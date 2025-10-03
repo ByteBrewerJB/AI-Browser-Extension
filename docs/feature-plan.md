@@ -27,6 +27,11 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 - [ ] Options dashboard foundations
   - [x] Conversations table view showing latest chats (filtering controls still pending).
   - [x] Folder tree sidebar (folders + subfolders).
+- [ ] Polish & verification
+  - [ ] Saved filters/column presets for the conversation table.
+  - [ ] Shared empty/error state components across dashboard modules.
+  - [ ] Manual regression script documented for both chat domains.
+  - [ ] Additional Vitest coverage for DOM ingestion edge cases (system messages, streaming edits).
 
 **Test checklist**
 - Unit: text metric helpers, storage service (Vitest or manual Dexie smoke test).
@@ -40,15 +45,21 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [x] GPT folder hierarchy CRUD.
   - [x] Prompt template creation + organization.
   - [x] Prompt chains UI (drag-and-drop ordering).
+  - [ ] Shared toolbar patterns (bulk actions, search, filters) defined for reuse.
 - [ ] Bulk actions
   - [ ] Multi-select conversations with bulk archive/delete/export.
   - [ ] Bulk GPT/prompt operations.
+  - [ ] Background command queue for executing bulk jobs with undo metadata.
+  - [ ] Optimistic UI state with conflict resolution against storage sync.
 - [ ] Advanced search
   - [ ] MiniSearch index builder syncing with storage events.
   - [ ] Global search UI with filters (date, GPT, folder, language).
+  - [ ] Search worker wiring with streaming updates to Zustand stores.
+  - [ ] Scoped search panels (conversations, prompts, GPTs) sharing filter chips.
 - [ ] Exports
   - [ ] TXT/JSON export service with settings (include metadata, include audio links).
   - [ ] Bulk export wizard in dashboard.
+  - [ ] Background orchestration for long-running exports + notification surface.
 
 **Test checklist**
 - Unit: storage/query helpers for GPTs, prompts, prompt chains, search index.
