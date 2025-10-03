@@ -37,8 +37,8 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 
 ## Milestone 2 - Productivity Suite
 - [ ] GPT & prompt management
-  - [ ] GPT folder hierarchy CRUD.
-  - [ ] Prompt template creation + organization.
+  - [x] GPT folder hierarchy CRUD.
+  - [x] Prompt template creation + organization.
   - [ ] Prompt chains UI (drag-and-drop ordering).
 - [ ] Bulk actions
   - [ ] Multi-select conversations with bulk archive/delete/export.
