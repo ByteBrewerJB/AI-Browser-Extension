@@ -33,6 +33,28 @@ export class CompanionDatabase extends Dexie {
       bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
       settings: 'id'
     });
+
+    this.version(2)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id'
+      })
+      .upgrade(async (transaction) => {
+        await transaction.table('prompts').toCollection().modify((prompt) => {
+          if (prompt.description === '') {
+            prompt.description = undefined;
+          }
+          if (prompt.gptId === '') {
+            prompt.gptId = undefined;
+          }
+        });
+      });
   }
 }
 

@@ -1,6 +1,6 @@
 ﻿# AI ChatGPT Companion Extension
 
-A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats. Audio tooling and deeper productivity workflows are planned in upcoming milestones.
+A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats, custom GPTs, and prompt templates. Audio tooling and deeper productivity workflows are planned in upcoming milestones.
 
 ## Prerequisites
 - Node.js 18 or newer
@@ -39,7 +39,7 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 - `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
 - `src/content` – DOM integrations on chat.openai.com/chatgpt.com for conversation capture and live metrics.
 - `src/core` – Dexie storage, models, and sync bridge helpers shared across surfaces.
-- `src/options` – dashboard for recent conversations and folder management (additional management views forthcoming).
+- `src/options` – dashboard for conversations, folders, custom GPTs, and prompt template management.
 - `src/popup` – quick-access UI for bookmarks, pinned chats, language/direction controls.
 - `src/shared` – localization, Zustand stores, and shared hooks.
 - `assets/icons` – placeholder extension icons.
