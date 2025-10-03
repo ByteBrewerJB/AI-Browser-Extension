@@ -157,12 +157,32 @@ export async function togglePinned(conversationId: string) {
   return { pinned: nextPinned };
 }
 
-export async function clearConversation(conversationId: string) {
+export async function clearConversation(conversationId:string) {
+  return deleteConversations([conversationId]);
+}
+
+export async function deleteConversations(ids: string[]) {
+  if (!ids.length) {
+    return;
+  }
   await db.transaction('rw', db.messages, db.bookmarks, db.conversations, async () => {
-    await db.messages.where('conversationId').equals(conversationId).delete();
-    await db.bookmarks.where('conversationId').equals(conversationId).delete();
-    await db.conversations.delete(conversationId);
+    await db.messages.where('conversationId').anyOf(ids).delete();
+    await db.bookmarks.where('conversationId').anyOf(ids).delete();
+    await db.conversations.bulkDelete(ids);
   });
+}
+
+export async function archiveConversations(ids: string[], archived: boolean) {
+  if (!ids.length) {
+    return;
+  }
+  await db.conversations.bulkUpdate(ids.map((id) => ({
+    key: id,
+    changes: {
+      archived,
+      updatedAt: nowIso()
+    }
+  })));
 }
 
 
