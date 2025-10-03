@@ -7,11 +7,24 @@
     "bookmarks": "Bladwijzers",
     "pinnedChats": "Vastgezette chats",
     "recentActivity": "Recente activiteit",
-    "openDashboard": "Open dashboard"
+    "openDashboard": "Open dashboard",
+    "recentConversations": "Recente gesprekken",
+    "noConversations": "Start een chat om je geschiedenis hier te zien.",
+    "words": "Woorden",
+    "characters": "Karakters",
+    "messages": "Berichten",
+    "pin": "Vastzetten",
+    "unpin": "Losmaken",
+    "bookmark": "Bladwijzer",
+    "unbookmark": "Bladwijzer verwijderen",
+    "openConversation": "Openen"
   },
   "options": {
     "heading": "AI Companion Dashboard",
     "description": "Beheer gesprekken, prompts, audio-voorkeuren en synchronisatie-instellingen op één plek.",
-    "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties."
+    "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties.",
+    "conversationHeading": "Overzicht van gesprekken",
+    "conversationDescription": "Laatste chats vastgelegd vanuit ChatGPT (lokaal opgeslagen).",
+    "conversationEmpty": "Nog geen gesprekken vastgelegd."
   }
 }

@@ -1,0 +1,46 @@
+﻿import Dexie, { Table } from 'dexie';
+import type {
+  BookmarkRecord,
+  ConversationRecord,
+  FolderRecord,
+  GPTRecord,
+  MessageRecord,
+  PromptChainRecord,
+  PromptRecord,
+  SettingsRecord
+} from '@/core/models';
+
+export class CompanionDatabase extends Dexie {
+  conversations!: Table<ConversationRecord, string>;
+  messages!: Table<MessageRecord, string>;
+  gpts!: Table<GPTRecord, string>;
+  prompts!: Table<PromptRecord, string>;
+  promptChains!: Table<PromptChainRecord, string>;
+  folders!: Table<FolderRecord, string>;
+  bookmarks!: Table<BookmarkRecord, string>;
+  settings!: Table<SettingsRecord, string>;
+
+  constructor() {
+    super('AICompanionDB');
+
+    this.version(1).stores({
+      conversations: 'id, updatedAt, folderId, pinned, archived',
+      messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+      gpts: 'id, folderId, updatedAt',
+      prompts: 'id, folderId, updatedAt',
+      promptChains: 'id, updatedAt',
+      folders: 'id, parentId, kind',
+      bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+      settings: 'id'
+    });
+  }
+}
+
+export const db = new CompanionDatabase();
+
+export async function resetDatabase() {
+  await db.delete();
+  await db.open();
+}
+
+

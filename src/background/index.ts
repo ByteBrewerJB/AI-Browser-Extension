@@ -3,14 +3,14 @@
     id: 'ai-companion-save-audio',
     title: 'Save audio from ChatGPT reply',
     contexts: ['page'],
-    documentUrlPatterns: ['https://chat.openai.com/*']
+    documentUrlPatterns: ['https://chat.openai.com/*', 'https://chatgpt.com/*']
   });
 
   chrome.contextMenus.create({
     id: 'ai-companion-bookmark-chat',
     title: 'Bookmark this ChatGPT conversation',
     contexts: ['page'],
-    documentUrlPatterns: ['https://chat.openai.com/*']
+    documentUrlPatterns: ['https://chat.openai.com/*', 'https://chatgpt.com/*']
   });
 });
 
