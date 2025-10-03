@@ -26,7 +26,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [ ] Bookmark pin toggle persists to storage.
 - [ ] Options dashboard foundations
   - [ ] Conversations table view (filter, sort by date).
-  - [ ] Folder tree sidebar (folders + subfolders).
+  - [x] Folder tree sidebar (folders + subfolders).
 
 **Test checklist**
 - Unit: text metric helpers, storage service (Vitest or manual Dexie smoke test).

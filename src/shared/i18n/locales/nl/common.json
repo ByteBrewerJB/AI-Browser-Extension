@@ -25,6 +25,17 @@
     "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties.",
     "conversationHeading": "Overzicht van gesprekken",
     "conversationDescription": "Laatste chats vastgelegd vanuit ChatGPT (lokaal opgeslagen).",
-    "conversationEmpty": "Nog geen gesprekken vastgelegd."
+    "conversationEmpty": "Nog geen gesprekken vastgelegd.",
+    "folderHeading": "Gespreksmappen",
+    "folderDescription": "Organiseer chats per project, onderwerp of workflow.",
+    "folderEmpty": "Nog geen mappen. Maak er een om gesprekken te groeperen.",
+    "addFolder": "Map toevoegen",
+    "addFolderButton": "Aanmaken",
+    "folderNamePlaceholder": "Naam van map",
+    "deleteFolder": "Verwijderen",
+    "columnTitle": "Titel",
+    "columnUpdated": "Bijgewerkt",
+    "columnActions": "Acties",
+    "untitledConversation": "Naamloos gesprek"
   }
 }
