@@ -34,7 +34,8 @@ export async function listFolders(kind?: FolderRecord['kind']): Promise<FolderRe
   if (kind) {
     return db.folders.where('kind').equals(kind).sortBy('name');
   }
-  return db.folders.orderBy('name').toArray();
+  const folders = await db.folders.toArray();
+  return folders.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function updateFolder(id: string, updates: Partial<Pick<FolderRecord, 'name' | 'parentId'>>) {
