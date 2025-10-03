@@ -1,0 +1,17 @@
+﻿{
+  "app": {
+    "title": "AI Companion",
+    "tagline": "Boost your ChatGPT productivity."
+  },
+  "popup": {
+    "bookmarks": "Bookmarks",
+    "pinnedChats": "Pinned chats",
+    "recentActivity": "Recent activity",
+    "openDashboard": "Open dashboard"
+  },
+  "options": {
+    "heading": "AI Companion Dashboard",
+    "description": "Manage conversations, prompts, audio preferences, and sync settings in one place.",
+    "comingSoon": "Detailed management views arrive in upcoming iterations."
+  }
+}

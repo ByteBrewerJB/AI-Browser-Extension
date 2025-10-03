@@ -1,0 +1,25 @@
+﻿# Node & tooling
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# Build outputs
+dist/
+dist-zip/
+*.crx
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

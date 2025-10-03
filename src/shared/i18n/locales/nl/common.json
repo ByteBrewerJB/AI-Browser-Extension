@@ -1,0 +1,17 @@
+﻿{
+  "app": {
+    "title": "AI Companion",
+    "tagline": "Verbeter je ChatGPT-productiviteit."
+  },
+  "popup": {
+    "bookmarks": "Bladwijzers",
+    "pinnedChats": "Vastgezette chats",
+    "recentActivity": "Recente activiteit",
+    "openDashboard": "Open dashboard"
+  },
+  "options": {
+    "heading": "AI Companion Dashboard",
+    "description": "Beheer gesprekken, prompts, audio-voorkeuren en synchronisatie-instellingen op één plek.",
+    "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties."
+  }
+}
