@@ -38,6 +38,12 @@ npm run lint
 ```
 This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additional linting rules.
 
+## Tests
+```bash
+npm run test
+```
+Runs the Node-based unit tests for the storage layer (prompt chain workflows currently).
+
 ## Project Structure
 - `docs/` – architecture overview and roadmap.
 - `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
