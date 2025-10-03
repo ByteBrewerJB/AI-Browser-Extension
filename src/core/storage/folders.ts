@@ -81,7 +81,7 @@ export async function getFolderTree(kind: FolderKind): Promise<FolderTreeNode[]>
 }
 
 export async function deleteFolder(folderId: string) {
-  await db.transaction('rw', db.folders, db.conversations, async () => {
+  await db.transaction('rw', db.folders, db.conversations, db.gpts, db.prompts, async () => {
     const allFolders = await db.folders.toArray();
     const byParent = new Map<string | undefined, FolderRecord[]>();
     for (const folder of allFolders) {
@@ -108,11 +108,20 @@ export async function deleteFolder(folderId: string) {
     }
 
     const ids = Array.from(toDelete);
+    const timestamp = nowIso();
     await db.folders.bulkDelete(ids);
     await db.conversations
       .where('folderId')
       .anyOf(ids)
-      .modify({ folderId: undefined, updatedAt: nowIso() });
+      .modify({ folderId: undefined, updatedAt: timestamp });
+    await db.gpts
+      .where('folderId')
+      .anyOf(ids)
+      .modify({ folderId: undefined, updatedAt: timestamp });
+    await db.prompts
+      .where('folderId')
+      .anyOf(ids)
+      .modify({ folderId: undefined, updatedAt: timestamp });
   });
 }
 
