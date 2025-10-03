@@ -25,6 +25,17 @@
     "comingSoon": "Detailed management views arrive in upcoming iterations.",
     "conversationHeading": "Conversation overview",
     "conversationDescription": "Latest chats captured from ChatGPT (stored locally).",
-    "conversationEmpty": "No conversations captured yet."
+    "conversationEmpty": "No conversations captured yet.",
+    "folderHeading": "Conversation folders",
+    "folderDescription": "Organize chats by project, topic, or workflow.",
+    "folderEmpty": "No folders yet. Create one to start grouping conversations.",
+    "addFolder": "Add folder",
+    "addFolderButton": "Create",
+    "folderNamePlaceholder": "Folder name",
+    "deleteFolder": "Remove",
+    "columnTitle": "Title",
+    "columnUpdated": "Updated",
+    "columnActions": "Actions",
+    "untitledConversation": "Untitled conversation"
   }
 }
