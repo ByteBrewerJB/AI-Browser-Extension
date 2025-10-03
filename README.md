@@ -1,6 +1,6 @@
 ﻿# AI ChatGPT Companion Extension
 
-A Chrome / Edge extension that enhances ChatGPT with audio tooling, advanced conversation management, multilingual UX, and productivity workflows.
+A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats. Audio tooling and deeper productivity workflows are planned in upcoming milestones.
 
 ## Prerequisites
 - Node.js 18 or newer
@@ -36,11 +36,12 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 
 ## Project Structure
 - `docs/` – architecture overview and roadmap.
-- `src/background` – service worker for context menus and messaging.
-- `src/content` – DOM integrations on chat.openai.com (word/character counter stubbed).
-- `src/options` – dashboard for managing conversations, prompts, GPTs, audio, and sync settings (UI scaffolding).
-- `src/popup` – quick-access UI for bookmarks, pinned chats, and controls.
-- `src/shared` – localization, Zustand stores, and shared types.
+- `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
+- `src/content` – DOM integrations on chat.openai.com/chatgpt.com for conversation capture and live metrics.
+- `src/core` – Dexie storage, models, and sync bridge helpers shared across surfaces.
+- `src/options` – dashboard for recent conversations and folder management (additional management views forthcoming).
+- `src/popup` – quick-access UI for bookmarks, pinned chats, language/direction controls.
+- `src/shared` – localization, Zustand stores, and shared hooks.
 - `assets/icons` – placeholder extension icons.
 
 ## Testing Ideas
@@ -49,5 +50,5 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 - Manual validation checklist: popup language toggle, RTL switch, content-script counter, background context menu messaging.
 
 ## Next Steps
-See `docs/architecture-roadmap.md` for the feature roadmap (audio downloads, bulk actions, sync tiers, etc.).
+See `docs/architecture-roadmap.md` for the feature roadmap (audio downloads, bulk actions, sync tiers, etc.). Milestone status is tracked in `docs/feature-plan.md`.
 

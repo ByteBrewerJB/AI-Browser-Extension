@@ -45,6 +45,7 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - ✅ **Milestone 0 (Baseline shell) is complete.** The MV3 scaffold, popup/options shells with RTL + i18n, background worker stubs, and the initial word/character counter shipped and have lint coverage.
 - ✅ **Shared foundations are in place.** Tailwind theming, Zustand store scaffolding, route wiring, and localization utilities are functional across popup, options, and content script surfaces.
 - ✅ **Developer experience is stable.** Vite dev flow, CRXJS bundling, and lint/test scripts run reliably for day-to-day iteration.
+- 🚧 **Milestone 1 capture work is underway.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; filtering and advanced management are the remaining gaps.
 
 The next stages focus on layering robust storage, capture, and productivity systems atop this baseline.
 
