@@ -12,7 +12,7 @@ npm install
 ```
 
 ## Development
-Start Vite in watch mode and load the unpacked extension in your browser:
+Start Vite in watch mode and load the unpacked extension in your browser (targets https://chat.openai.com and https://chatgpt.com):
 ```bash
 npm run dev
 ```
@@ -50,3 +50,4 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 
 ## Next Steps
 See `docs/architecture-roadmap.md` for the feature roadmap (audio downloads, bulk actions, sync tiers, etc.).
+

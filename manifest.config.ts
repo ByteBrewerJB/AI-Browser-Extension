@@ -33,16 +33,16 @@ const manifest = defineManifest({
     'downloads',
     'contextMenus'
   ],
-  host_permissions: ['https://chat.openai.com/*'],
+  host_permissions: ['https://chat.openai.com/*', 'https://chatgpt.com/*'],
   web_accessible_resources: [
     {
       resources: ['assets/*'],
-      matches: ['https://chat.openai.com/*']
+      matches: ['https://chat.openai.com/*', 'https://chatgpt.com/*']
     }
   ],
   content_scripts: [
     {
-      matches: ['https://chat.openai.com/*'],
+      matches: ['https://chat.openai.com/*', 'https://chatgpt.com/*'],
       js: ['src/content/index.ts']
     }
   ]
