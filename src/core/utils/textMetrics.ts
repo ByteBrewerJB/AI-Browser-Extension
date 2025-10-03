@@ -1,9 +1,9 @@
-﻿export interface TextMetrics {
+export interface TextMetrics {
   wordCount: number;
   charCount: number;
 }
 
-const WORD_REGEX = /\p{L}+[\p{L}\p{Mn}\p{Pd}\']*/gu;
+const WORD_REGEX = new RegExp("\\p{L}+[\\p{L}\\p{Mn}\\p{Pd}\\']*", 'gu');
 
 function countWords(text: string) {
   const matches = text.match(WORD_REGEX);
