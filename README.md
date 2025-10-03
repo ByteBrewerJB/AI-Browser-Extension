@@ -21,6 +21,10 @@ npm run dev
 3. Choose **Load unpacked** and select `dist` once Vite finishes the first build.
 4. Keep the dev server running for hot-reload of popup/options. Re-load the extension page after manifest changes.
 
+### Known dev-console warnings
+
+While the dev server is running Chrome may log messages such as `Service worker registration failed. Status code: 3` and `Access to script at 'http://localhost:5173/@vite/client' has been blocked by CORS policy`. These come from the CRXJS dev loader bootstrapping the background worker and are harmless—they disappear in production builds (`npm run build`). If you see them, just confirm the Vite dev server is still running and reload the extension after the first successful compilation.
+
 ## Build
 Produce a production build in `dist/`:
 ```bash
