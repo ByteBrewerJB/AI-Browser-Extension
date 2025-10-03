@@ -1,4 +1,5 @@
-﻿import { db } from './db';
+import { db } from './db';
+import { removeConversationMetadata, syncConversationMetadata } from './syncBridge';
 import type { BookmarkRecord, ConversationRecord, MessageRecord } from '@/core/models';
 import { computeTextMetrics, sumTextMetrics } from '@/core/utils/textMetrics';
 
@@ -34,17 +35,26 @@ function nowIso() {
 }
 
 export async function upsertConversation(input: ConversationUpsertInput) {
-  const timestamp = input.updatedAt ?? nowIso();
-  return db.conversations.put({
-    id: input.id,
-    title: input.title,
-    folderId: input.folderId,
-    pinned: input.pinned ?? false,
-    archived: input.archived ?? false,
-    createdAt: input.createdAt ?? timestamp,
-    updatedAt: timestamp,
-    wordCount: input.wordCount ?? 0,
-    charCount: input.charCount ?? 0
+  return db.transaction('rw', db.conversations, async () => {
+    const existing = await db.conversations.get(input.id);
+    const timestamp = input.updatedAt ?? nowIso();
+
+    const record: ConversationRecord = {
+      id: input.id,
+      title: input.title,
+      folderId: input.folderId ?? existing?.folderId,
+      pinned: input.pinned ?? existing?.pinned ?? false,
+      archived: input.archived ?? existing?.archived ?? false,
+      createdAt: existing?.createdAt ?? input.createdAt ?? timestamp,
+      updatedAt: timestamp,
+      wordCount: input.wordCount ?? existing?.wordCount ?? 0,
+      charCount: input.charCount ?? existing?.charCount ?? 0
+    };
+
+    await db.conversations.put(record);
+    await syncConversationMetadata(record);
+
+    return record;
   });
 }
 
@@ -69,13 +79,15 @@ export async function addMessages(messages: MessageInput[]) {
       wordCount: metrics.wordCount,
       charCount: metrics.charCount,
       metadata: message.metadata
-    };
+    } satisfies MessageRecord;
   });
 
-  const metricsToApply = sumTextMetrics(records.map((record) => ({
-    wordCount: record.wordCount,
-    charCount: record.charCount
-  })));
+  const metricsToApply = sumTextMetrics(
+    records.map((record) => ({
+      wordCount: record.wordCount,
+      charCount: record.charCount
+    }))
+  );
 
   await db.transaction('rw', db.messages, db.conversations, async () => {
     await db.messages.bulkPut(records);
@@ -86,11 +98,15 @@ export async function addMessages(messages: MessageInput[]) {
       throw new Error(`Conversation ${conversationId} missing. Call upsertConversation first.`);
     }
 
-    await db.conversations.update(conversationId, {
+    const updatedConversation: ConversationRecord = {
+      ...existing,
       updatedAt: nowIso(),
       wordCount: (existing.wordCount ?? 0) + metricsToApply.wordCount,
       charCount: (existing.charCount ?? 0) + metricsToApply.charCount
-    });
+    };
+
+    await db.conversations.put(updatedConversation);
+    await syncConversationMetadata(updatedConversation);
   });
 }
 
@@ -115,7 +131,7 @@ export async function getRecentConversations(limit = 10): Promise<ConversationOv
 }
 
 export async function toggleBookmark(conversationId: string, messageId?: string, note?: string) {
-    const existing = await db.bookmarks
+  const existing = await db.bookmarks
     .where('conversationId')
     .equals(conversationId)
     .and((bookmark) => (bookmark.messageId ?? null) === (messageId ?? null))
@@ -149,10 +165,14 @@ export async function togglePinned(conversationId: string) {
   }
 
   const nextPinned = !existing.pinned;
-  await db.conversations.update(conversationId, {
+  const updatedConversation: ConversationRecord = {
+    ...existing,
     pinned: nextPinned,
     updatedAt: nowIso()
-  });
+  };
+
+  await db.conversations.put(updatedConversation);
+  await syncConversationMetadata(updatedConversation);
 
   return { pinned: nextPinned };
 }
@@ -163,10 +183,5 @@ export async function clearConversation(conversationId: string) {
     await db.bookmarks.where('conversationId').equals(conversationId).delete();
     await db.conversations.delete(conversationId);
   });
+  await removeConversationMetadata(conversationId);
 }
-
-
-
-
-
-

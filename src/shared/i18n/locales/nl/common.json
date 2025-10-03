@@ -25,6 +25,27 @@
     "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties.",
     "conversationHeading": "Overzicht van gesprekken",
     "conversationDescription": "Laatste chats vastgelegd vanuit ChatGPT (lokaal opgeslagen).",
-    "conversationEmpty": "Nog geen gesprekken vastgelegd."
+    "conversationEmpty": "Nog geen gesprekken vastgelegd.",
+    "conversationFilterEmpty": "Geen gesprekken komen overeen met je filters.",
+    "conversationTitle": "Titel",
+    "conversationUpdated": "Bijgewerkt",
+    "conversationActions": "Acties",
+    "untitledConversation": "Naamloos gesprek",
+    "folderHeading": "Mappen",
+    "folderDescription": "Organiseer gesprekken in geneste mappen.",
+    "folderAll": "Alle gesprekken",
+    "folderEmpty": "Nog geen mappen. Maak er hieronder één.",
+    "folderUnfiled": "Niet-ingedeeld gesprek",
+    "addFolderHeading": "Map toevoegen",
+    "folderNameLabel": "Mapnaam",
+    "folderNamePlaceholder": "bijv. Productonderzoek",
+    "folderParentLabel": "Bovenliggende map",
+    "folderParentRoot": "Geen bovenliggende map (topniveau)",
+    "folderCreating": "Bezig met maken...",
+    "folderCreateButton": "Map maken",
+    "folderNameError": "Mapnaam mag niet leeg zijn.",
+    "folderUnknownError": "Er is iets misgegaan bij het maken van de map.",
+    "searchLabel": "Gesprekken zoeken",
+    "searchPlaceholder": "Zoek op titel"
   }
 }
