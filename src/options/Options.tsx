@@ -1,6 +1,8 @@
 ﻿import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { togglePinned } from '@/core/storage';
+import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { initI18n } from '@/shared/i18n';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 
@@ -19,9 +21,22 @@ const featureColumns = [
   }
 ];
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat().format(value);
+}
+
+function formatDate(value: string) {
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
 export function Options() {
   const { t } = useTranslation();
   const { direction } = useSettingsStore();
+  const conversations = useRecentConversations(20);
 
   useEffect(() => {
     initI18n();
@@ -30,6 +45,10 @@ export function Options() {
   useEffect(() => {
     document.documentElement.dir = direction;
   }, [direction]);
+
+  const handlePinToggle = async (conversationId: string) => {
+    await togglePinned(conversationId);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100" dir={direction}>
@@ -42,6 +61,63 @@ export function Options() {
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
+        <section className="space-y-4">
+          <header>
+            <h2 className="text-lg font-semibold text-emerald-300">{t('options.conversationHeading')}</h2>
+            <p className="text-sm text-slate-300">{t('options.conversationDescription')}</p>
+          </header>
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            <table className="min-w-full divide-y divide-slate-800 text-sm">
+              <thead className="bg-slate-900/70 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Title</th>
+                  <th className="px-4 py-3">{t('popup.messages')}</th>
+                  <th className="px-4 py-3">{t('popup.words')}</th>
+                  <th className="px-4 py-3">{t('popup.characters')}</th>
+                  <th className="px-4 py-3">Updated</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-900/60">
+                {conversations.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-sm text-slate-400" colSpan={6}>
+                      {t('options.conversationEmpty')}
+                    </td>
+                  </tr>
+                ) : (
+                  conversations.map((conversation) => (
+                    <tr key={conversation.id} className="bg-slate-900/30">
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-100">
+                            {conversation.title || 'Untitled conversation'}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{formatNumber(conversation.messageCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.wordCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+                          onClick={() => handlePinToggle(conversation.id)}
+                        >
+                          {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="grid gap-4 md:grid-cols-3">
           {featureColumns.map((column) => (
             <article

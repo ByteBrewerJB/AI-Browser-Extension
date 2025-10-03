@@ -142,6 +142,21 @@ export async function getBookmarks(conversationId: string) {
   return db.bookmarks.where('conversationId').equals(conversationId).toArray();
 }
 
+export async function togglePinned(conversationId: string) {
+  const existing = await db.conversations.get(conversationId);
+  if (!existing) {
+    return { pinned: false };
+  }
+
+  const nextPinned = !existing.pinned;
+  await db.conversations.update(conversationId, {
+    pinned: nextPinned,
+    updatedAt: nowIso()
+  });
+
+  return { pinned: nextPinned };
+}
+
 export async function clearConversation(conversationId: string) {
   await db.transaction('rw', db.messages, db.bookmarks, db.conversations, async () => {
     await db.messages.where('conversationId').equals(conversationId).delete();
@@ -149,6 +164,7 @@ export async function clearConversation(conversationId: string) {
     await db.conversations.delete(conversationId);
   });
 }
+
 
 
 

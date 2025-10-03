@@ -7,11 +7,24 @@
     "bookmarks": "Bookmarks",
     "pinnedChats": "Pinned chats",
     "recentActivity": "Recent activity",
-    "openDashboard": "Open dashboard"
+    "openDashboard": "Open dashboard",
+    "recentConversations": "Recent conversations",
+    "noConversations": "Start chatting to see history here.",
+    "words": "Words",
+    "characters": "Characters",
+    "messages": "Messages",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "bookmark": "Bookmark",
+    "unbookmark": "Remove bookmark",
+    "openConversation": "Open"
   },
   "options": {
     "heading": "AI Companion Dashboard",
     "description": "Manage conversations, prompts, audio preferences, and sync settings in one place.",
-    "comingSoon": "Detailed management views arrive in upcoming iterations."
+    "comingSoon": "Detailed management views arrive in upcoming iterations.",
+    "conversationHeading": "Conversation overview",
+    "conversationDescription": "Latest chats captured from ChatGPT (stored locally).",
+    "conversationEmpty": "No conversations captured yet."
   }
 }
