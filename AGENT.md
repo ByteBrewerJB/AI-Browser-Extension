@@ -22,7 +22,7 @@ Guidelines for agents contributing to the AI ChatGPT Companion extension.
 - Keep localization keys in `src/shared/i18n/locales/{lang}/common.json`; update both EN and NL.
 
 ## 4. Testing & QA
-- Minimum: run `npm run lint` before submitting changes.
+- Minimum: run `npm run lint` and `npm run build` before submitting changes.
 - Add unit tests (Vitest) as new services are introduced; document gaps when skipping tests.
 - For DOM integrations, test against both `https://chat.openai.com` and `https://chatgpt.com`.
 - Document manual test steps in PR descriptions when automated coverage is missing.
@@ -36,6 +36,7 @@ Guidelines for agents contributing to the AI ChatGPT Companion extension.
 ## 6. Review Checklist
 Before requesting review:
 - [ ] `npm run lint` passes.
+- [ ] `npm run build` succeeds.
 - [ ] Feature aligns with milestone goals.
 - [ ] Localization + RTL considerations addressed.
 - [ ] Tests updated or rationale provided.
