@@ -3,7 +3,18 @@ export interface TextMetrics {
   charCount: number;
 }
 
-const WORD_REGEX = new RegExp("\\p{L}+[\\p{L}\\p{Mn}\\p{Pd}\\']*", 'gu');
+const UNICODE_WORD_PATTERN = "\\p{L}+[\\p{L}\\p{Mn}\\p{Pd}\\']*";
+
+function createWordRegex(): RegExp {
+  try {
+    return new RegExp(UNICODE_WORD_PATTERN, 'gu');
+  } catch {
+    // Fallback for environments without Unicode property escape support.
+    return /[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g;
+  }
+}
+
+const WORD_REGEX = createWordRegex();
 
 function countWords(text: string) {
   const matches = text.match(WORD_REGEX);
