@@ -37,9 +37,11 @@ export interface PromptRecord {
   id: string;
   name: string;
   content: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
   folderId?: string;
+  gptId?: string;
 }
 
 export interface PromptChainRecord {
