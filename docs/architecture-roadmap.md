@@ -46,7 +46,8 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - ✅ **Shared foundations are in place.** Tailwind theming, Zustand store scaffolding, route wiring, and localization utilities are functional across popup, options, and content script surfaces.
 - ✅ **Developer experience is stable.** Vite dev flow, CRXJS bundling, and lint/test scripts run reliably for day-to-day iteration.
 - ✅ **Prompt chain builder shipped.** Options dashboard now provides a prompt chain composer with accessible ordering controls backed by the new storage API and Node-based unit tests.
-- 🚧 **Milestone 1 capture work is underway.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; filtering and advanced management are the remaining gaps.
+- ✅ **Milestone 1 capture work reached feature-complete.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; table filtering refinements and broader regression coverage remain as polish tasks.
+- 🚧 **Milestone 2 productivity tooling is underway.** Prompt & GPT management flows are shipping; bulk actions, global search, and export orchestration are the next large workstreams.
 
 The next stages focus on layering robust storage, capture, and productivity systems atop this baseline.
 
@@ -57,19 +58,29 @@ The next stages focus on layering robust storage, capture, and productivity syst
 4. **Sync & Collaboration**: enhanced multi-device sync, per-browser profile settings, optional cloud backup connectors.
 5. **Polish**: side panel experience, performance profiling, telemetry opt-in, expanded localization.
 
-## Immediate Next Steps (Milestone 1 Focus)
-1. **Finalize the storage backbone**
-   - Define Dexie tables and TypeScript models for conversations, messages, prompts, GPTs, folders, and settings.
-   - Build a storage service in `src/core/storage` that exposes CRUD helpers, change streams, and conflict resolution against `chrome.storage.sync` mirrors.
-2. **Capture conversations from the DOM**
-   - Ship a resilient observer in the content script that normalizes user/assistant turns, captures metadata (timestamps, tokens, GPT variant), and debounces writes into storage.
-   - Update the word/character counter to read from stored data so metrics stay consistent across reloads.
-3. **Surface stored data in the UI**
-   - Hydrate the popup with recent conversations from Zustand selectors, including bookmark toggles that persist back into storage.
-   - Scaffold the options dashboard with a virtualized table view and folder tree, relying on the new storage service.
-4. **Harden tooling & QA**
-   - Add Vitest suites for storage helpers and DOM parsing utilities.
-   - Document manual regression steps that cover both chat.openai.com and chatgpt.com.
+## Remaining Milestone 1 Hardening
+1. **Dashboards polish**
+   - Layer column filtering and saved views onto the conversations table without regressing virtualization performance.
+   - Instrument a lightweight empty/error state system that the options dashboard can reuse across modules.
+2. **Reliability & QA**
+   - Expand unit coverage for the DOM ingestion pipeline (edge cases: system messages, code blocks, streaming edits).
+   - Capture a repeatable manual regression script spanning chat.openai.com & chatgpt.com to unblock contributor testing.
+3. **Sync telemetry**
+   - Add debug logging hooks (behind a dev flag) for storage bridge queue processing to aid in diagnosing quota or merge failures.
+
+## Immediate Next Steps (Milestone 2 Kickoff)
+1. **Bulk action engine foundation**
+   - Define a command queue abstraction in the background worker with undo metadata and optimistic UI updates.
+   - Wire multi-select state in the options dashboard, including keyboard shortcuts and selection persistence across filters.
+2. **Search infrastructure**
+   - Implement the MiniSearch-backed worker, sourcing incremental updates from storage change streams.
+   - Prototype scoped search panels (conversation vs. prompts) with shared faceted filtering primitives.
+3. **Export service**
+   - Design a normalized export payload schema shared across TXT/JSON formats, supporting localization-ready metadata labels.
+   - Provide UI entry points in both popup quick actions and the dashboard bulk wizard, ensuring background execution handles large datasets.
+4. **UX systematization**
+   - Document shared toolbar, table, and modal patterns to keep productivity surfaces consistent.
+   - Extend the design tokens/global Tailwind config where necessary to cover new interaction states (selected rows, search chips, wizard steps).
 
 ## Near-Term Architecture Phases
 
