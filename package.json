@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --loader ts-node/esm --experimental-specifier-resolution=node tests/promptChains.spec.ts"
   },
   "keywords": [
     "chrome-extension",

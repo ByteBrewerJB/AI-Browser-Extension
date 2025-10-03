@@ -2,24 +2,28 @@ import type { ReactElement } from 'react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { GPTRecord } from '@/core/models';
+import type { GPTRecord, PromptChainRecord, PromptRecord } from '@/core/models';
 import type { FolderTreeNode } from '@/core/storage';
 import {
   createFolder,
   createGpt,
   createPrompt,
+  createPromptChain,
   deleteFolder,
   deleteGpt,
   deletePrompt,
+  deletePromptChain,
   togglePinned,
   updateGpt,
-  updatePrompt
+  updatePrompt,
+  updatePromptChain
 } from '@/core/storage';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useFolders } from '@/shared/hooks/useFolders';
 import { useGpts } from '@/shared/hooks/useGpts';
 import { usePrompts } from '@/shared/hooks/usePrompts';
+import { usePromptChains } from '@/shared/hooks/usePromptChains';
 import { initI18n } from '@/shared/i18n';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 
@@ -124,6 +128,12 @@ interface EditingPromptState {
   gptId: string;
 }
 
+interface EditingPromptChainState {
+  id: string;
+  name: string;
+  nodeIds: string[];
+}
+
 export function Options() {
   const { t } = useTranslation();
   const { direction } = useSettingsStore();
@@ -133,6 +143,7 @@ export function Options() {
   const promptFolderTree = useFolderTree('prompt');
   const gpts = useGpts();
   const prompts = usePrompts();
+  const promptChains = usePromptChains();
   const gptFolders = useFolders('gpt');
   const promptFolders = useFolders('prompt');
 
@@ -151,6 +162,9 @@ export function Options() {
   const [promptFolderId, setPromptFolderId] = useState('');
   const [promptGptId, setPromptGptId] = useState('');
   const [editingPrompt, setEditingPrompt] = useState<EditingPromptState | null>(null);
+  const [promptChainName, setPromptChainName] = useState('');
+  const [promptChainNodeIds, setPromptChainNodeIds] = useState<string[]>([]);
+  const [editingPromptChain, setEditingPromptChain] = useState<EditingPromptChainState | null>(null);
 
   useEffect(() => {
     initI18n();
@@ -197,6 +211,26 @@ export function Options() {
     });
     return counts;
   }, [prompts]);
+
+  const promptById = useMemo(() => {
+    const map = new Map<string, PromptRecord>();
+    prompts.forEach((prompt) => {
+      map.set(prompt.id, prompt);
+    });
+    return map;
+  }, [prompts]);
+
+  const selectedChainPrompts = useMemo(() => {
+    return promptChainNodeIds
+      .map((id) => promptById.get(id))
+      .filter((prompt): prompt is PromptRecord => Boolean(prompt));
+  }, [promptById, promptChainNodeIds]);
+
+  const availableChainPrompts = useMemo(() => {
+    return prompts.filter((prompt) => !promptChainNodeIds.includes(prompt.id));
+  }, [prompts, promptChainNodeIds]);
+
+  const isEditingPromptChain = editingPromptChain !== null;
 
   const handlePinToggle = async (conversationId: string) => {
     await togglePinned(conversationId);
@@ -331,6 +365,90 @@ export function Options() {
     } catch (error) {
       console.error('[ai-companion] failed to update prompt', error);
     }
+  };
+
+  const resetPromptChainForm = () => {
+    setPromptChainName('');
+    setPromptChainNodeIds([]);
+    setEditingPromptChain(null);
+  };
+
+  const handleCreateOrUpdatePromptChain = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!promptChainName.trim()) {
+      return;
+    }
+
+    try {
+      if (editingPromptChain) {
+        await updatePromptChain({
+          id: editingPromptChain.id,
+          name: promptChainName,
+          nodeIds: promptChainNodeIds
+        });
+      } else {
+        await createPromptChain({
+          name: promptChainName,
+          nodeIds: promptChainNodeIds
+        });
+      }
+      resetPromptChainForm();
+    } catch (error) {
+      console.error('[ai-companion] failed to save prompt chain', error);
+    }
+  };
+
+  const handleDeletePromptChain = async (id: string) => {
+    try {
+      await deletePromptChain(id);
+      if (editingPromptChain?.id === id) {
+        resetPromptChainForm();
+      }
+    } catch (error) {
+      console.error('[ai-companion] failed to delete prompt chain', error);
+    }
+  };
+
+  const handleEditPromptChain = (chain: PromptChainRecord) => {
+    setEditingPromptChain({
+      id: chain.id,
+      name: chain.name,
+      nodeIds: [...chain.nodeIds]
+    });
+    setPromptChainName(chain.name);
+    setPromptChainNodeIds([...chain.nodeIds]);
+  };
+
+  const handleAddPromptToChain = (promptId: string) => {
+    setPromptChainNodeIds((current) => {
+      if (current.includes(promptId)) {
+        return current;
+      }
+      return [...current, promptId];
+    });
+  };
+
+  const handleRemovePromptFromChain = (promptId: string) => {
+    setPromptChainNodeIds((current) => current.filter((id) => id !== promptId));
+  };
+
+  const handleMovePromptInChain = (promptId: string, direction: 'up' | 'down') => {
+    setPromptChainNodeIds((current) => {
+      const index = current.indexOf(promptId);
+      if (index === -1) {
+        return current;
+      }
+
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      next.splice(index, 1);
+      next.splice(targetIndex, 0, promptId);
+      return next;
+    });
   };
 
   const renderConversationTree = conversationFolders.length === 0 ? (
@@ -1010,6 +1128,186 @@ export function Options() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <header>
+            <h2 className="text-lg font-semibold text-emerald-300">{t('options.promptChainHeading')}</h2>
+            <p className="text-sm text-slate-300">{t('options.promptChainDescription')}</p>
+          </header>
+          <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+            <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+              <header className="space-y-1">
+                <h3 className="text-base font-semibold text-slate-100">{t('options.promptChainListHeading')}</h3>
+                <p className="text-xs text-slate-400">{t('options.promptChainListDescription')}</p>
+              </header>
+              {promptChains.length === 0 ? (
+                <p className="text-sm text-slate-300">{t('options.promptChainEmpty')}</p>
+              ) : (
+                <ul className="space-y-3">
+                  {promptChains.map((chain) => (
+                    <li key={chain.id} className="rounded-lg border border-slate-800 bg-slate-950/40">
+                      <div className="flex items-start justify-between gap-3 px-4 py-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-slate-100">{chain.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {t('options.promptChainPromptCount', { count: chain.nodeIds.length })}
+                          </p>
+                          <p className="text-xs text-slate-500">{formatDate(chain.updatedAt)}</p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+                            onClick={() => handleEditPromptChain(chain)}
+                            type="button"
+                          >
+                            {t('options.editButton')}
+                          </button>
+                          <button
+                            className="rounded-md border border-rose-600 px-3 py-1 text-xs uppercase tracking-wide text-rose-300 hover:bg-rose-600/20"
+                            onClick={() => void handleDeletePromptChain(chain.id)}
+                            type="button"
+                          >
+                            {t('options.deleteButton')}
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+              <header className="space-y-1">
+                <h3 className="text-base font-semibold text-slate-100">
+                  {isEditingPromptChain
+                    ? t('options.promptChainEditTitle', { name: editingPromptChain?.name ?? '' })
+                    : t('options.promptChainBuilderHeading')}
+                </h3>
+                <p className="text-xs text-slate-400">{t('options.promptChainHelper')}</p>
+              </header>
+              <form className="space-y-4" onSubmit={handleCreateOrUpdatePromptChain}>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="prompt-chain-name">
+                    {t('options.promptChainNameLabel')}
+                  </label>
+                  <input
+                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                    id="prompt-chain-name"
+                    placeholder={t('options.promptChainNamePlaceholder') ?? ''}
+                    value={promptChainName}
+                    onChange={(event) => setPromptChainName(event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-100">{t('options.promptChainAvailableHeading')}</h4>
+                      <p className="text-xs text-slate-400">{t('options.promptChainAvailableDescription')}</p>
+                    </div>
+                    {availableChainPrompts.length === 0 ? (
+                      <p className="text-sm text-slate-400">{t('options.promptChainAvailableEmpty')}</p>
+                    ) : (
+                      <ul className="space-y-2" role="list">
+                        {availableChainPrompts.map((prompt) => (
+                          <li key={prompt.id} className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-slate-100">{prompt.name}</p>
+                                <p className="text-xs text-slate-400">
+                                  {prompt.description ? truncate(prompt.description, 80) : truncate(prompt.content, 80)}
+                                </p>
+                              </div>
+                              <button
+                                className="rounded-md border border-emerald-500 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 hover:bg-emerald-500/10"
+                                onClick={() => handleAddPromptToChain(prompt.id)}
+                                type="button"
+                              >
+                                {t('options.promptChainAddButton')}
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-100">{t('options.promptChainStepsHeading')}</h4>
+                      <p className="text-xs text-slate-400">{t('options.promptChainStepsDescription')}</p>
+                    </div>
+                    {selectedChainPrompts.length === 0 ? (
+                      <p className="text-sm text-slate-400">{t('options.promptChainSelectedEmpty')}</p>
+                    ) : (
+                      <ol className="space-y-2" role="list">
+                        {selectedChainPrompts.map((prompt, index) => (
+                          <li key={prompt.id} className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  {t('options.promptChainStepLabel', { index: index + 1 })}
+                                </p>
+                                <p className="text-sm font-medium text-slate-100">{prompt.name}</p>
+                                <p className="text-xs text-slate-400">
+                                  {prompt.description ? truncate(prompt.description, 80) : truncate(prompt.content, 80)}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 flex-col gap-2">
+                                <div className="flex gap-2">
+                                  <button
+                                    className="rounded-md border border-slate-700 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={index === 0}
+                                    onClick={() => handleMovePromptInChain(prompt.id, 'up')}
+                                    type="button"
+                                  >
+                                    {t('options.promptChainMoveUp')}
+                                  </button>
+                                  <button
+                                    className="rounded-md border border-slate-700 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={index === selectedChainPrompts.length - 1}
+                                    onClick={() => handleMovePromptInChain(prompt.id, 'down')}
+                                    type="button"
+                                  >
+                                    {t('options.promptChainMoveDown')}
+                                  </button>
+                                </div>
+                                <button
+                                  className="rounded-md border border-rose-600 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-300 hover:bg-rose-600/20"
+                                  onClick={() => handleRemovePromptFromChain(prompt.id)}
+                                  type="button"
+                                >
+                                  {t('options.promptChainRemoveButton')}
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  {isEditingPromptChain ? (
+                    <button
+                      className="rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
+                      onClick={() => resetPromptChainForm()}
+                      type="button"
+                    >
+                      {t('options.cancelButton')}
+                    </button>
+                  ) : null}
+                  <button
+                    className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm"
+                    type="submit"
+                  >
+                    {isEditingPromptChain
+                      ? t('options.promptChainUpdateButton')
+                      : t('options.promptChainCreateButton')}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </section>

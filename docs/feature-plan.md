@@ -39,7 +39,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 - [ ] GPT & prompt management
   - [x] GPT folder hierarchy CRUD.
   - [x] Prompt template creation + organization.
-  - [ ] Prompt chains UI (drag-and-drop ordering).
+  - [x] Prompt chains UI (drag-and-drop ordering).
 - [ ] Bulk actions
   - [ ] Multi-select conversations with bulk archive/delete/export.
   - [ ] Bulk GPT/prompt operations.
@@ -51,7 +51,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [ ] Bulk export wizard in dashboard.
 
 **Test checklist**
-- Unit: storage/query helpers for GPTs, prompts, search index.
+- Unit: storage/query helpers for GPTs, prompts, prompt chains, search index.
 - Integration: search results respect filters (Vitest + jsdom or Playwright component test).
 - Manual: bulk select + action flows behave without regressions (check undo/back confirms).
 - Manual: exported TXT/JSON files open and content is correct.
