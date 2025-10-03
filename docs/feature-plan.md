@@ -15,18 +15,18 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 - Command: `npm run lint`.
 
 ## Milestone 1 - Conversation Capture Backbone
-- [ ] Storage layer
-  - [ ] Dexie schema covering conversations, messages, prompts, GPTs, folders, settings.
-  - [ ] Sync bridge to `chrome.storage.sync` for metadata mirroring and conflict resolution strategy.
-- [ ] Content collection
-  - [ ] DOM observer on chat.openai.com/chatgpt.com capturing message bodies (user + assistant) with metadata.
-  - [ ] Conversation normalization into storage, update counters to use stored stats.
-- [ ] Popup wiring
-  - [ ] Render recent conversations with word/char counts from state.
-  - [ ] Bookmark pin toggle persists to storage.
-- [ ] Options dashboard foundations
-  - [ ] Conversations table view (filter, sort by date).
-  - [ ] Folder tree sidebar (folders + subfolders).
+- [x] Storage layer
+  - [x] Dexie schema covering conversations, messages, prompts, GPTs, folders, settings.
+  - [x] Sync bridge to `chrome.storage.sync` for metadata mirroring and conflict resolution strategy.
+- [x] Content collection
+  - [x] DOM observer on chat.openai.com/chatgpt.com capturing message bodies (user + assistant) with metadata.
+  - [x] Conversation normalization into storage, update counters to use stored stats.
+- [x] Popup wiring
+  - [x] Render recent conversations with word/char counts from state.
+  - [x] Bookmark pin toggle persists to storage.
+- [x] Options dashboard foundations
+  - [x] Conversations table view (filter, sort by date).
+  - [x] Folder tree sidebar (folders + subfolders).
 
 **Test checklist**
 - Unit: text metric helpers, storage service (Vitest or manual Dexie smoke test).

@@ -25,6 +25,27 @@
     "comingSoon": "Detailed management views arrive in upcoming iterations.",
     "conversationHeading": "Conversation overview",
     "conversationDescription": "Latest chats captured from ChatGPT (stored locally).",
-    "conversationEmpty": "No conversations captured yet."
+    "conversationEmpty": "No conversations captured yet.",
+    "conversationFilterEmpty": "No conversations match your filters.",
+    "conversationTitle": "Title",
+    "conversationUpdated": "Updated",
+    "conversationActions": "Actions",
+    "untitledConversation": "Untitled conversation",
+    "folderHeading": "Folders",
+    "folderDescription": "Organize conversations into nested folders.",
+    "folderAll": "All conversations",
+    "folderEmpty": "No folders yet. Create one below.",
+    "folderUnfiled": "Unfiled conversation",
+    "addFolderHeading": "Add folder",
+    "folderNameLabel": "Folder name",
+    "folderNamePlaceholder": "e.g. Product research",
+    "folderParentLabel": "Parent folder",
+    "folderParentRoot": "No parent (top level)",
+    "folderCreating": "Creating...",
+    "folderCreateButton": "Create folder",
+    "folderNameError": "Folder name cannot be empty.",
+    "folderUnknownError": "Something went wrong while creating the folder.",
+    "searchLabel": "Search conversations",
+    "searchPlaceholder": "Search by title"
   }
 }
