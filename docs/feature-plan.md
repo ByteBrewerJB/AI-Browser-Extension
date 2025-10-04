@@ -30,7 +30,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 - [ ] Polish & verification
   - [ ] Saved filters/column presets for the conversation table.
   - [x] Shared empty/error state components across dashboard modules (`StateMessage` + `EmptyState`).
-  - [ ] Manual regression script documented for both chat domains.
+  - [x] Manual regression script documented for both chat domains (`docs/testing/manual-regression.md`).
   - [ ] Additional Vitest coverage for DOM ingestion edge cases (system messages, streaming edits).
 
 **Test checklist**

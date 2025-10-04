@@ -44,6 +44,9 @@ npm run test
 ```
 Runs the Node-based unit tests for the storage layer (prompt chain workflows currently).
 
+### Manual regression
+- Follow the [popup/dashboard/bookmark/counter regression script](docs/testing/manual-regression.md) on both ChatGPT domains before shipping UX changes.
+
 ## Project Structure
 - `docs/` – architecture overview and roadmap.
 - `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
@@ -57,7 +60,7 @@ Runs the Node-based unit tests for the storage layer (prompt chain workflows cur
 ## Testing Ideas
 - Extend `npm run lint` with ESLint once business logic solidifies.
 - Add unit tests for storage/search services when implemented (e.g., Vitest + React Testing Library).
-- Manual validation checklist: popup language toggle, RTL switch, content-script counter, background context menu messaging.
+- Expand the manual regression script with additional dashboard filters or audio scenarios as they land.
 
 ## Next Steps
 See `docs/architecture-roadmap.md` for the feature roadmap (audio downloads, bulk actions, sync tiers, etc.). Milestone status is tracked in `docs/feature-plan.md`.
