@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';

@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type { ActivityItem, BookmarkSummary } from '@/core/storage';
 import { toggleBookmark, togglePinned } from '@/core/storage';

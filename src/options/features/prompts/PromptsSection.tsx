@@ -1,5 +1,5 @@
 import { FormEvent, Fragment, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type { GPTRecord, PromptChainRecord, PromptRecord } from '@/core/models';
 import { EmptyState } from '@/shared/components';
