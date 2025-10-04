@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { createJobScheduler } from '../src/background/jobs/scheduler';
-import { getJobById, resetJobQueueForTests } from '../src/background/jobs/queue';
+import { getJobById, markJobRunning, resetJobQueueForTests } from '../src/background/jobs/queue';
 
 type AsyncTest = [name: string, execute: () => Promise<void>];
 
@@ -74,6 +74,43 @@ const tests: AsyncTest[] = [
       assert.equal(stored?.status, 'completed');
       assert.equal(stored?.attempts, 2);
       assert.equal(attempts, 2);
+    }
+  ],
+  [
+    'requeues running jobs when the scheduler restarts',
+    async () => {
+      await resetJobQueueForTests();
+
+      const baseTime = new Date('2024-03-03T00:00:00.000Z');
+      let currentTime = baseTime;
+
+      const scheduler = createJobScheduler({ now: () => currentTime, intervalMs: 60_000, alarms: null });
+
+      const processed: string[] = [];
+      scheduler.registerHandler('export', (job) => {
+        processed.push(job.id);
+      });
+
+      const job = await scheduler.schedule({
+        type: 'export',
+        runAt: new Date(baseTime.getTime() + 60_000),
+        payload: { scope: 'recovery' }
+      });
+
+      currentTime = new Date(baseTime.getTime() + 90_000);
+      await markJobRunning(job.id);
+
+      scheduler.start();
+
+      currentTime = new Date(baseTime.getTime() + 120_000);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const stored = await getJobById(job.id);
+      assert.equal(processed.length, 1);
+      assert.equal(stored?.status, 'completed');
+      assert.equal(stored?.attempts, 2);
+
+      scheduler.stop();
     }
   ]
 ];

@@ -86,6 +86,10 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function toIsoString(input: Date | string) {
+  return input instanceof Date ? input.toISOString() : input;
+}
+
 export interface EnqueueJobInput {
   type: string;
   payload?: Record<string, unknown>;
@@ -180,6 +184,30 @@ export async function markJobCompleted(id: string) {
     status: 'completed',
     updatedAt: timestamp
   }));
+}
+
+export async function requeueRunningJobs(reference: Date | string) {
+  const timestamp = toIsoString(reference);
+  const jobs = await jobStore.list();
+  const updated: JobRecord[] = [];
+
+  for (const job of jobs) {
+    if (job.status !== 'running') {
+      continue;
+    }
+
+    const requeued = await jobStore.update(job.id, (current) => ({
+      ...current,
+      status: 'pending',
+      runAt: timestamp,
+      updatedAt: timestamp,
+      lastRunAt: undefined
+    }));
+
+    updated.push(requeued);
+  }
+
+  return updated;
 }
 
 export async function resetJobQueueForTests() {

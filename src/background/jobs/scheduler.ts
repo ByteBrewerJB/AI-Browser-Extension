@@ -6,6 +6,7 @@ import {
   markJobCompleted,
   markJobFailed,
   markJobRunning,
+  requeueRunningJobs,
   type EnqueueJobInput,
   type MarkJobFailedOptions
 } from './queue';
@@ -168,7 +169,10 @@ export function createJobScheduler(options: JobSchedulerOptions = {}): JobSchedu
       alarmApi.onAlarm.addListener(alarmListener);
     }
 
-    void ensureNextAlarm();
+    void (async () => {
+      await requeueRunningJobs(now());
+      await ensureNextAlarm();
+    })();
   }
 
   function stop() {
