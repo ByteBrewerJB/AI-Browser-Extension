@@ -99,7 +99,7 @@ function CompanionSidebarItem(): ReactElement {
           }
         }}
       >
-        <TabList className="mb-3 flex gap-1 rounded-lg bg-white/5 p-1 text-sm text-slate-200">
+        <TabList className="mb-3 flex flex-nowrap gap-1 rounded-lg bg-white/5 p-1 text-sm text-slate-200">
           {toolbarOrder.map((key) => (
             <Tab
               key={key}
