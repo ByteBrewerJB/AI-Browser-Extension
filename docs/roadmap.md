@@ -33,7 +33,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 8 | Quality & growth | 💤 Planned | Telemetry, observability, and localization scorecards remain future work. |
 
 ### Near-term backlog (Phase 3 focus)
-- Move MiniSearch indexing into a worker or incremental task so large datasets do not block the UI on rebuild.
+- ✅ Move MiniSearch indexing into a worker-driven pipeline so large datasets do not block the UI on rebuild.
 - ✅ Promote the TXT/JSON export flow beyond manual scheduling by integrating the background handler and download APIs; downloads now trigger automatically from scheduled jobs with export status surfaced in the dashboard.
 - ✅ Flesh out job retry/backoff handling and surface status in the dashboard with exponential backoff and a jobs overview widget in the options surface.
 - ✅ Align feature toggles and placeholder cards with actual data (bookmarks/pinned/activity).
