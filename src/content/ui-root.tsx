@@ -675,16 +675,12 @@ function CompanionSidebar(): ReactElement {
 
 async function init() {
   await initializeSettingsStore();
-  if (!useSettingsStore.getState().showSidebar) {
-    return;
-  }
-
   const host = await ensureShadowHost();
   const container = mountReact(host);
   const root = createRoot(container);
   root.render(
     <StrictMode>
-      <CompanionSidebar />
+      <CompanionSidebarRoot host={host} />
     </StrictMode>
   );
 }

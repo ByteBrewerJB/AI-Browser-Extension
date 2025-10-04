@@ -32,7 +32,7 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
   const record = input as Partial<SettingsSnapshot>;
   const language = typeof record.language === 'string' ? record.language : DEFAULT_SNAPSHOT.language;
   const direction: TextDirection = record.direction === 'rtl' ? 'rtl' : 'ltr';
-  const showSidebar = false;
+  const showSidebar = typeof record.showSidebar === 'boolean' ? record.showSidebar : DEFAULT_SNAPSHOT.showSidebar;
 
   return { language, direction, showSidebar };
 }
