@@ -553,10 +553,8 @@ interface CompanionSidebarRootProps {
 }
 
 function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement | null {
-  const { hydrated, showSidebar } = useSettingsStore((state) => ({
-    hydrated: state.hydrated,
-    showSidebar: state.showSidebar
-  }));
+  const hydrated = useSettingsStore((state) => state.hydrated);
+  const showSidebar = useSettingsStore((state) => state.showSidebar);
 
   useEffect(() => {
     const shouldShow = hydrated && showSidebar;

@@ -36,10 +36,8 @@ const featureColumns = [
 
 export function Options() {
   const { t } = useTranslation();
-  const { direction, hydrated } = useSettingsStore((state) => ({
-    direction: state.direction,
-    hydrated: state.hydrated
-  }));
+  const direction = useSettingsStore((state) => state.direction);
+  const hydrated = useSettingsStore((state) => state.hydrated);
   const [isSchedulingExport, setIsSchedulingExport] = useState(false);
   const [optimisticExportAt, setOptimisticExportAt] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
