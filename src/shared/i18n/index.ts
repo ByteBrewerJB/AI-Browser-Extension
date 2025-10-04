@@ -1,5 +1,4 @@
 ﻿import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
 
 import en from './locales/en/common.json' with { type: 'json' };
 import nl from './locales/nl/common.json' with { type: 'json' };
@@ -7,7 +6,11 @@ import nl from './locales/nl/common.json' with { type: 'json' };
 let initialized = false;
 
 export async function initI18n(): Promise<typeof i18n> {
-  const targetLanguage = navigator.language?.startsWith('nl') ? 'nl' : 'en';
+  const languageCode =
+    typeof navigator !== 'undefined' && typeof navigator.language === 'string'
+      ? navigator.language
+      : 'en';
+  const targetLanguage = languageCode.startsWith('nl') ? 'nl' : 'en';
 
   if (initialized) {
     if (i18n.language !== targetLanguage) {
@@ -16,7 +19,7 @@ export async function initI18n(): Promise<typeof i18n> {
     return i18n;
   }
 
-  await i18n.use(initReactI18next).init({
+  await i18n.init({
     resources: {
       en: { translation: en },
       nl: { translation: nl }

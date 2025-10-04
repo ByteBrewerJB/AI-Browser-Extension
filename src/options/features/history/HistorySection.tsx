@@ -1,5 +1,5 @@
 import { FormEvent, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
   ConversationArchivedFilter,
