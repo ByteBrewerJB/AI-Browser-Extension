@@ -151,7 +151,12 @@ export function ensureHostPlacement(): void {
 
   const { container, target } = structure;
 
-  if (activeHost.parentElement !== target) {
+  const firstChild = target.firstElementChild;
+  if (typeof target.insertBefore === 'function') {
+    if (activeHost.parentElement !== target || firstChild !== activeHost) {
+      target.insertBefore(activeHost, firstChild ?? null);
+    }
+  } else if (activeHost.parentElement !== target) {
     target.appendChild(activeHost);
   }
 
@@ -230,7 +235,11 @@ export async function ensureShadowHost(): Promise<HTMLElement> {
   const host = document.createElement('div');
   host.id = HOST_ID;
   host.textContent = placeholder;
-  target.appendChild(host);
+  if (typeof target.insertBefore === 'function') {
+    target.insertBefore(host, target.firstElementChild ?? null);
+  } else {
+    target.appendChild(host);
+  }
   initializeSidebarWatchers(host);
   return host;
 }

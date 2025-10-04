@@ -74,16 +74,16 @@ function CompanionSidebarItem(): ReactElement {
   }, [t]);
 
   return (
-    <div className="pointer-events-auto w-full rounded-xl border border-slate-800 bg-slate-950/95 p-4 text-slate-100 shadow-xl">
-      <header className="mb-4 flex items-center justify-between">
+    <div className="pointer-events-auto w-full rounded-lg border border-white/10 bg-slate-900/70 p-3 text-slate-100 shadow-sm">
+      <header className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-400">
+          <p className="text-xs font-medium text-slate-300">
             {t('content.sidebar.title')}
           </p>
-          <h2 className="text-base font-semibold">{toolbarLabel}</h2>
+          <h2 className="mt-1 text-base font-semibold text-slate-100">{toolbarLabel}</h2>
         </div>
         <button
-          className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+          className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
           aria-label={t('content.sidebar.patternButtonAria')}
           onClick={() => setModalOpen(true)}
           type="button"
@@ -99,14 +99,18 @@ function CompanionSidebarItem(): ReactElement {
           }
         }}
       >
-        <TabList className="mb-2 flex gap-2">
+        <TabList className="mb-3 flex gap-1 rounded-lg bg-white/5 p-1 text-sm text-slate-200">
           {toolbarOrder.map((key) => (
-            <Tab key={key} value={key}>
+            <Tab
+              key={key}
+              value={key}
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 aria-selected:bg-white/10 aria-selected:text-slate-100"
+            >
               {t(`content.sidebar.tabs.${key}`)}
             </Tab>
           ))}
         </TabList>
-        <TabPanels className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-sm text-slate-200">
+        <TabPanels className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200">
           {toolbarOrder.map((key) => (
             <TabPanel key={key} value={key}>
               <p>{t(`content.sidebar.tabDescriptions.${key}`)}</p>
@@ -130,7 +134,7 @@ function CompanionSidebarItem(): ReactElement {
         </ModalBody>
         <ModalFooter>
           <button
-            className="rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
+            className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
             aria-label={t('content.sidebar.modal.closeAria')}
             onClick={() => setModalOpen(false)}
             type="button"
