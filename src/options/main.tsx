@@ -1,9 +1,10 @@
-﻿import React, { StrictMode } from 'react';
+import React, { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
+import { I18nextProvider } from 'react-i18next';
 
 import { Options } from './Options';
 import '@/styles/global.css';
-import { initI18n } from '@/shared/i18n';
+import { i18n, initI18n } from '@/shared/i18n';
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
 
 async function bootstrap() {
@@ -16,7 +17,9 @@ async function bootstrap() {
 
   ReactDOM.createRoot(rootElement).render(
     <StrictMode>
-      <Options />
+      <I18nextProvider i18n={i18n}>
+        <Options />
+      </I18nextProvider>
     </StrictMode>
   );
 }
@@ -24,5 +27,3 @@ async function bootstrap() {
 bootstrap().catch((error) => {
   console.error('[options] failed to bootstrap', error);
 });
-
-
