@@ -3,7 +3,7 @@
 Thanks for helping improve the AI ChatGPT Companion extension! This guide explains how to set up your environment, collaborate on changes, and prepare your work for review.
 
 ## Project Setup
-- Install Node.js 18+ and npm 9+.
+- Install Node.js >=20.19.0 and npm 9+.
 - Run `npm install` to install dependencies.
 - Use the Vite dev server for rapid iteration: `npm run dev`.
 - Reload the browser extension when testing content scripts to ensure the latest bundle is loaded.
