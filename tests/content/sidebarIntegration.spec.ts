@@ -24,7 +24,15 @@ function createSidebarEnvironment(language: string, ariaLabel = 'Chat history') 
   const env = setupDomEnvironment();
   const { document } = env;
 
-  (globalThis as any).navigator = { language };
+  const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { language },
+    configurable: true,
+    enumerable: true,
+    writable: true
+  });
+
   (globalThis as any).ResizeObserver = ResizeObserverMock;
   (globalThis as any).HTMLElement = (document.createElement('div') as any).constructor;
 
@@ -53,8 +61,13 @@ function createSidebarEnvironment(language: string, ariaLabel = 'Chat history') 
       resetSidebarPlacementForTests();
       env.cleanup();
       delete (globalThis as any).ResizeObserver;
-      delete (globalThis as any).navigator;
       delete (globalThis as any).HTMLElement;
+
+      if (originalNavigatorDescriptor) {
+        Object.defineProperty(globalThis, 'navigator', originalNavigatorDescriptor);
+      } else {
+        delete (globalThis as any).navigator;
+      }
     }
   };
 }
