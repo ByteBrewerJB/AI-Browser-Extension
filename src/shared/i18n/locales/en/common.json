@@ -153,5 +153,38 @@
     "promptChainRemoveButton": "Remove",
     "promptChainUpdateButton": "Update chain",
     "promptChainCreateButton": "Save chain"
+  },
+  "content": {
+    "sidebar": {
+      "title": "AI Companion",
+      "patternButton": "Patterns",
+      "patternButtonAria": "Open pattern references",
+      "toolbars": {
+        "history": "Conversation tools",
+        "prompts": "Prompt toolbox",
+        "media": "Voice controls"
+      },
+      "tabs": {
+        "history": "History",
+        "prompts": "Prompts",
+        "media": "Media"
+      },
+      "tabDescriptions": {
+        "history": "Save and pin chats directly from the conversation view. Table presets created here sync with the dashboard.",
+        "prompts": "Build prompt chains inline, attach them to GPT folders, and reuse them across popup and options surfaces.",
+        "media": "Voice overlays reuse the shared modal + overlay primitives to ensure consistent focus management and styling."
+      },
+      "modal": {
+        "title": "Shared component library",
+        "description": "Modals, tabs, and overlays are rendered within a shadow root so styles do not collide with ChatGPT.",
+        "points": [
+          "Keyboard shortcuts remain functional thanks to consistent escape handling.",
+          "All surfaces respect RTL layouts and localized labels from the shared i18n bundle.",
+          "Zustand domain stores hydrate content, popup, and options entries without prop drilling."
+        ],
+        "close": "Close",
+        "closeAria": "Close modal"
+      }
+    }
   }
 }

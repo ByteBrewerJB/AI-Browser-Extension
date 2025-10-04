@@ -153,5 +153,38 @@
     "promptChainRemoveButton": "Verwijderen",
     "promptChainUpdateButton": "Keten bijwerken",
     "promptChainCreateButton": "Keten opslaan"
+  },
+  "content": {
+    "sidebar": {
+      "title": "AI Companion",
+      "patternButton": "Patronen",
+      "patternButtonAria": "Patroonoverzicht openen",
+      "toolbars": {
+        "history": "Gesprekstools",
+        "prompts": "Prompt-toolbox",
+        "media": "Spraakbediening"
+      },
+      "tabs": {
+        "history": "Geschiedenis",
+        "prompts": "Prompts",
+        "media": "Media"
+      },
+      "tabDescriptions": {
+        "history": "Sla chats op en zet ze vast rechtstreeks vanuit de gespreksweergave. Tabelpresets die je hier maakt, worden gesynchroniseerd met het dashboard.",
+        "prompts": "Stel promptketens samen in de interface, koppel ze aan GPT-mappen en hergebruik ze in de popup- en optieschermen.",
+        "media": "Spraakoverlays hergebruiken de gedeelde modal- en overlay-primitieven voor consistente focusafhandeling en styling."
+      },
+      "modal": {
+        "title": "Gedeelde componentenbibliotheek",
+        "description": "Modals, tabbladen en overlays worden weergegeven binnen een shadow root zodat stijlen niet botsen met ChatGPT.",
+        "points": [
+          "Sneltoetsen blijven werken dankzij consistente escape-afhandeling.",
+          "Alle oppervlakken respecteren RTL-layouts en vertaalde labels uit het gedeelde i18n-pakket.",
+          "Zustand-domeinstores hydrateren content-, popup- en optieschermen zonder prop-drilling."
+        ],
+        "close": "Sluiten",
+        "closeAria": "Modal sluiten"
+      }
+    }
   }
 }
