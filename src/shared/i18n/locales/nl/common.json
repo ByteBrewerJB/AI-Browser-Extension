@@ -88,7 +88,7 @@
     "conversationEmpty": "Nog geen gesprekken vastgelegd.",
     "conversationFilteredEmpty": "Geen gesprekken komen overeen met de huidige filters.",
     "conversationFiltersHeading": "Filters & sortering",
-    "conversationFiltersDescription": "Stel map-, pin- en archiefstatus en sorteervolgorde in.",
+    "conversationFiltersDescription": "Gebruik de bubbels om map-, pin- en archiefstatus en sorteervolgorde aan te passen.",
     "filterFolderLabel": "Mapfilter",
     "filterFolderAll": "Alle mappen",
     "filterPinnedLabel": "Vastgezet",
@@ -134,7 +134,7 @@
     "columnActions": "Acties",
     "untitledConversation": "Naamloos gesprek",
     "gptFolderHeading": "GPT-mappen",
-    "gptFolderDescription": "Groepeer aangepaste GPT's per workflow of domein.",
+    "gptFolderDescription": "Gebruik de bubbels om GPT-mappen te kiezen, te verwijderen of toe te voegen. De actieve map wordt toegepast op nieuwe items.",
     "gptHeading": "Bibliotheek met aangepaste GPT's",
     "gptDescription": "Leg herbruikbare GPT-configuraties vast met beschrijving en map.",
     "gptNameLabel": "Naam",
@@ -147,7 +147,7 @@
     "gptTablePrompts": "Prompts",
     "gptEmpty": "Nog geen aangepaste GPT's.",
     "promptFolderHeading": "Promptmappen",
-    "promptFolderDescription": "Organiseer sjablonen per team of project.",
+    "promptFolderDescription": "Kies via de bubbels waar prompts terechtkomen en beheer hier nieuwe of verwijderde mappen.",
     "promptHeading": "Promptsjablonen",
     "promptDescription": "Schrijf en bewaar herbruikbare promptsnippers. Koppel ze aan GPT's voor snelle workflows.",
     "promptNameLabel": "Titel",
@@ -192,7 +192,13 @@
     "sidebarToggleLabel": "Zijbalkweergave",
     "sidebarToggleHelp": "Schakel de zwevende zijbalk in de ChatGPT-interface in of uit.",
     "sidebarToggleOn": "Ingeschakeld",
-    "sidebarToggleOff": "Uitgeschakeld"
+    "sidebarToggleOff": "Uitgeschakeld",
+    "gptFolderActiveLabel": "Actieve map: {{name}}",
+    "promptFolderActiveLabel": "Actieve map: {{name}}",
+    "promptGptActiveLabel": "Gekoppelde GPT: {{name}}",
+    "promptFormHeading": "Promptsjabloon maken",
+    "promptFormDescription": "Je map, GPT-koppeling en ketens volgen de bubbelselecties hierboven.",
+    "promptChainBubbleHelper": "Selecteer een bestaande keten om te bewerken of tik op + om een nieuwe reeks te starten."
   },
   "content": {
     "sidebar": {

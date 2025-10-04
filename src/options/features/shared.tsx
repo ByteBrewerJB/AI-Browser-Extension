@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ButtonHTMLAttributes, ReactElement, ReactNode } from 'react';
 
 import type { FolderTreeNode } from '@/core/storage';
 
@@ -15,42 +15,68 @@ export function flattenFolderOptions(nodes: FolderTreeNode[], depth = 0): Folder
   ]);
 }
 
-interface FolderTreeListProps {
-  nodes: FolderTreeNode[];
-  deleteLabel: string;
-  onDelete: (folderId: string) => Promise<void> | void;
+export interface OptionBubbleProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'children'> {
+  children: ReactNode;
+  selected?: boolean;
+  onRemove?: () => Promise<void> | void;
+  removeLabel?: string;
 }
 
-export function FolderTreeList({ nodes, deleteLabel, onDelete }: FolderTreeListProps): ReactElement | null {
-  if (nodes.length === 0) {
-    return null;
-  }
+export function OptionBubble({
+  children,
+  selected = false,
+  onRemove,
+  removeLabel,
+  className = '',
+  disabled,
+  ...rest
+}: OptionBubbleProps): ReactElement {
+  const baseClasses =
+    'rounded-full border border-slate-700 px-4 py-2 text-sm font-medium transition inline-flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400';
+  const stateClasses = selected
+    ? 'border-emerald-400 bg-emerald-500/10 text-emerald-100 shadow-sm'
+    : 'bg-slate-900/60 text-slate-200 hover:border-emerald-400 hover:text-emerald-100';
 
   return (
-    <ul className="space-y-1" role="group">
-      {nodes.map((node) => (
-        <li key={node.id} className="space-y-1" role="treeitem" aria-expanded={node.children.length > 0}>
-          <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-100">
-            <span className="truncate" title={node.name}>
-              {node.name}
-            </span>
-            <button
-              className="text-xs font-medium text-emerald-300 hover:text-emerald-200"
-              onClick={() => void onDelete(node.id)}
-              type="button"
-            >
-              {deleteLabel}
-            </button>
-          </div>
-          {node.children.length > 0 ? (
-            <div className="ml-4 border-l border-slate-800 pl-3" role="group">
-              <FolderTreeList nodes={node.children} deleteLabel={deleteLabel} onDelete={onDelete} />
-            </div>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <span className="relative inline-flex items-center">
+      <button
+        {...rest}
+        type="button"
+        aria-pressed={selected}
+        className={`${baseClasses} ${stateClasses} ${className}`.trim()}
+        disabled={disabled}
+      >
+        <span className="truncate">{children}</span>
+      </button>
+      {onRemove ? (
+        <button
+          type="button"
+          aria-label={removeLabel ?? 'Remove'}
+          className="absolute -top-2 -right-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-slate-900 text-xs font-bold text-rose-200 shadow-sm transition hover:bg-rose-500/20"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          ×
+        </button>
+      ) : null}
+    </span>
   );
+}
+
+export interface OptionBubbleListItem extends Omit<OptionBubbleProps, 'children'> {
+  id: string;
+  label: ReactNode;
+}
+
+export function renderOptionBubbleList(items: OptionBubbleListItem[]): ReactElement[] {
+  return items.map(({ id, label, ...props }) => (
+    <OptionBubble key={id} {...props}>
+      {label}
+    </OptionBubble>
+  ));
 }
 
 export function formatNumber(value: number) {
