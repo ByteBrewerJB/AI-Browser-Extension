@@ -1,6 +1,6 @@
-﻿# AI ChatGPT Companion Extension
+# AI ChatGPT Companion Extension
 
-A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats, custom GPTs, and prompt templates. Audio tooling and deeper productivity workflows are planned in upcoming milestones.
+A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats, custom GPTs, and prompt templates. Het primaire in-context entrypoint is een bubbledock rechts in het ChatGPT-venster dat slimme overlays voor prompts, bookmarks en dashboardacties opent. Audio tooling en diepere productiviteitsworkflows staan voor komende milestones gepland.
 
 ## Prerequisites
 - Node.js 20.19 or newer
@@ -20,6 +20,15 @@ npm run dev
 2. Enable **Developer mode**.
 3. Choose **Load unpacked** and select `dist` once Vite finishes the first build.
 4. Keep the dev server running for hot-reload of popup/options. Re-load the extension page after manifest changes.
+
+## Documentatie & planning
+
+- `retrofit.md` – leidend retrofitplan met status per featuregroep en logboek voor voortgang (bijwerken na elke feature-drop).
+- `docs/roadmap.md` – high-level architectuursnapshot en faseplanning; houd de statuskolom synchroon met het retrofitplan.
+- `docs/testing/manual-regression.md` – regressiescript voor popup, dashboard, content-script en storage flows; noteer resultaten in het logboek van `retrofit.md`.
+- `docs/decisions/` – architectuur- en productbesluiten (ADR-formaat). Leg belangrijke keuzes hier vast.
+- `docs/testing/` – aanvullende QA-scripts of testhulpjes.
+
 
 ### Known dev-console warnings
 
@@ -43,13 +52,13 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 npm run test
 ```
 Runs the Node-based test harness (prompt chain storage and the content-script ingestion suite). The command uses the custom
-loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks required by the Vitest-style specs.
+loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks required by the Vitest-style specs. Zorg dat `npm run lint` en `npm run build` eveneens slagen voordat je een PR of release voorbereidt.
 
 ### Manual regression
-- Follow the [popup/dashboard/bookmark/counter regression script](docs/testing/manual-regression.md) on both ChatGPT domains before shipping UX changes.
+- Follow the [popup/dashboard/bookmark/counter regression script](docs/testing/manual-regression.md) on both ChatGPT domains before shipping UX changes. Log het resultaat, de gebruikte browser en de commit in het logboek van [`retrofit.md`](retrofit.md).
 
 ## Project Structure
-- `docs/` – consolidated architecture & delivery roadmap plus decisions and QA guides.
+- `docs/` – documentatiehub (retrofitplan, roadmap, beslissingen, QA).
 - `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
 - `src/content` – DOM integrations on chat.openai.com/chatgpt.com for conversation capture and live metrics.
 - `src/core` – Dexie storage, models, and sync bridge helpers shared across surfaces.
@@ -64,5 +73,5 @@ loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks
 - Expand the manual regression script with additional dashboard filters or audio scenarios as they land.
 
 ## Next Steps
-See `docs/roadmap.md` for the architecture snapshot, delivery status, and premium planning.
+Zie `retrofit.md` voor het actuele retrofitwerk en `docs/roadmap.md` voor de architectuursnapshot en premiumplanning.
 

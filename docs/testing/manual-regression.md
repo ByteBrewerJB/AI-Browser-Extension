@@ -2,6 +2,8 @@
 
 Use this checklist when shipping changes that affect the popup, dashboard/options page, content script counter, or storage flows. Run the pass on both supported ChatGPT domains so we maintain parity.
 
+> Noteer per run de browser, domein en commit in het logboek in [`retrofit.md`](../../retrofit.md) zodat QA-resultaten traceerbaar blijven.
+
 ## Test data & setup
 
 1. **Browser profile**
@@ -62,5 +64,9 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 4. After sending the message, open the popup and verify the new conversation appears with updated totals once the assistant response finishes streaming.
 
 ## Completion
+
+1. Registreer de testdatum, browser- en extensieversies in het logboek van [`retrofit.md`](../../retrofit.md).
+2. Koppel eventuele regressies aan een issue of ADR en link het referentienummer in het logboek.
+3. Upload consolelogs of screenshots naar de gedeelde QA-map (indien beschikbaar) en verwijs ernaar vanuit het logboek.
 
 Record the browser version, extension commit SHA, and any deviations or bugs found. Attach console logs or screenshots for regressions and update the shared QA log (if maintained) with pass/fail notes per surface.
