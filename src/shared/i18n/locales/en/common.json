@@ -260,6 +260,12 @@
       "updatedAt": "Updated {{time}}",
       "folderLabel": "Folder: {{name}}",
       "closeAria": "Close prompt launcher"
+    },
+    "dock": {
+      "prompts": "Prompts",
+      "promptsAria": "Toggle prompts dock",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Open dashboard"
     }
   }
 }

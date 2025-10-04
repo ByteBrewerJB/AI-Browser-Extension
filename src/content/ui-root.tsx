@@ -658,16 +658,20 @@ function CompanionSidebar(): ReactElement {
   );
 }
 
-function init() {
-  ensureShadowHost().then((host) => {
-    const container = mountReact(host);
-    const root = createRoot(container);
-    root.render(
-      <StrictMode>
-        <CompanionSidebar />
-      </StrictMode>
-    );
-  });
+async function init() {
+  await initializeSettingsStore();
+  if (!useSettingsStore.getState().showSidebar) {
+    return;
+  }
+
+  const host = await ensureShadowHost();
+  const container = mountReact(host);
+  const root = createRoot(container);
+  root.render(
+    <StrictMode>
+      <CompanionSidebar />
+    </StrictMode>
+  );
 }
 
 if (document.readyState === 'loading') {

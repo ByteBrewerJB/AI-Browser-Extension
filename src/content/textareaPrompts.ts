@@ -1,4 +1,4 @@
-﻿import { liveQuery } from 'dexie';
+import { liveQuery } from 'dexie';
 import type { FolderRecord, PromptRecord } from '@/core/models';
 import { db } from '@/core/storage/db';
 import { initI18n } from '@/shared/i18n';
@@ -24,6 +24,9 @@ const state: LauncherState = {
 let container: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
 let toggleButton: HTMLButtonElement | null = null;
+let toggleButtonLabel: HTMLSpanElement | null = null;
+let dashboardButton: HTMLButtonElement | null = null;
+let dashboardButtonLabel: HTMLSpanElement | null = null;
 let closeButton: HTMLButtonElement | null = null;
 let panel: HTMLDivElement | null = null;
 let searchInput: HTMLInputElement | null = null;
@@ -58,30 +61,55 @@ button {
   color: #f8fafc;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
-.toggle {
+.bubble-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.bubble {
   border: 1px solid rgba(148, 163, 184, 0.45);
   background: rgba(15, 23, 42, 0.9);
   color: #f8fafc;
   border-radius: 999px;
-  padding: 6px 14px;
+  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
 }
-.toggle:hover,
-.toggle:focus-visible {
+.bubble span {
+  padding: 0 14px;
+}
+.bubble:hover,
+.bubble:focus-visible {
   background: rgba(16, 185, 129, 0.2);
   border-color: rgba(16, 185, 129, 0.65);
   color: #34d399;
   outline: none;
 }
-.toggle[data-open="true"] {
+.bubble[data-open="true"] {
   background: rgba(16, 185, 129, 0.22);
   border-color: rgba(16, 185, 129, 0.75);
   color: #34d399;
+}
+.bubble-secondary {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #e2e8f0;
+}
+.bubble-secondary:hover,
+.bubble-secondary:focus-visible {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.55);
+  color: #f8fafc;
 }
 .panel {
   width: 300px;
@@ -301,15 +329,31 @@ function ensureContainer() {
   wrapper.className = 'launcher';
   shadowRoot.appendChild(wrapper);
 
+  const dock = document.createElement('div');
+  dock.className = 'bubble-dock';
+  wrapper.appendChild(dock);
+
   toggleButton = document.createElement('button');
   toggleButton.type = 'button';
-  toggleButton.className = 'toggle';
+  toggleButton.className = 'bubble';
   toggleButton.setAttribute('aria-haspopup', 'dialog');
   toggleButton.setAttribute('aria-expanded', 'false');
   toggleButton.addEventListener('click', () => {
     setOpen(!state.open);
   });
-  wrapper.appendChild(toggleButton);
+  toggleButtonLabel = document.createElement('span');
+  toggleButton.appendChild(toggleButtonLabel);
+  dock.appendChild(toggleButton);
+
+  dashboardButton = document.createElement('button');
+  dashboardButton.type = 'button';
+  dashboardButton.className = 'bubble bubble-secondary';
+  dashboardButton.addEventListener('click', () => {
+    openDashboard();
+  });
+  dashboardButtonLabel = document.createElement('span');
+  dashboardButton.appendChild(dashboardButtonLabel);
+  dock.appendChild(dashboardButton);
 
   panel = document.createElement('div');
   panel.className = 'panel';
@@ -369,15 +413,24 @@ function ensureContainer() {
 }
 
 function applyTranslations() {
-  if (!toggleButton || !searchInput || !titleEl || !emptyTitleEl || !emptySubtitleEl || !closeButton) {
+  if (!toggleButton || !toggleButtonLabel || !dashboardButton || !dashboardButtonLabel || !searchInput || !titleEl || !emptyTitleEl || !emptySubtitleEl || !closeButton) {
     return;
   }
 
-  const toggleLabel = translate('content.promptLauncher.toggleLabel', 'Prompts');
-  toggleButton.textContent = toggleLabel;
+  const promptsLabel = translate('content.dock.prompts', 'Prompts');
+  toggleButtonLabel.textContent = promptsLabel;
   toggleButton.setAttribute('data-open', state.open ? 'true' : 'false');
-  toggleButton.setAttribute('aria-label', translate('content.promptLauncher.toggleAria', 'Toggle prompt menu'));
-  toggleButton.title = toggleLabel;
+  toggleButton.setAttribute('aria-expanded', state.open ? 'true' : 'false');
+  toggleButton.setAttribute('aria-label', translate('content.dock.promptsAria', 'Toggle prompts dock'));
+  toggleButton.setAttribute('title', promptsLabel);
+
+  const dashboardLabel = translate('content.dock.dashboard', 'Dashboard');
+  dashboardButtonLabel.textContent = dashboardLabel;
+  dashboardButton.setAttribute('title', dashboardLabel);
+  dashboardButton.setAttribute(
+    'aria-label',
+    translate('content.dock.dashboardAria', 'Open dashboard')
+  );
 
   titleEl.textContent = translate('content.promptLauncher.title', 'Saved prompts');
   closeButton.setAttribute(
@@ -477,6 +530,30 @@ function renderPromptList() {
   const limited = filtered.slice(0, MAX_PROMPTS);
   const items = limited.map((prompt) => createPromptListItem(prompt));
   promptList.append(...items);
+}
+
+function openDashboard() {
+  if (chrome.runtime?.openOptionsPage) {
+    chrome.runtime.openOptionsPage(() => {
+      const lastError = chrome.runtime?.lastError;
+      if (lastError) {
+        console.error('[ai-companion] failed to open options page', lastError);
+        const fallbackUrl = chrome.runtime?.getURL?.('options.html');
+        if (fallbackUrl) {
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
+    });
+    return;
+  }
+
+  const url = chrome.runtime?.getURL?.('options.html');
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  window.open('/options.html', '_blank', 'noopener,noreferrer');
 }
 
 function matchesPrompt(prompt: PromptRecord, term: string) {
@@ -726,6 +803,7 @@ export async function mountPromptLauncher(): Promise<void> {
   document.addEventListener('keydown', handleKeyDown, true);
   window.addEventListener('pagehide', handlePageHide, { once: true });
 }
+
 
 
 

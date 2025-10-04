@@ -90,18 +90,14 @@ export function Popup() {
   const {
     language,
     direction,
-    showSidebar,
     setLanguage: setStoreLanguage,
     toggleDirection,
-    setShowSidebar,
     hydrated
   } = useSettingsStore((state) => ({
     language: state.language,
     direction: state.direction,
-    showSidebar: state.showSidebar,
     setLanguage: state.setLanguage,
     toggleDirection: state.toggleDirection,
-    setShowSidebar: state.setShowSidebar,
     hydrated: state.hydrated
   }));
   const conversations = useRecentConversations(5);
@@ -165,13 +161,6 @@ export function Popup() {
     t('popup.noActivity') ||
     'Recent conversation edits, bookmarks, and exports will show up here.';
 
-  const sidebarToggleLabel = showSidebar
-    ? t('popup.sidebarToggleOn') || 'Enabled'
-    : t('popup.sidebarToggleOff') || 'Disabled';
-  const sidebarToggleClasses = showSidebar
-    ? 'rounded-md border border-emerald-500 bg-emerald-500/20 px-2 py-1 text-sm font-medium text-emerald-100'
-    : 'rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm font-medium text-slate-200';
-
   if (!hydrated) {
     return (
       <div className="w-96 p-4 text-sm text-slate-300" dir={direction}>
@@ -224,18 +213,6 @@ export function Popup() {
             {direction.toUpperCase()}
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-200">{t('popup.sidebarToggleLabel') ?? 'Chat sidebar'}</span>
-          <button
-            aria-pressed={showSidebar}
-            className={sidebarToggleClasses}
-            onClick={() => setShowSidebar(!showSidebar)}
-            type="button"
-          >
-            {sidebarToggleLabel}
-          </button>
-        </div>
-
       </section>
 
       <section className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/50 p-3">

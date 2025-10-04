@@ -260,6 +260,12 @@
       "updatedAt": "Bijgewerkt {{time}}",
       "folderLabel": "Map: {{name}}",
       "closeAria": "Promptmenu sluiten"
+    },
+    "dock": {
+      "prompts": "Prompts",
+      "promptsAria": "Promptmenu openen of sluiten",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Dashboard openen"
     }
   }
 }

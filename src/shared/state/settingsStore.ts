@@ -21,7 +21,7 @@ const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   language: 'en',
   direction: 'ltr',
-  showSidebar: true
+  showSidebar: false
 };
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
@@ -32,7 +32,7 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
   const record = input as Partial<SettingsSnapshot>;
   const language = typeof record.language === 'string' ? record.language : DEFAULT_SNAPSHOT.language;
   const direction: TextDirection = record.direction === 'rtl' ? 'rtl' : 'ltr';
-  const showSidebar = typeof record.showSidebar === 'boolean' ? record.showSidebar : DEFAULT_SNAPSHOT.showSidebar;
+  const showSidebar = false;
 
   return { language, direction, showSidebar };
 }

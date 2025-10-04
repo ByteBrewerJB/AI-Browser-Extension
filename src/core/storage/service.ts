@@ -272,7 +272,12 @@ export class StorageService {
   private async loadOrCreateKey(): Promise<CryptoKey> {
     const stored = await this.readLocal<string>(ENCRYPTION_KEY_STORAGE_KEY);
     if (stored) {
-      return this.importKey(base64ToArrayBuffer(stored));
+      try {
+        return this.importKey(base64ToArrayBuffer(stored));
+      } catch (error) {
+        console.warn('[storageService] failed to decode stored encryption key. Regenerating.', error);
+        await storageRemove('local', ENCRYPTION_KEY_STORAGE_KEY, this.localFallback);
+      }
     }
 
     const crypto = getCrypto();

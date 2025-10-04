@@ -4,6 +4,7 @@
 - De map `example/jlalnhjkfiogoeonamcnngdndjbneina/4.0.9_0` bevat uitsluitend mappenamen (zoals `scripts/chatMenu`, `scripts/pinnedChats`, `html/promptLibrary`). Ze geven de gewenste surfaces en workflows weer, maar bevatten geen bronbestanden.
 - In deze sessie is `src/content/textareaPrompts.ts` toegevoegd en aangesloten vanuit `src/content/index.ts`. Hiermee bestaat nu een floating promptlauncher die opgeslagen prompts in de ChatGPT-composer kan invoegen.
 - De content-zijbalk (`src/content/ui-root.tsx`) toont nu vastgezette gesprekken, recente updates, bladwijzers en een snelle promptlijst binnen dezelfde shadow-root. Verdere toggles en voorkeuren staan hieronder in de checklist.
+- Rechts onderin staat nu een bubble dock met snelkoppelingen (prompts, dashboard).
 - Popup en Options tonen nu een schakelaar om de ChatGPT-zijbalk te activeren of verbergen (gesynchroniseerd via de gedeelde store).
 - Onderstaande acties beschrijven hoe de overige "scripts" en "html" mappen uit het voorbeeld vertaald kunnen worden naar onze huidige architectuur (Dexie + Zustand + React voor popup/options + vanilla overlay in content).
 
@@ -13,8 +14,8 @@
 - [x] **Shadow-root container:** gerealiseerd via `src/content/sidebar-host.ts` + `src/content/ui-root.tsx`; React surface mounted in ChatGPT-zijbalk.
 - [x] **Zustand bridge:** `src/shared/state/settingsStore.ts` hydrateert nu `showSidebar` via `chrome.storage` en synchroniseert popup/options/content.
 - [x] **Datalaag:** huidige sidebar gebruikt `usePinnedConversations`, `useRecentConversations`, `useRecentBookmarks`, `usePrompts` voor basispanelen.
-- [ ] **Collapse functionaliteit:** lokale Zustand store (`useSidebarStore`) met persistente voorkeuren (`storageService.writeLocal` voor `sidebar:sections`).
-- [ ] **Toetscombinaties en focus:** sneltoets (bijv. `Alt+Shift+K`) om sidebar te toggelen + focus restore/escape-handling.
+- [x] **Collapse functionaliteit:** collapsible secties via `useSidebarStore` met persistente `chrome.storage.local` snapshot (`sidebarStore.ts`).
+- [x] **Toetscombinaties en focus:** `Alt+Shift+K` toggelt de zijbalk, `Escape` sluit de overlay en focus wordt teruggezet naar de vorige context.
 
 ### 2. Pinnen, verplaatsen en bulkacties (`scripts/manageChats`, `scripts/moveChat`, `scripts/pinnedChats`, `scripts/pinnedFolders`)
 1. **Pinned surface:** breid de nieuwe zijbalk uit met een sectie die `togglePinned` en `archiveConversations` gebruikt als inline acties. Toon twee kolommen: vastgezette gesprekken en snelkoppelingen naar mapstructuur (`useFolderTree('conversation')`).

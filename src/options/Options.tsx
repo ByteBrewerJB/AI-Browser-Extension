@@ -37,10 +37,8 @@ const featureColumns = [
 
 export function Options() {
   const { t } = useTranslation();
-  const { direction, showSidebar, setShowSidebar, hydrated } = useSettingsStore((state) => ({
+  const { direction, hydrated } = useSettingsStore((state) => ({
     direction: state.direction,
-    showSidebar: state.showSidebar,
-    setShowSidebar: state.setShowSidebar,
     hydrated: state.hydrated
   }));
   const [isSchedulingExport, setIsSchedulingExport] = useState(false);
@@ -203,27 +201,6 @@ export function Options() {
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10">
-        <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-          <header className="mb-2 space-y-1">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{t('options.sidebarHeading')}</h2>
-            <p className="text-xs text-slate-400">{t('options.sidebarDescription')}</p>
-          </header>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-slate-200">{t('options.sidebarToggleLabel')}</p>
-              <p className="text-xs text-slate-400">{t('options.sidebarToggleHelp')}</p>
-            </div>
-            <button
-              aria-pressed={showSidebar}
-              className={sidebarToggleClasses}
-              disabled={!hydrated}
-              onClick={() => setShowSidebar(!showSidebar)}
-              type="button"
-            >
-              {sidebarToggleLabel}
-            </button>
-          </div>
-        </section>
         <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
           <header className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
             <div>
