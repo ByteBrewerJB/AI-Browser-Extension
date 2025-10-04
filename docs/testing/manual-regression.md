@@ -1,68 +1,66 @@
 # Manual Regression Guide
 
-This checklist defines the shared scenarios contributors should execute before shipping updates that affect the popup, dashboard, bookmarks, or the live counter. Follow the steps on both supported ChatGPT domains so we keep feature parity intact.
+Use this checklist when shipping changes that affect the popup, dashboard/options page, content script counter, or storage flows. Run the pass on both supported ChatGPT domains so we maintain parity.
 
-## Test Data & Setup
+## Test data & setup
 
 1. **Browser profile**
-   - Use a Chromium-based browser with the extension loaded unpacked.
-   - Clear previous extension storage (chrome://extensions > inspect views > Application tab > Clear storage) to ensure a clean baseline unless you are running differential tests.
+   - Load the extension unpacked in a Chromium-based browser.
+   - Clear existing extension storage (chrome://extensions → Inspect views → Application tab → Clear storage) unless you are validating migrations.
 2. **ChatGPT account**
-   - Sign in to the same ChatGPT account on both `https://chat.openai.com` and `https://chatgpt.com`.
-   - Set the UI language to English to match localized copy in this guide; record deviations if testing other locales.
+   - Sign in to the same ChatGPT account on `https://chat.openai.com` and `https://chatgpt.com`.
+   - Keep the UI language on English for baseline copy unless you are explicitly testing localization.
 3. **Seed conversations**
-   - Create three fresh conversations on each domain with the following prompts to exercise word/character counting and bookmarks:
+   - Create three fresh conversations on each domain with the prompts below so totals are easy to verify:
      1. `Write a short haiku about morning coffee.`
      2. `Summarize the advantages of using Dexie.js with IndexedDB in bullet points.`
      3. `Generate a numbered list of five productivity tips for remote teams.`
-   - Wait for assistant responses to finish streaming before moving to the next test.
-4. **Bookmark state**
-   - From the popup, bookmark the second conversation only. Confirm the bookmark propagates to the dashboard after refreshing it once.
-5. **Dashboard filters (if applicable)**
-   - Ensure the dashboard is displaying conversations for “All folders” and reset any saved filters prior to testing.
+   - Let each assistant response finish streaming before creating the next conversation.
+4. **Initial bookmark/pin state**
+   - Open the popup once the responses load.
+   - Pin the first conversation and bookmark the second using the card actions. Confirm the buttons immediately flip to “Unpin” / “Unbookmark”.
 
-Keep the seeded conversations intact for the duration of the regression pass. If you must rerun the checklist, delete the conversations from the dashboard and recreate them following the same prompts so metrics remain comparable across contributors.
+## Popup regression
 
-## Popup Regression
+Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 
-Perform these steps on `chat.openai.com` first, then repeat on `chatgpt.com`.
+1. Confirm the extension icon is active when a chat tab is open.
+2. Open the popup and verify:
+   - The “Recent conversations” list shows all three seeded chats with accurate titles and updated timestamps.
+   - Word, message, and character totals match the dashboard numbers for the active chat (use the haiku as a quick spot-check).
+   - The language dropdown switches between English and Dutch without layout issues and the RTL toggle flips the interface direction.
+   - Pin and bookmark buttons on each card toggle state and counts without requiring a refresh.
+3. Use “Open conversation” on the pinned chat and confirm a new tab targets the correct conversation id.
+4. Scroll to the placeholder sections at the bottom of the popup and ensure they still show the “arrive soon” copy for bookmarks, pinned chats, and recent activity (regressions here can break expectations for upcoming features).
 
-1. Open a new ChatGPT tab and confirm the extension icon is active (not grayed out).
-2. Launch the popup:
-   - Verify recent conversations list shows the three seeded chats with correct titles and timestamps.
-   - Confirm the live word and character totals match the assistant responses for the currently open chat (use the haiku as the baseline; totals should equal the haiku word/character counts shown in the dashboard).
-3. Toggle the language dropdown to Dutch and back to English; ensure UI labels and RTL toggle respond without layout regressions.
-4. Flip the RTL switch twice, confirming layout responds and resets when switched back.
-5. Check the bookmarks tab lists only the bookmarked conversation. Unbookmark and re-bookmark it to confirm the count updates immediately.
-6. Click the bookmarked conversation to open it in the current tab; ensure navigation succeeds and the popup reflects the active conversation after reload.
+## Dashboard / options regression
 
-## Dashboard Regression
+1. Open the dashboard via the extension context menu or by navigating to `chrome-extension://<id>/options.html`.
+2. In the “Scheduled exports” card:
+   - Click “Schedule export in 5 min” and confirm the card reports the planned run time without errors.
+   - Reload the page and note that the timestamp clears (current implementation keeps this state in memory only). Log regressions if the behaviour changes.
+3. In the conversation section:
+   - Verify the folder tree renders and the active conversations appear in the table with correct message/word/character counts.
+   - Toggle the pinned filter to “Pinned only” and ensure only the pinned conversation remains. Switch back to “All”.
+   - Change the sort order (e.g., sort by “Title” ascending) and confirm rows reorder immediately.
+4. Save a table preset, reload the page, and apply the preset to confirm it restores filters/sorts.
+5. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
 
-1. Open the dashboard/options page via the extension’s context menu or `chrome-extension://<id>/options.html`.
-2. Confirm the conversations table lists the three seeded chats with accurate word/character totals.
-3. Verify the bookmark column matches the popup bookmark state.
-4. Filter by “Bookmarked” and confirm only the bookmarked conversation remains.
-5. Clear filters and expand the folder tree in the sidebar to ensure the hierarchy renders and no console errors appear.
-6. Refresh the page and confirm state persists (table data reloads, bookmark status retained).
-7. Switch language to Dutch via the UI (if available) and verify localization applies consistently across table headers and empty states.
+## Bookmark & pin workflow
 
-## Bookmarks Workflow
+1. From the popup, unbookmark the second conversation and verify the action button reverts to “Bookmark”. Close and reopen the popup to confirm the state persists.
+2. Reapply the bookmark in the popup and ensure reopening the popup shows the button as “Unbookmark” again.
+3. Unpin the first conversation in the dashboard table (via row actions) and confirm the popup no longer labels it as pinned after reopening.
 
-1. In the dashboard, unbookmark the second conversation.
-2. Switch back to the popup and verify the bookmark badge disappears from the bookmarks tab.
-3. Reapply the bookmark from the popup, then refresh the dashboard and ensure the bookmark column updates.
-4. Confirm the bookmarked conversation appears at the top of the popup’s bookmarks tab (or follows documented sorting rules).
+## Live counter regression
 
-## Live Counter Regression
-
-1. On `chat.openai.com`, open a new conversation and begin typing the prompt `Draft a release note for a minor documentation update.`
-2. Observe the live counter overlay in the composer:
-   - Word and character counts should update as you type.
-   - Delete text to verify counts decrease accordingly.
-3. Send the message and ensure the counter resets for a fresh input.
-4. Repeat the typing exercise on `chatgpt.com` to confirm parity.
-5. Return to the popup and ensure the new conversation appears with updated totals once the assistant response streams in.
+1. On `chat.openai.com`, start a new conversation and type `Draft a release note for a minor documentation update.` into the composer.
+2. Observe the floating counter:
+   - Word and character counts update while typing and decrease when deleting.
+   - Sending the message resets the counter for the next draft.
+3. Repeat the typing exercise on `chatgpt.com` to confirm parity.
+4. After sending the message, open the popup and verify the new conversation appears with updated totals once the assistant response finishes streaming.
 
 ## Completion
 
-Record the date, browser version, extension commit SHA, and any deviations or bugs encountered. Attach console logs or screenshots for regressions. Update the shared QA log (if maintained separately) with pass/fail status per surface.
+Record the browser version, extension commit SHA, and any deviations or bugs found. Attach console logs or screenshots for regressions and update the shared QA log (if maintained) with pass/fail notes per surface.
