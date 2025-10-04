@@ -180,3 +180,9 @@ export async function removeFromIndex(ids: string[]) {
 
   await persistIndex();
 }
+
+export function resetSearchServiceForTests() {
+  miniSearch = createMiniSearch();
+  indexReady = false;
+  buildPromise = null;
+}

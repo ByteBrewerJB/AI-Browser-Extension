@@ -14,6 +14,7 @@ type WhereResult<T extends RecordWithId> = {
   count(): Promise<number>;
   toArray(): Promise<T[]>;
   delete(): Promise<void>;
+  primaryKeys(): Promise<string[]>;
 };
 
 type WhereQuery<T extends RecordWithId> = {
@@ -61,6 +62,9 @@ function createWhereResult<T extends RecordWithId>(
       for (const item of items) {
         table.deleteSync(item.id);
       }
+    },
+    async primaryKeys() {
+      return items.map((item) => item.id);
     }
   };
 }
