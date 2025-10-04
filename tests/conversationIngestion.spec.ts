@@ -5,6 +5,7 @@ import { computeTextMetrics, sumTextMetrics } from '@/core/utils/textMetrics';
 import type { MessageRecord } from '@/core/models';
 import { db, resetDatabase } from '@/core/storage/db';
 import type { SyncSnapshot } from '@/core/storage/syncBridge';
+import { storageService } from '@/core/storage/service';
 
 interface ChromeStorageChange {
   oldValue?: unknown;
@@ -153,13 +154,17 @@ async function prepareConversation(id: string, title: string) {
   return document;
 }
 
-function getSnapshot(): SyncSnapshot | undefined {
-  const key = 'ai-companion:snapshot:v1';
+async function getSnapshot(): Promise<SyncSnapshot | undefined> {
+  const key = 'ai-companion:snapshot:v2';
   const storage = (globalThis as any).__chromeStorageState as Record<string, unknown> | undefined;
-  if (!storage) {
+  if (!storage || !storage[key]) {
     return undefined;
   }
-  return storage[key] as SyncSnapshot | undefined;
+  return storageService.decodeEnvelope(storage[key], key, {
+    fallback: undefined,
+    expectedVersion: 2,
+    upgrade: (payload) => payload as SyncSnapshot
+  });
 }
 
 const tests: AsyncTest[] = [
@@ -194,7 +199,7 @@ const tests: AsyncTest[] = [
       const messageCount = await db.messages.where('conversationId').equals('system-test').count();
       assert.equal(messageCount, 3);
 
-      const snapshot = getSnapshot();
+      const snapshot = await getSnapshot();
       assert.ok(snapshot, 'sync snapshot should exist');
       const storedConversation = snapshot!.conversations['system-test'];
       assert.equal(storedConversation.wordCount, totals.wordCount);

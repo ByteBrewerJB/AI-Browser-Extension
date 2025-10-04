@@ -1,4 +1,4 @@
-﻿import Dexie, { Table } from 'dexie';
+import Dexie, { Table } from 'dexie';
 import type {
   BookmarkRecord,
   ConversationRecord,
@@ -10,6 +10,36 @@ import type {
   PromptRecord,
   SettingsRecord
 } from '@/core/models';
+
+export interface MetadataRecord<T = unknown> {
+  key: string;
+  value: T;
+  updatedAt: string;
+}
+
+export interface EncryptionMetadataValue {
+  /**
+   * Highest Dexie schema version that has been migrated with encryption aware logic.
+   */
+  schemaVersion: number;
+  /**
+   * Version of the encryption format currently applied to IndexedDB rows.
+   */
+  dataVersion: number;
+  /**
+   * Timestamp of the last completed encryption sweep across tables.
+   */
+  lastMigrationAt?: string;
+  /**
+   * Flag indicating whether plaintext rows still need to be upgraded.
+   */
+  pending: boolean;
+}
+
+export type EncryptionMetadataRecord = MetadataRecord<EncryptionMetadataValue>;
+
+export const ENCRYPTION_DATA_VERSION = 1;
+export const ENCRYPTION_METADATA_KEY = 'encryption';
 
 export class CompanionDatabase extends Dexie {
   conversations!: Table<ConversationRecord, string>;
@@ -78,5 +108,3 @@ export async function resetDatabase() {
   await db.delete();
   await db.open();
 }
-
-
