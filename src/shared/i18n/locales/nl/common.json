@@ -262,8 +262,8 @@
       "closeAria": "Promptmenu sluiten"
     },
     "dock": {
-      "prompts": "Prompts",
-      "promptsAria": "Promptmenu openen of sluiten",
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Promptmenu openen of sluiten ({{count}} beschikbaar)",
       "dashboard": "Dashboard",
       "dashboardAria": "Dashboard openen"
     }

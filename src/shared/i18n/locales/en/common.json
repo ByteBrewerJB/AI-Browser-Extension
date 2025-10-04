@@ -262,8 +262,8 @@
       "closeAria": "Close prompt launcher"
     },
     "dock": {
-      "prompts": "Prompts",
-      "promptsAria": "Toggle prompts dock",
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Toggle prompts dock ({{count}} available)",
       "dashboard": "Dashboard",
       "dashboardAria": "Open dashboard"
     }

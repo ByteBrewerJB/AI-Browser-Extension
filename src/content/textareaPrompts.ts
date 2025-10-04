@@ -417,12 +417,9 @@ function applyTranslations() {
     return;
   }
 
-  const promptsLabel = translate('content.dock.prompts', 'Prompts');
-  toggleButtonLabel.textContent = promptsLabel;
+  updatePromptToggleText();
   toggleButton.setAttribute('data-open', state.open ? 'true' : 'false');
   toggleButton.setAttribute('aria-expanded', state.open ? 'true' : 'false');
-  toggleButton.setAttribute('aria-label', translate('content.dock.promptsAria', 'Toggle prompts dock'));
-  toggleButton.setAttribute('title', promptsLabel);
 
   const dashboardLabel = translate('content.dock.dashboard', 'Dashboard');
   dashboardButtonLabel.textContent = dashboardLabel;
@@ -442,6 +439,21 @@ function applyTranslations() {
   emptySubtitleEl.textContent = translate(
     'content.promptLauncher.emptySubtitle',
     'Save prompts in the dashboard or popup to reuse them here.'
+  );
+}
+
+function updatePromptToggleText() {
+  if (!toggleButton || !toggleButtonLabel) {
+    return;
+  }
+
+  const count = state.prompts?.length ?? 0;
+  const promptsLabel = translate('content.dock.prompts', 'Prompts ({{count}})', { count });
+  toggleButtonLabel.textContent = promptsLabel;
+  toggleButton.setAttribute('title', promptsLabel);
+  toggleButton.setAttribute(
+    'aria-label',
+    translate('content.dock.promptsAria', 'Toggle prompts dock ({{count}} available)', { count })
   );
 }
 
@@ -489,6 +501,8 @@ function setOpen(open: boolean) {
 }
 
 function renderPromptList() {
+  updatePromptToggleText();
+
   if (!promptList || !emptyState || !emptyTitleEl || !emptySubtitleEl) {
     return;
   }
