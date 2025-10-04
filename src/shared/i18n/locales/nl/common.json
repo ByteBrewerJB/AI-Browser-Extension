@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "AI Companion",
     "tagline": "Verbeter je ChatGPT-productiviteit."
@@ -214,7 +214,42 @@
         ],
         "close": "Sluiten",
         "closeAria": "Modal sluiten"
+      },
+      "history": {
+        "pinnedHeading": "Vastgezette gesprekken",
+        "recentHeading": "Recente updates",
+        "bookmarksHeading": "Laatste bladwijzers",
+        "emptyPinned": "Zet ChatGPT-gesprekken vast om ze hier snel terug te vinden.",
+        "emptyRecent": "Start een gesprek om je geschiedenis te vullen.",
+        "emptyRecentTitle": "Nog geen recente updates.",
+        "emptyBookmarks": "Maak bladwijzers om snel terug te springen naar belangrijke berichten.",
+        "openDashboard": "Dashboard openen"
+      },
+      "prompts": {
+        "heading": "Promptsjablonen",
+        "empty": "Bewaar prompts via het dashboard of de pop-up om ze hier te gebruiken.",
+        "emptyTitle": "Nog geen prompts.",
+        "openLibrary": "Promptbibliotheek openen"
+      },
+      "media": {
+        "heading": "Spraak & synchronisatie",
+        "description": "Beheer downloads, spraakweergave en synchronisatievoorkeuren vanuit het dashboard.",
+        "openOptions": "Dashboard openen"
       }
+    },
+    "promptLauncher": {
+      "toggleLabel": "Prompts",
+      "toggleAria": "Promptmenu openen/sluiten",
+      "title": "Opgeslagen prompts",
+      "searchPlaceholder": "Prompts zoeken...",
+      "emptyTitle": "Nog geen prompts",
+      "emptySubtitle": "Bewaar prompts via het dashboard of de popup om ze hier te gebruiken.",
+      "emptyFilteredTitle": "Geen prompts gevonden",
+      "emptyFilteredSubtitle": "Pas je zoekopdracht aan of maak een nieuw sjabloon.",
+      "insertButton": "Invoegen",
+      "updatedAt": "Bijgewerkt {{time}}",
+      "folderLabel": "Map: {{name}}",
+      "closeAria": "Promptmenu sluiten"
     }
   }
 }

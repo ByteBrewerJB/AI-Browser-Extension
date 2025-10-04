@@ -87,7 +87,7 @@ function getActivityAccent(item: ActivityItem) {
 
 export function Popup() {
   const { t, i18n } = useTranslation();
-  const { language, direction, setLanguage: setStoreLanguage, toggleDirection } = useSettingsStore();
+  const {\r\n    language,\r\n    direction,\r\n    showSidebar,\r\n    setLanguage: setStoreLanguage,\r\n    toggleDirection,\r\n    setShowSidebar,\r\n    hydrated\r\n  } = useSettingsStore((state) => ({\r\n    language: state.language,\r\n    direction: state.direction,\r\n    showSidebar: state.showSidebar,\r\n    setLanguage: state.setLanguage,\r\n    toggleDirection: state.toggleDirection,\r\n    setShowSidebar: state.setShowSidebar,\r\n    hydrated: state.hydrated\r\n  }));
   const conversations = useRecentConversations(5);
   const pinnedConversations = usePinnedConversations(4);
   const recentBookmarks = useRecentBookmarks(4);
@@ -149,6 +149,21 @@ export function Popup() {
     t('popup.noActivity') ||
     'Recent conversation edits, bookmarks, and exports will show up here.';
 
+  const sidebarToggleLabel = showSidebar
+    ? t('popup.sidebarToggleOn') || 'Enabled'
+    : t('popup.sidebarToggleOff') || 'Disabled';
+  const sidebarToggleClasses = showSidebar
+    ? 'rounded-md border border-emerald-500 bg-emerald-500/20 px-2 py-1 text-sm font-medium text-emerald-100'
+    : 'rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm font-medium text-slate-200';
+
+  if (!hydrated) {
+    return (
+      <div className="w-96 p-4 text-sm text-slate-300" dir={direction}>
+        {t('popup.loadingSettings') ?? 'Loading settings...'}
+      </div>
+    );
+  }
+
   return (
     <div className="w-96 space-y-4 p-4" dir={direction}>
       <header className="flex flex-col gap-2">
@@ -193,6 +208,18 @@ export function Popup() {
             {direction.toUpperCase()}
           </button>
         </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-200">{t('popup.sidebarToggleLabel') ?? 'Chat sidebar'}</span>
+          <button
+            aria-pressed={showSidebar}
+            className={sidebarToggleClasses}
+            onClick={() => setShowSidebar(!showSidebar)}
+            type="button"
+          >
+            {sidebarToggleLabel}
+          </button>
+        </div>
+
       </section>
 
       <section className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
@@ -526,3 +553,4 @@ export function Popup() {
     </div>
   );
 }
+

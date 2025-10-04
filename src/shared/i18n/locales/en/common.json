@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "AI Companion",
     "tagline": "Boost your ChatGPT productivity."
@@ -214,7 +214,42 @@
         ],
         "close": "Close",
         "closeAria": "Close modal"
+      },
+      "history": {
+        "pinnedHeading": "Pinned conversations",
+        "recentHeading": "Recent updates",
+        "bookmarksHeading": "Latest bookmarks",
+        "emptyPinned": "Pin chats from ChatGPT to keep them handy.",
+        "emptyRecent": "Start chatting to populate your history.",
+        "emptyRecentTitle": "No recent updates yet.",
+        "emptyBookmarks": "Bookmark messages to keep quick references here.",
+        "openDashboard": "Open dashboard"
+      },
+      "prompts": {
+        "heading": "Prompt templates",
+        "empty": "Save prompts in the dashboard or popup to reuse them here.",
+        "emptyTitle": "No prompts yet.",
+        "openLibrary": "Open prompt library"
+      },
+      "media": {
+        "heading": "Voice & sync",
+        "description": "Manage audio downloads, voice playback, and sync preferences from the dashboard.",
+        "openOptions": "Open dashboard"
       }
+    },
+    "promptLauncher": {
+      "toggleLabel": "Prompts",
+      "toggleAria": "Toggle prompt menu",
+      "title": "Saved prompts",
+      "searchPlaceholder": "Search prompts...",
+      "emptyTitle": "No prompts yet",
+      "emptySubtitle": "Save prompts in the dashboard or popup to reuse them here.",
+      "emptyFilteredTitle": "No prompts match your search",
+      "emptyFilteredSubtitle": "Adjust the search or create a new template.",
+      "insertButton": "Insert",
+      "updatedAt": "Updated {{time}}",
+      "folderLabel": "Folder: {{name}}",
+      "closeAria": "Close prompt launcher"
     }
   }
 }

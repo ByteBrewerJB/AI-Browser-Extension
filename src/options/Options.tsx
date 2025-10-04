@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { HistorySection } from './features/history/HistorySection';
@@ -37,7 +37,7 @@ const featureColumns = [
 
 export function Options() {
   const { t } = useTranslation();
-  const { direction } = useSettingsStore();
+  const { direction, showSidebar, setShowSidebar, hydrated } = useSettingsStore((state) => ({\r\n    direction: state.direction,\r\n    showSidebar: state.showSidebar,\r\n    setShowSidebar: state.setShowSidebar,\r\n    hydrated: state.hydrated\r\n  }));
   const [isSchedulingExport, setIsSchedulingExport] = useState(false);
   const [optimisticExportAt, setOptimisticExportAt] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -214,7 +214,7 @@ export function Options() {
               disabled={isSchedulingExport}
               type="button"
             >
-              {isSchedulingExport ? t('options.exportScheduling') ?? 'Scheduling…' : t('options.exportScheduleCta') ?? 'Schedule export in 5 min'}
+              {isSchedulingExport ? t('options.exportScheduling') ?? 'Schedulingâ€¦' : t('options.exportScheduleCta') ?? 'Schedule export in 5 min'}
             </button>
           </header>
           {exportStatusMessage ? (
@@ -238,7 +238,7 @@ export function Options() {
               </div>
               <div className="text-[11px] text-slate-500">
                 {isFetchingJobs ? (
-                  <span>{t('options.exportJobsLoading') ?? 'Refreshing…'}</span>
+                  <span>{t('options.exportJobsLoading') ?? 'Refreshingâ€¦'}</span>
                 ) : jobsFetchedAt ? (
                   <span>
                     {t('options.exportJobsUpdatedLabel', {
@@ -297,10 +297,10 @@ export function Options() {
                             ? formatDateTime(job.runAt)
                             : job.status === 'running'
                               ? t('options.exportJobsInProgress') ?? 'In progress'
-                              : '—'}
+                              : 'â€”'}
                         </td>
                         <td className="px-3 py-2 align-top text-[11px] text-slate-300">
-                          {job.lastRunAt ? formatDateTime(job.lastRunAt) : '—'}
+                          {job.lastRunAt ? formatDateTime(job.lastRunAt) : 'â€”'}
                         </td>
                         <td className="rounded-r-md px-3 py-2 align-top text-[11px] text-slate-300">
                           {job.lastError
@@ -310,7 +310,7 @@ export function Options() {
                                   defaultValue: 'Completed {{time}}',
                                   time: formatDateTime(job.completedAt)
                                 })
-                              : '—'}
+                              : 'â€”'}
                         </td>
                       </tr>
                     ))}
@@ -328,3 +328,4 @@ export function Options() {
     </div>
   );
 }
+
