@@ -221,7 +221,9 @@ async function init() {
   observeLocationChanges();
   resetStateForConversation(getConversationId());
   await scanConversation();
-  chrome.runtime.sendMessage({ type: 'ping' }).catch(() => undefined);
+  chrome.runtime
+    .sendMessage({ type: 'ping' })
+    .catch((error) => console.error('[ai-companion] failed to send message', error));
 }
 
 if (document.readyState === 'loading') {
