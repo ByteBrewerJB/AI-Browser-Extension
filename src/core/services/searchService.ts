@@ -19,7 +19,7 @@ const searchOptions = {
 const SEARCH_INDEX_METADATA_KEY = 'search:index';
 const SEARCH_INDEX_VERSION = 1;
 
-let miniSearch = createMiniSearch();
+let searchIndex = createMiniSearch();
 let indexReady = false;
 let buildPromise: Promise<void> | null = null;
 
@@ -48,7 +48,7 @@ async function persistIndex() {
     key: SEARCH_INDEX_METADATA_KEY,
     value: {
       version: SEARCH_INDEX_VERSION,
-      index: JSON.stringify(miniSearch),
+      index: JSON.stringify(searchIndex),
     },
     updatedAt: new Date().toISOString(),
   };
@@ -67,11 +67,11 @@ async function restorePersistedIndex(): Promise<boolean> {
   }
 
   try {
-    miniSearch = await MiniSearch.loadJSONAsync<SearchDocument>(stored.value.index, searchOptions);
+    searchIndex = await MiniSearch.loadJSONAsync<SearchDocument>(stored.value.index, searchOptions);
     return true;
   } catch (error) {
     console.warn('searchService: unable to restore persisted index, rebuilding', error);
-    miniSearch = createMiniSearch();
+    searchIndex = createMiniSearch();
     return false;
   }
 }
@@ -94,8 +94,8 @@ async function rebuildIndexFromDatabase() {
     })),
   ];
 
-  miniSearch = createMiniSearch();
-  await miniSearch.addAllAsync(documents);
+  searchIndex = createMiniSearch();
+  await searchIndex.addAllAsync(documents);
   await persistIndex();
 }
 
@@ -111,7 +111,7 @@ export async function buildSearchIndex() {
       indexReady = true;
     })().catch(error => {
       indexReady = false;
-      miniSearch = createMiniSearch();
+      searchIndex = createMiniSearch();
       throw error;
     }).finally(() => {
       buildPromise = null;
@@ -126,7 +126,7 @@ export async function search(query: string): Promise<string[]> {
     await buildSearchIndex();
   }
 
-  const results = miniSearch.search(query, { prefix: true, fuzzy: 0.2 });
+  const results = searchIndex.search(query, { prefix: true, fuzzy: 0.2 });
   const conversationIds = new Set(results.map(r => r.conversationId));
   return Array.from(conversationIds);
 }
@@ -152,10 +152,10 @@ export async function upsertIntoIndex(items: Array<ConversationRecord | MessageR
   });
 
   for (const doc of documents) {
-    if (miniSearch.has(doc.id)) {
-      miniSearch.replace(doc);
+    if (searchIndex.has(doc.id)) {
+      searchIndex.replace(doc);
     } else {
-      miniSearch.add(doc);
+      searchIndex.add(doc);
     }
   }
 
@@ -171,18 +171,18 @@ export async function removeFromIndex(ids: string[]) {
     .primaryKeys();
 
   for (const id of ids) {
-    miniSearch.discard(`conv:${id}`);
+    searchIndex.discard(`conv:${id}`);
   }
 
   for (const messageId of messageIds) {
-    miniSearch.discard(`msg:${messageId}`);
+    searchIndex.discard(`msg:${messageId}`);
   }
 
   await persistIndex();
 }
 
 export function resetSearchServiceForTests() {
-  miniSearch = createMiniSearch();
+  searchIndex = createMiniSearch();
   indexReady = false;
   buildPromise = null;
 }
