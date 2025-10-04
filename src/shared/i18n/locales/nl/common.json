@@ -47,7 +47,11 @@
     "activityJobCompleted": "Voltooid {{time}}",
     "activityJobRunning": "Actief sinds {{time}}",
     "activityJobScheduled": "Gepland voor {{time}}",
-    "activityJobAttempts": "{{attempts}} / {{max}} pogingen"
+    "activityJobAttempts": "{{attempts}} / {{max}} pogingen",
+    "loadingSettings": "Instellingen laden…",
+    "sidebarToggleLabel": "Chat-zijbalk",
+    "sidebarToggleOn": "Ingeschakeld",
+    "sidebarToggleOff": "Uitgeschakeld"
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -182,7 +186,13 @@
     "promptChainMoveDown": "Omlaag",
     "promptChainRemoveButton": "Verwijderen",
     "promptChainUpdateButton": "Keten bijwerken",
-    "promptChainCreateButton": "Keten opslaan"
+    "promptChainCreateButton": "Keten opslaan",
+    "sidebarHeading": "Chat-zijbalk",
+    "sidebarDescription": "Beheer de zijbalkoverlay voor ChatGPT vanuit elke surface.",
+    "sidebarToggleLabel": "Zijbalkweergave",
+    "sidebarToggleHelp": "Schakel de zwevende zijbalk in de ChatGPT-interface in of uit.",
+    "sidebarToggleOn": "Ingeschakeld",
+    "sidebarToggleOff": "Uitgeschakeld"
   },
   "content": {
     "sidebar": {

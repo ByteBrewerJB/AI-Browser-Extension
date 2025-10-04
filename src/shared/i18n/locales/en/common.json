@@ -47,7 +47,11 @@
     "activityJobCompleted": "Completed {{time}}",
     "activityJobRunning": "Running since {{time}}",
     "activityJobScheduled": "Scheduled for {{time}}",
-    "activityJobAttempts": "{{attempts}} / {{max}} attempts"
+    "activityJobAttempts": "{{attempts}} / {{max}} attempts",
+    "loadingSettings": "Loading settings…",
+    "sidebarToggleLabel": "Chat sidebar",
+    "sidebarToggleOn": "Enabled",
+    "sidebarToggleOff": "Disabled"
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -182,7 +186,13 @@
     "promptChainMoveDown": "Down",
     "promptChainRemoveButton": "Remove",
     "promptChainUpdateButton": "Update chain",
-    "promptChainCreateButton": "Save chain"
+    "promptChainCreateButton": "Save chain",
+    "sidebarHeading": "Chat sidebar",
+    "sidebarDescription": "Control the ChatGPT sidebar overlay from any surface.",
+    "sidebarToggleLabel": "Sidebar visibility",
+    "sidebarToggleHelp": "Toggle the floating sidebar in the ChatGPT interface.",
+    "sidebarToggleOn": "Enabled",
+    "sidebarToggleOff": "Disabled"
   },
   "content": {
     "sidebar": {

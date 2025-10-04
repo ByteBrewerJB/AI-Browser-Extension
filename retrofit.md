@@ -4,13 +4,14 @@
 - De map `example/jlalnhjkfiogoeonamcnngdndjbneina/4.0.9_0` bevat uitsluitend mappenamen (zoals `scripts/chatMenu`, `scripts/pinnedChats`, `html/promptLibrary`). Ze geven de gewenste surfaces en workflows weer, maar bevatten geen bronbestanden.
 - In deze sessie is `src/content/textareaPrompts.ts` toegevoegd en aangesloten vanuit `src/content/index.ts`. Hiermee bestaat nu een floating promptlauncher die opgeslagen prompts in de ChatGPT-composer kan invoegen.
 - De content-zijbalk (`src/content/ui-root.tsx`) toont nu vastgezette gesprekken, recente updates, bladwijzers en een snelle promptlijst binnen dezelfde shadow-root. Verdere toggles en voorkeuren staan hieronder in de checklist.
+- Popup en Options tonen nu een schakelaar om de ChatGPT-zijbalk te activeren of verbergen (gesynchroniseerd via de gedeelde store).
 - Onderstaande acties beschrijven hoe de overige "scripts" en "html" mappen uit het voorbeeld vertaald kunnen worden naar onze huidige architectuur (Dexie + Zustand + React voor popup/options + vanilla overlay in content).
 
 ## Prioriteiten en stappen per featuregroep
 
 ### 1. Conversatiebeheer en zijbalk (`scripts/sidebar`, `scripts/manageChats`, `scripts/featuresCollapse`)
 - [x] **Shadow-root container:** gerealiseerd via `src/content/sidebar-host.ts` + `src/content/ui-root.tsx`; React surface mounted in ChatGPT-zijbalk.
-- [ ] **Zustand bridge:** breid `src/shared/state/settingsStore.ts` uit met flag `showSidebar` + synchronisatie via achtergrondrouter.
+- [x] **Zustand bridge:** `src/shared/state/settingsStore.ts` hydrateert nu `showSidebar` via `chrome.storage` en synchroniseert popup/options/content.
 - [x] **Datalaag:** huidige sidebar gebruikt `usePinnedConversations`, `useRecentConversations`, `useRecentBookmarks`, `usePrompts` voor basispanelen.
 - [ ] **Collapse functionaliteit:** lokale Zustand store (`useSidebarStore`) met persistente voorkeuren (`storageService.writeLocal` voor `sidebar:sections`).
 - [ ] **Toetscombinaties en focus:** sneltoets (bijv. `Alt+Shift+K`) om sidebar te toggelen + focus restore/escape-handling.
@@ -69,5 +70,7 @@
 ## Afronding
 - Wanneer de bovengenoemde stappen afgerond zijn, actualiseer `README.md` met nieuwe surface-screenshots en korte featurelijst.
 - Hergebruik `retrofit.md` als checklist: vink secties af en noteer datum + commit in een log onderaan dit document.
+
+
 
 

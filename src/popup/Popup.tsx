@@ -87,7 +87,23 @@ function getActivityAccent(item: ActivityItem) {
 
 export function Popup() {
   const { t, i18n } = useTranslation();
-  const {\r\n    language,\r\n    direction,\r\n    showSidebar,\r\n    setLanguage: setStoreLanguage,\r\n    toggleDirection,\r\n    setShowSidebar,\r\n    hydrated\r\n  } = useSettingsStore((state) => ({\r\n    language: state.language,\r\n    direction: state.direction,\r\n    showSidebar: state.showSidebar,\r\n    setLanguage: state.setLanguage,\r\n    toggleDirection: state.toggleDirection,\r\n    setShowSidebar: state.setShowSidebar,\r\n    hydrated: state.hydrated\r\n  }));
+  const {
+    language,
+    direction,
+    showSidebar,
+    setLanguage: setStoreLanguage,
+    toggleDirection,
+    setShowSidebar,
+    hydrated
+  } = useSettingsStore((state) => ({
+    language: state.language,
+    direction: state.direction,
+    showSidebar: state.showSidebar,
+    setLanguage: state.setLanguage,
+    toggleDirection: state.toggleDirection,
+    setShowSidebar: state.setShowSidebar,
+    hydrated: state.hydrated
+  }));
   const conversations = useRecentConversations(5);
   const pinnedConversations = usePinnedConversations(4);
   const recentBookmarks = useRecentBookmarks(4);
