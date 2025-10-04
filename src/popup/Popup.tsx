@@ -47,22 +47,35 @@ function formatBookmarkPreview(bookmark: BookmarkSummary, fallback: string) {
 }
 
 function openDashboard() {
+  const dashboardUrl =
+    chrome.runtime?.getURL?.('src/options/index.html') ??
+    chrome.runtime?.getURL?.('options.html');
+
   if (chrome.runtime?.openOptionsPage) {
     chrome.runtime.openOptionsPage(() => {
       const lastError = chrome.runtime.lastError;
       if (lastError) {
         console.error('[ai-companion] failed to open options page', lastError);
+        if (dashboardUrl) {
+          chrome.tabs
+            .create({ url: dashboardUrl })
+            .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+        } else {
+          console.error('[ai-companion] unable to resolve dashboard URL for fallback navigation');
+        }
       }
     });
     return;
   }
 
-  const url = chrome.runtime?.getURL?.('options.html');
-  if (url) {
-    chrome.tabs.create({ url }).catch((error) => {
-      console.error('[ai-companion] failed to open dashboard tab', error);
-    });
+  if (dashboardUrl) {
+    chrome.tabs
+      .create({ url: dashboardUrl })
+      .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+    return;
   }
+
+  console.error('[ai-companion] dashboard URL could not be resolved');
 }
 
 function getActivityAccent(item: ActivityItem) {
