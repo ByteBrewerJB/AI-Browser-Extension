@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
-import '@/styles/global.css';
+import globalStylesUrl from '@/styles/global.css?url';
 
 function ensureShadowHost(): HTMLElement {
   const existing = document.getElementById('ai-companion-shadow-host');
@@ -32,6 +32,10 @@ function mountReact(rootElement: HTMLElement) {
     button { font: inherit; }
   `;
   shadow.appendChild(style);
+  const globalStyles = document.createElement('link');
+  globalStyles.rel = 'stylesheet';
+  globalStyles.href = globalStylesUrl;
+  shadow.appendChild(globalStyles);
   const container = document.createElement('div');
   shadow.appendChild(container);
   return shadow;
