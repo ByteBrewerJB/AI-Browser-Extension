@@ -20,6 +20,14 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - Web Speech API / `chrome.tts` for advanced voice playback; `MediaRecorder` for capture when available.
 - WebAssembly-enabled audio processor (phase 2) to support advanced voice mode features such as pitch shifting.
 
+## UI Component Library
+- **Directory layout**: shared primitives live under `src/ui/components/` (e.g., `Modal`, `Tabs`, `MediaOverlay`) and layout wrappers under `src/ui/layouts/` (e.g., `Surface`). These modules are framework-agnostic enough to be reused by options, popup, and content scripts.
+- **Rendering surfaces**: content scripts bootstrap UI inside a shadow DOM (`src/content/ui-root.tsx`) to protect styling, while options/popup consume the same components directly. The shadow host mirrors Tailwind tokens and fallbacks for SSR/screenshot tests.
+- **Examples & screenshot baselines**: the `tests/ui/componentGallery.spec.tsx` runner renders static markup stories for each primitive, logging HTML snapshots that double as lightweight screenshot tests. The test suite now exercises tabs, modals, and overlays in SSR mode to guard regressions.
+- **State segmentation**: dashboard features consume domain-specific Zustand stores (`src/options/features/{history,prompts,media}`), ensuring React trees stay thin and serializable for reuse in portals/overlays.
+- **Accessibility + RTL**: components default to semantic roles (`role="dialog"`, `aria-modal`, labelled controls) and respect `document.dir` propagated by the settings store. Modals trap ESC/keyboard focus; tabs expose orientation and stable IDs for assistive tech. Media overlays mirror announcements for screen-readers and flip controls automatically in RTL.
+- **Testing + authoring guidance**: new component additions must include a gallery story in `tests/ui/componentGallery.spec.tsx` and document keyboard/RTL considerations in this roadmap.
+
 ## High-Level Modules
 - **core/storage**: abstraction over IndexedDB + storage.sync mirroring + conflict resolution.
 - **core/models**: schemas for conversations, messages, prompts, GPT configs, bookmarks.
