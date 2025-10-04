@@ -75,3 +75,38 @@
 
 
 
+### 10. Composer uitbreidingen (`scripts/counter`, `scripts/textareaPrompts`)
+1. Introduceer `initComposerCounters` in `src/content/textareaPrompts.ts` die, naar analogie met `example/example/1/scripts/counter/injectWordsCounter.js`, via een `MutationObserver` de actieve ChatGPT-composer detecteert. Render een `div[data-ai-companion="composer-counters"]` in dezelfde shadow-root als de promptlauncher en toon woorden-, tekens- en tokenaantallen. Baseer tokenlimits op `settingsStore.maxTokens` (fallback 4096) en kleur de badge rood zodra limieten overschreden worden.
+2. Vervang de placeholderlogica in `textareaPrompts` door een helper `updateComposerPlaceholder(language, promptHint)` die het bestaande `CHATGPT_PROMPT_PLACEHOLDER`-patroon uit de voorbeeldmanifest ("Message ChatGPT Normally, Use // ...") gebruikt. Luister naar `chrome.storage.onChanged` zodat taalwissels of aangepaste hints direct worden toegepast zoals in `scripts/textareaPrompts/changeDefaultPlaceholder.js`.
+3. Voeg een instructieoverlay toe gebaseerd op `example/example/1/scripts/textareaPrompts/promptListInstructions.js`: richt een `Popover`-component in `src/ui/components` in die de combinaties `//` (prompt), `..` (keten) en `@@` (bookmark) uitlegt. Toon deze overlay de eerste drie keer nadat de launcher openklapt en bewaar de teller in `settingsStore.dismissedLauncherTips`.
+4. Breid het launcherpanel uit met een tab "Ketens" waarin `PromptChainRecord`s compact getoond worden (titel, aantal stappen, laatst gebruikt). Hergebruik de instructies uit `scripts/textareaPrompts/chainListUI.js` door een React-versie (`ChainPreviewList`) te bouwen. Center de call-to-action "Start keten" rechtsboven en koppel aan het `content/run-chain` bericht dat in sectie 4 wordt toegevoegd.
+
+### 11. Onboarding en gidsen (`assets/data/guides.json`, `html/infoAndUpdates`)
+1. Kopieer `example/example/1/assets/data/guides.json` naar `public/guides.json` en breid het schema uit met `title`, `description` en `badgeColor` zodat we eigen copy kunnen plaatsen. Maak een type `GuideResource` in `src/core/models/guides.ts` met validatie via Zod.
+2. Bouw in `src/options/features/infoAndUpdates/GuideResourcesCard.tsx` een kaart die de gidsen toont met knoppen "Bekijken". Gebruik `chrome.tabs.create` om de Guideflow-URL in een nieuw tabblad te openen en log kliktelemetrie via `background/jobs/scheduler` (event `guide-opened`).
+3. Introduceer in `useSettingsStore` een veld `dismissedGuideIds: string[]`. Voeg een "Markeer als bekeken"-toggle toe per gids (zowel in options als in popup) en synchroniseer de status naar `chrome.storage.local` vergelijkbaar met het voorbeeld `setPreviousModal`/`setSelectedManageTabsItem` patroon.
+4. Plaats in het promptlauncher-dock een nieuwe bubble "Guides" die de `GuideResourcesCard` in een modal opent. Gebruik `Modal` component en zorg dat het modaal in de content-shadow-root rendert zodat de gebruiker in-context hulp krijgt zoals in `html/infoAndUpdates`.
+
+### 12. Internationalisatie en direction (`locales/*.json`)
+1. Importeer de talen uit `example/example/1/locales` (ar, de, en, es, fr, he, hi, it, ja, zh). Schrijf een script `scripts/generate-locales.ts` dat de sleutel-naamgeving omzet naar onze `content.sidebar.*` structuur en voeg de resultaten toe aan `src/shared/i18n/locales/<lang>/common.json`.
+2. Breid `initI18n` uit met `supportedLngs` en detecteer de taal van ChatGPT (`document.documentElement.lang`). Val terug op Engels indien onbekend en update `settingsStore.language` automatisch, met respect voor handmatige overrides.
+3. Koppel `document.documentElement.dir` aan de taalrichting (zoals `isLTR` in de voorbeeldbestanden). Voeg in content een helper `applyDirectionToComposer(dir)` toe die body-, sidebar- en launcherklassen bijwerkt zodat RTL-aanpassingen correct renderen.
+4. Schrijf Vitest-unit tests voor `generate-locales` (validate dat placeholders `{{ }}` intact blijven) en Playwright-scenario's die controleren dat een RTL-taal (bijv. Arabic) zowel in popup, options als content correct omschakelt.
+
+### 13. Iconen, beelden en audio (`assets/icons`, `assets/images`, `assets/sounds/alert.mp3`)
+1. Maak een generator `scripts/build-icons.ts` die de string-exporten uit `example/example/1/assets/icons/*.ts` omzet naar typed React-componenten in `src/ui/icons/*.tsx`. Voeg automatische booleaanse props toe (`size`, `strokeWidth`) en exporteer een index `@/ui/icons`.
+2. Vervang hardgecodeerde Heroicons in sidebar/promptlauncher door de nieuwe iconen zodat de look overeenkomt met de voorbeeldextensie. Documenteer in `docs/styleguide.md` hoe iconen gekozen worden (lineair 1px, kleur via currentColor).
+3. Selecteer uit `assets/images` een set achtergrondplaten (bijv. `ai-toolbox-banner.png`) en plaats ze in `public/media`. Gebruik ze in `infoAndUpdates` en premium-cards met `picture` voor responsive weergave.
+4. Koppel `assets/sounds/alert.mp3` aan onze snackbar/notification flow: voeg in `src/shared/utils/notifications.ts` een optie `audible: true` die bij premium-events het mp3-bestand via `chrome.runtime.getURL` laadt en afspeelt. Respecteer een nieuwe instelling `settingsStore.playSounds`.
+
+### 14. Account, authenticatie en premium-gating (`api/auth.js`, `api/payments.js`, `html/freeUser`)
+1. Creeer `src/core/services/authService.ts` dat de flows uit `example/example/1/api/auth.js` herschrijft: `generateJWT`, `setAuthToken`, `setServerToken`, `setIsPaidUser`. Gebruik `fetch` met onze backend-URL (`ENV.API_BASE_URL`) en implementeer retries + exponential backoff.
+2. Vorm een shared store `useAccountStore` (Zustand) met statevelden `accountId`, `isPaidUser`, `subscriptionTier`, `serverToken`. Synchroniseer de state via `chrome.storage.local` zoals de voorbeeldfunctie `setInitialStore` doet.
+3. Bouw een hook `usePremiumGate(feature: PremiumFeature)` die UI-componenten laat controleren of een feature free of premium is. Toon modals vergelijkbaar met `html/freeUser` / `html/premiumModal` (met upgrade CTA) en log `feature_blocked` events voor analytics.
+4. Integreer een backend-poll in `background/jobs/scheduler.ts` (`jobType: 'account-sync'`) die elke 6 uur `authService.refreshAccount()` draait. Bij downgrade moeten pinned-limieten en media-downloads automatisch gelimiteerd worden (follow-up events en UI notificaties).
+
+### 15. Synchronisatie, database en export (`scripts/database.js`, `scripts/sync.js`, `scripts/exportConversations.js`)
+1. Breid `src/core/storage/db.ts` uit met een `backup` schema (Dexie table `backups`) waarin snapshots van conversations/prompts worden opgeslagen. Gebruik `navigator.storage.persist()` en bewaar enkel een rolling window (laatste 10).
+2. Introduceer `SyncQueue` in `src/core/storage/syncBridge.ts` dat de logica uit `example/.../scripts/sync.js` vertaalt: queue items (type, payload, retries) in `chrome.storage.local`, verstuur via background worker en markeer status.
+3. Breng exportfunctionaliteit naar parity met `scripts/exportConversations.js`: voeg in `background/jobs/exportHandler.ts` support voor PDF, Markdown en CSV toe. Gebruik `assets/html/templates` (te maken) om exports te stylen en bied in options bulkselectie + progressbar.
+4. Schrijf jest-tests voor `SyncQueue` (retry/backoff) en end-to-end tests die verifiëren dat bulkexport een zip met per-conversatie-bestanden oplevert. Documenteer in `docs/data-safety.md` hoe back-ups, sync en export samenwerken.
