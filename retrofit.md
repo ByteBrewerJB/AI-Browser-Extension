@@ -1,7 +1,7 @@
 ﻿# Retrofitplan voor voorbeeldfunctionaliteit
 
 ## Context
-- De map `example/jlalnhjkfiogoeonamcnngdndjbneina/4.0.9_0` bevat uitsluitend mappenamen (zoals `scripts/chatMenu`, `scripts/pinnedChats`, `html/promptLibrary`). Ze geven de gewenste surfaces en workflows weer, maar bevatten geen bronbestanden.
+- De map `example\example\1` bevat uitsluitend mappenamen (zoals `scripts/chatMenu`, `scripts/pinnedChats`, `html/promptLibrary`). Ze geven de gewenste surfaces en workflows weer, maar bevatten geen bronbestanden.
 - In deze sessie is `src/content/textareaPrompts.ts` toegevoegd en aangesloten vanuit `src/content/index.ts`. Hiermee bestaat nu een floating promptlauncher die opgeslagen prompts in de ChatGPT-composer kan invoegen.
 - De content-zijbalk (`src/content/ui-root.tsx`) toont nu vastgezette gesprekken, recente updates, bladwijzers en een snelle promptlijst binnen dezelfde shadow-root. Verdere toggles en voorkeuren staan hieronder in de checklist.
 - Rechts onderin staat nu een bubble dock met snelkoppelingen (prompts, dashboard).
