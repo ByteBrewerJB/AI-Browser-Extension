@@ -20,6 +20,14 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - Web Speech API / `chrome.tts` for advanced voice playback; `MediaRecorder` for capture when available.
 - WebAssembly-enabled audio processor (phase 2) to support advanced voice mode features such as pitch shifting.
 
+## UI Component Library
+- **Directory layout**: shared primitives live under `src/ui/components/` (e.g., `Modal`, `Tabs`, `MediaOverlay`) and layout wrappers under `src/ui/layouts/` (e.g., `Surface`). These modules are framework-agnostic enough to be reused by options, popup, and content scripts.
+- **Rendering surfaces**: content scripts bootstrap UI inside a shadow DOM (`src/content/ui-root.tsx`) to protect styling, while options/popup consume the same components directly. The shadow host mirrors Tailwind tokens and fallbacks for SSR/screenshot tests.
+- **Examples & screenshot baselines**: the `tests/ui/componentGallery.spec.tsx` runner renders static markup stories for each primitive, logging HTML snapshots that double as lightweight screenshot tests. The test suite now exercises tabs, modals, and overlays in SSR mode to guard regressions.
+- **State segmentation**: dashboard features consume domain-specific Zustand stores (`src/options/features/{history,prompts,media}`), ensuring React trees stay thin and serializable for reuse in portals/overlays.
+- **Accessibility + RTL**: components default to semantic roles (`role="dialog"`, `aria-modal`, labelled controls) and respect `document.dir` propagated by the settings store. Modals trap ESC/keyboard focus; tabs expose orientation and stable IDs for assistive tech. Media overlays mirror announcements for screen-readers and flip controls automatically in RTL.
+- **Testing + authoring guidance**: new component additions must include a gallery story in `tests/ui/componentGallery.spec.tsx` and document keyboard/RTL considerations in this roadmap.
+
 ## High-Level Modules
 - **core/storage**: abstraction over IndexedDB + storage.sync mirroring + conflict resolution.
 - **core/models**: schemas for conversations, messages, prompts, GPT configs, bookmarks.
@@ -44,77 +52,83 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - `i18next` with JSON locale bundles, defaulting to English and supporting dynamic language switching.
 - Text direction toggled globally; layout components read from `dir` state.
 
-## Current Status
-- ✅ **Milestone 0 (Baseline shell) is complete.** The MV3 scaffold, popup/options shells with RTL + i18n, background worker stubs, and the initial word/character counter shipped and have lint coverage.
-- ✅ **Shared foundations are in place.** Tailwind theming, Zustand store scaffolding, route wiring, and localization utilities are functional across popup, options, and content script surfaces.
-- ✅ **Developer experience is stable.** Vite dev flow, CRXJS bundling, and lint/test scripts run reliably for day-to-day iteration.
-- ✅ **Prompt chain builder shipped.** Options dashboard now provides a prompt chain composer with accessible ordering controls backed by the new storage API and Node-based unit tests.
-- ✅ **Milestone 1 capture work reached feature-complete.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; the sync bridge now mirrors counts/pin/archive state via `chrome.storage.sync`, with table filtering and broader regression coverage still on deck as polish.
-- 🚧 **Milestone 2 productivity tooling is underway.** Prompt & GPT management flows are shipping; bulk actions, global search, and export orchestration are the next large workstreams.
+## Roadmap 2.0 Overview
+Roadmap 2.0 reframes delivery into nine phases (0–8) that highlight architectural scope, reusable deliverables, and the effort required to unlock future capabilities. Earlier milestones such as Dexie-backed storage and the prompt management suite are now treated as reusable foundations instead of active projects.
 
-The next stages focus on layering robust storage, capture, and productivity systems atop this baseline.
+| Phase | Theme | Status | Notes |
+| --- | --- | --- | --- |
+| 0 | Baseline extension shell | Gereed | MV3 scaffold, surface shells, lint/build automation. |
+| 1 | Conversation capture backbone | Gereed | Dexie storage, sync bridge, DOM ingestion, capture QA playbook. |
+| 2 | Prompt & knowledge tooling | Hergebruiken | Prompt chains, GPT folders, template authoring, toolbar primitives. |
+| 3 | Productivity automation | Actief | Bulk actions, global search, exports, inline tray. |
+| 4 | Audio suite | Gepland | Download pipeline, playback UI, voice presets. |
+| 5 | Sync & collaboration | Gepland | Cross-device merge, cloud backups, shared settings. |
+| 6 | Intelligence & assistive features | Gepland | Smart suggestions, workflow automation, proactive insights. |
+| 7 | Platform extensibility | Gepland | Side panel workspace, partner integrations, API hooks. |
+| 8 | Quality, telemetry & growth | Gepland | Reliability scoring, localization expansion, governance. |
 
-## Feature Delivery Roadmap
-1. **MVP**: baseline extension shell (popup, options, background), conversation capture, bookmarks, exports, word/character counter, basic multilingual UI.
-2. **Productivity**: GPT folders, prompt creation & chains, pinned chats, advanced search, bulk actions, inline quick-settings surfaces inside ChatGPT.
-3. **Audio Suite**: audio download integration with ChatGPT responses, voice options UI, advanced voice mode pipeline.
-4. **Sync & Collaboration**: enhanced multi-device sync, per-browser profile settings, optional cloud backup connectors.
-5. **Polish**: side panel experience, performance profiling, telemetry opt-in, expanded localization.
+## Roadmap 2.0 Phase Breakdown
 
-## Remaining Milestone 1 Hardening
-1. **Dashboards polish**
-   - Layer column filtering and saved views onto the conversations table without regressing virtualization performance.
-   - Extend the shared `StateMessage` / `EmptyState` components across dashboard modules as they roll out (search, exports, inline tray).
-2. **Reliability & QA**
-   - Expand unit coverage for the DOM ingestion pipeline (edge cases: system messages, code blocks, streaming edits).
-   - Capture a repeatable manual regression script spanning chat.openai.com & chatgpt.com to unblock contributor testing.
-3. **Sync telemetry**
-   - Add debug logging hooks (behind a dev flag) for storage bridge queue processing to aid in diagnosing quota or merge failures.
+### Phase 0 — Baseline Extension Shell
+- **Scope**: Maintain the core MV3 scaffolding, popup/options shells, and developer tooling required for rapid iteration.
+- **Key deliverables**: extension manifest/config, Vite + CRX build system, global Tailwind tokens, lint/build pipelines, surface navigation shells.
+- **Dependencies**: Requires Vite toolchain and CRXJS plugin to remain stable; depends on Chrome MV3 APIs.
+- **Feasibility**: **Laag risico (gereed)** — foundational work is complete and only needs routine upkeep.
 
-## Immediate Next Steps (Milestone 2 Kickoff)
-1. **Bulk action engine foundation**
-   - Define a command queue abstraction in the background worker with undo metadata and optimistic UI updates.
-   - Wire multi-select state in the options dashboard, including keyboard shortcuts and selection persistence across filters.
-2. **Search infrastructure**
-   - Implement the MiniSearch-backed worker, sourcing incremental updates from storage change streams.
-   - Prototype scoped search panels (conversation vs. prompts) with shared faceted filtering primitives.
-3. **Export service**
-   - Design a normalized export payload schema shared across TXT/JSON formats, supporting localization-ready metadata labels.
-   - Provide UI entry points in both popup quick actions and the dashboard bulk wizard, ensuring background execution handles large datasets.
-4. **Inline composer tray**
-   - Ship a lightweight drawer inside the ChatGPT UI exposing capture toggles, language/RTL switches, and quick archive/bookmark actions.
-   - Reuse dashboard stores so inline changes immediately reflect in popup/options views.
-5. **UX systematization**
-   - Document shared toolbar, table, and modal patterns to keep productivity surfaces consistent.
-   - Extend the design tokens/global Tailwind config where necessary to cover new interaction states (selected rows, search chips, wizard steps).
+### Phase 1 — Conversation Capture Backbone
+- **Scope**: Persist structured conversations with offline-first guarantees and mirrored metadata sync.
+- **Key deliverables**: **Status: Gereed** Dexie database schema with migrations, **Status: Gereed** storage-sync bridge, **Status: Gereed** DOM ingestion observers with retry handling, QA checklist for capture validation.
+- **Dependencies**: Relies on Chrome storage quotas, Dexie runtime, and DOM selectors for chat.openai.com/chatgpt.com. Future phases piggyback on these storage contracts.
+- **Feasibility**: **Laag risico (gereed)** — production-proven; monitor for upstream DOM changes.
 
-## Near-Term Architecture Phases
+### Phase 2 — Prompt & Knowledge Tooling
+- **Scope**: Enable reusable prompts, GPT configurations, and knowledge artifacts across popup/options surfaces.
+- **Key deliverables**: **Status: Hergebruiken** Prompt chain composer, **Status: Hergebruiken** GPT folder hierarchy CRUD, reusable toolbar + table primitives, prompt template validators shared with storage.
+- **Dependencies**: Builds on Phase 1 storage schemas and shared UI components; requires localization coverage for authoring flows.
+- **Feasibility**: **Laag risico (hergebruik)** — modules ship today and can be extended incrementally.
 
-### Phase 1 — Conversation Capture Backbone (Milestone 1)
-- **Schema & migrations**: introduce Dexie versioning with upgrade handlers to evolve tables safely.
-- **Sync bridge**: implement a background-driven queue that batches diffs into `chrome.storage.sync`, with throttling and collision detection.
-- **Content ingestion**: encapsulate DOM scraping and mutation observers behind a service with retry/backoff and feature flags for quick disable.
-- **State wiring**: centralize derived selectors (recent conversations, stats) in Zustand, memoizing heavy computations.
-- **Testing**: run lint + new unit suites in CI, add a manual capture smoke test checklist to docs.
+### Phase 3 — Productivity Automation
+- **Scope**: Accelerate daily workflows with bulk operations, universal search, exports, and inline workspace affordances.
+- **Key deliverables**: Command queue + undo metadata in background worker, MiniSearch-backed global search with scoped panels, bulk action UX across conversations/prompts/GPTs, TXT/JSON export service, inline quick settings tray.
+- **Dependencies**: Requires stable storage change streams (Phases 1–2), shared UI primitives, and background messaging contracts. Search pipeline should reference forthcoming ADR `docs/decisions/20240210-search-indexer.md` for worker design.
+- **Feasibility**: **Middel risico** — coordination required between background worker, Dexie hooks, and UI virtualization.
 
-### Phase 2 — Productivity Suite Foundations (Milestone 2)
-- **Domain modules**: create dedicated modules for GPT management and prompt chains, sharing validators with the storage layer.
-- **Search infrastructure**: spin up a MiniSearch-powered indexer worker that listens to storage events and emits debounced updates to UI surfaces.
-- **Bulk action engine**: design a command pattern (queue with undo metadata) executed by the background worker to keep UIs responsive.
-- **Export service**: add a background-led exporter that formats TXT/JSON payloads, shared between popup quick actions and dashboard bulk workflows.
-- **Telemetry hooks**: start instrumenting optional analytics (locally stubbed until Milestone 5) to understand feature adoption.
+### Phase 4 — Audio Suite
+- **Scope**: Support voice reply capture, downloads, and playback customization aligned with ChatGPT audio experiences.
+- **Key deliverables**: Audio detection service, download orchestration via background worker, popup playback controls, voice preset management, optional WASM enhancement pipeline.
+- **Dependencies**: Chrome download APIs, MediaRecorder, optional WASM builds; consult geplande ADR `docs/decisions/20240218-audio-pipeline.md` voor codec handling.
+- **Feasibility**: **Middel risico** — dependent on evolving ChatGPT audio markup and browser permission prompts.
 
-### Phase 3 — Audio & Sync Enhancements (Milestones 3-4)
-- **Audio pipeline**: abstract response audio detection, downloads, and playback controllers, ensuring background/content messaging is typed and resilient to permission errors.
-- **Voice mode UI**: integrate media controls into popup/options with accessibility-first keyboard interactions and persisted user presets.
-- **Advanced sync**: extend the storage bridge with diff/merge helpers, conflict UI prompts, and encrypted backup adapters with pluggable providers.
-- **Resilience tooling**: add monitoring hooks, retry policies, and storage vacuum jobs executed by alarms in the background worker.
+### Phase 5 — Sync & Collaboration
+- **Scope**: Deliver trustworthy cross-device experiences with conflict resolution, encrypted backups, and shared workspace preferences.
+- **Key deliverables**: Diff/merge helpers with conflict UI, cloud backup provider abstraction, sync settings dashboard, encryption key management, collaborative metadata sharing.
+- **Dependencies**: Requires mature telemetry from Phase 8, storage bridge extensions, and geplande ADR `docs/decisions/20240305-sync-strategy.md` for reconciliation protocols.
+- **Feasibility**: **Middel tot hoog risico** — quota limits, encryption UX, and provider APIs introduce complexity.
 
-### Phase 4 — Polish & Side Panel (Milestone 5)
-- **Side panel workspace**: share layout primitives with popup/options while optimizing for resize and lazy loading of large histories.
-- **Performance tuning**: profile heavy surfaces, add virtualization, and cache computed aggregates.
-- **Accessibility & localization expansion**: audit ARIA roles, contrast, focus order, and extend locale bundles beyond EN/NL with contributor guidelines.
-- **Diagnostics**: surface an options page diagnostics tab with log streaming, version info, and exportable support bundles.
+### Phase 6 — Intelligence & Assistive Features
+- **Scope**: Layer proactive insights, workflow automation, and contextual recommendations over captured data.
+- **Key deliverables**: Suggestion engine leveraging stored metadata, automation recipes (e.g., reminders, follow-up prompts), optional AI summarization workers, notification surfaces.
+- **Dependencies**: Requires telemetry, robust search APIs (Phase 3), and privacy guardrails defined in geplande ADR `docs/decisions/20240320-intelligence-guardrails.md`.
+- **Feasibility**: **Hoog risico** — depends on additional model integrations and careful privacy review.
+
+### Phase 7 — Platform Extensibility
+- **Scope**: Open the extension to partner integrations and additional Chrome surfaces beyond popup/options.
+- **Key deliverables**: Side panel workspace, extension APIs for partner modules, integration framework for external tools, documentation for extension points.
+- **Dependencies**: Build upon productivity automation, telemetry (Phase 8), and Chrome side panel availability.
+- **Feasibility**: **Middel risico** — new surfaces demand performance profiling and security reviews.
+
+### Phase 8 — Quality, Telemetry & Growth
+- **Scope**: Institutionalize measurement, reliability, and growth levers to sustain the product at scale.
+- **Key deliverables**: Observability stack (metrics + structured logging), release quality scorecard, localization expansion, accessibility audits, governance for data retention.
+- **Dependencies**: Requires instrumentation from earlier phases, geplande ADR `docs/decisions/20240130-observability.md` for logging schema, and collaboration with documentation owners.
+- **Feasibility**: **Middel risico** — relies on team capacity for ongoing maintenance and compliance.
+
+## Cross-Cutting Initiatives & Metrics
+- **Quality automation**: Expand linting/build guardrails with Vitest, Playwright harnesses, and regression scripts; measure pass rates per release and track mean time to recovery when automation fails. Coordinate with future ADR `docs/decisions/20240105-testing-strategy.md`.
+- **Observability & telemetry**: Instrument key flows (capture latency, sync queue depth, search responsiveness) with privacy-conscious logging. Establish weekly dashboards that feed into Phase 8 scorecards.
+- **Accessibility & localization**: Maintain WCAG compliance and EN/NL parity; set quarterly audits scoring keyboard coverage, ARIA labelling, and translation completeness.
+- **Security & privacy reviews**: Introduce checklist for new data flows, referencing sync, audio, and intelligence ADRs to ensure encryption, opt-in toggles, and data lifecycle policies remain current.
+- **Documentation hygiene**: Keep roadmap/feature plan in lockstep; record architectural decisions as ADRs before implementation begins for phases 3+, ensuring contributors have traceable context.
 
 ## Risks & Mitigations
 - **Storage contention**: Chrome `storage.sync` quota limitations could throttle sync. Mitigate by batching updates, compressing payloads, and allowing users to opt into reduced-sync mode.

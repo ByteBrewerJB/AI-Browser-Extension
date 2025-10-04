@@ -2,150 +2,119 @@
 
 This plan refines the high-level roadmap into concrete, traceable work items derived from the requested feature set. Each item should move from **TODO -> IN PROGRESS -> DONE**, with status tracked in issues or PRs.
 
-## Milestone 0 - Baseline (DONE)
-- [x] MV3 project scaffolded with Vite + React + TypeScript.
-- [x] Popup and options UI shells with i18n + RTL support.
-- [x] Background worker + context menu stubs.
-- [x] Content script injects word/character counter.
+Roadmap 2.0 introduces phased delivery (0–8) that mirrors the architecture roadmap. Each phase below outlines scope, deliverables, dependencies, and a feasibility signal so contributors can plan workstreams and reference reusable assets.
 
-**Test checklist**
-- Manual: popup loads, language toggle works, RTL switch flips layout.
-- Manual: context menu entries visible on chat.openai.com and chatgpt.com.
-- Manual: word/character counter appears while typing and updates live.
-- Command: `npm run lint`.
+## Fase 0 – Baseline Extension Shell (Status: Gereed)
+- **Scope**: Bewaken van het MV3-raamwerk, de popup/options shells en de ontwikkeltooling die snelle iteratie mogelijk maken.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | MV3 manifest + Vite/CRX buildketen | Gereed | Dagelijkse build & reload workflows stabiel. |
+  | Globale Tailwind tokens en layout shells | Gereed | Popup/options delen navigatie en statebeheer. |
+  | Basis content-script teller | Gereed | Word/char teller blijft als regressie-indicator. |
+- **Afhankelijkheden**: Chrome MV3 API’s, Vite toolchain, lint/build pipelines.
+- **Haalbaarheidsinschatting**: Laag risico; onderhoudswerk past in reguliere releasecadans.
 
-## Milestone 1 - Conversation Capture Backbone
-- [x] Storage layer
-  - [x] Dexie schema covering conversations, messages, prompts, GPTs, folders, settings (see `src/core/storage/db.ts`).
-  - [x] Sync bridge to `chrome.storage.sync` for metadata mirroring and conflict resolution strategy (`src/core/storage/syncBridge.ts`, wired via `src/core/storage/conversations.ts`).
-- [x] Content collection
-  - [x] DOM observer on chat.openai.com/chatgpt.com capturing message bodies (user + assistant) with metadata.
-  - [x] Conversation normalization into storage, update counters to use stored stats.
-- [x] Popup wiring
-  - [x] Render recent conversations with word/char counts from state.
-  - [x] Bookmark pin toggle persists to storage.
-- [ ] Options dashboard foundations
-  - [x] Conversations table view showing latest chats (filtering controls still pending).
-  - [x] Folder tree sidebar (folders + subfolders).
-- [ ] Polish & verification
-- [x] Saved filters/column presets for the conversation table.
-  - [x] Shared empty/error state components across dashboard modules (`StateMessage` + `EmptyState`).
-  - [x] Manual regression script documented for both chat domains (`docs/testing/manual-regression.md`).
-  - [ ] Additional Vitest coverage for DOM ingestion edge cases (system messages, streaming edits).
+## Fase 1 – Conversation Capture Backbone (Status: Gereed)
+- **Scope**: Gestructureerde conversaties opslaan met offline-first garanties en gespiegelde metadata-sync.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Dexie-database + migraties | Gereed | Hergebruiken als basis voor alle opslag. |
+  | SyncBridge naar `chrome.storage.sync` | Gereed | Zie `src/core/storage/syncBridge.ts`; monitor quota. |
+  | DOM-ingestiedienst | Gereed | Retry/backoff aanwezig; regressies gedekt door handmatig script. |
+  | Captureregressie-checklist | Gereed | Zie `docs/testing/manual-regression.md`. |
+- **Afhankelijkheden**: Chrome storage quota, DOM-selectors op chat.openai.com/chatgpt.com, Dexie-runtime.
+- **Haalbaarheidsinschatting**: Laag risico; belangrijkste risico is upstream DOM-wijziging.
 
-**Test checklist**
-- Unit: text metric helpers, storage service (Vitest or manual Dexie smoke test).
-- Manual: type/refresh on both ChatGPT domains -> conversations appear in popup/dashboard.
-- Manual: bookmark toggle works and persists across reloads.
-- Manual: conversation word/char totals match expected sample text.
-- Command: `npm run lint`.
+## Fase 2 – Prompt & Kennis Tooling (Status: Hergebruiken)
+- **Scope**: Promptketens, GPT-mappen en kennisartefacten aanbieden als herbruikbare modules.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Prompt chain composer | Hergebruiken | UI gereed; uitbreidbaar met drag & drop (fase 3). |
+  | GPT-map- en templatebeheer | Hergebruiken | CRUD-stromen productieklaar. |
+  | Toolbar- en tabelprimitieven | Hergebruiken | Delen selectie-, filter- en statecomponenten. |
+  | Validatiebibliotheek gedeeld met storage | Hergebruiken | Houdt schema’s synchroon met Dexie. |
+- **Afhankelijkheden**: Fase 1 storagecontracten, i18n/RTL dekking, Zustand stores.
+- **Haalbaarheidsinschatting**: Laag risico; uitbreidingen kunnen incrementeel.
 
-## Milestone 2 - Productivity Suite
-- [ ] GPT & prompt management
-  - [x] GPT folder hierarchy CRUD.
-  - [x] Prompt template creation + organization.
-  - [x] Prompt chains UI (step-by-step reordering controls with move buttons; dedicated drag-and-drop UX tracked below).
-  - [ ] Drag-and-drop ordering for prompt chains (compare `dnd-kit` vs native HTML drag handles).
-  - [ ] Shared toolbar patterns (bulk actions, search, filters) defined for reuse.
-- [ ] Bulk actions
-  - [ ] Multi-select conversations with bulk archive/delete/export.
-  - [ ] Bulk GPT/prompt operations.
-  - [ ] Background command queue for executing bulk jobs with undo metadata.
-  - [ ] Optimistic UI state with conflict resolution against storage sync.
-- [ ] Advanced search
-  - [ ] MiniSearch index builder syncing with storage events.
-  - [ ] Global search UI with filters (date, GPT, folder, language).
-  - [ ] Search worker wiring with streaming updates to Zustand stores.
-  - [ ] Scoped search panels (conversations, prompts, GPTs) sharing filter chips.
-- [ ] Exports
-  - [ ] TXT/JSON export service with settings (include metadata, include audio links).
-  - [ ] Bulk export wizard in dashboard.
-  - [ ] Background orchestration for long-running exports + notification surface.
+## Fase 3 – Productivity Automation (Status: Actief)
+- **Scope**: Bulkacties, globale zoekopdrachten, exportstromen en inline werkbalken versnellen dagelijkse workflows.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Command queue + undo-metadata in background | In uitvoering | Geplande ADR `docs/decisions/20240201-command-queue.md` definieert patronen. |
+  | MiniSearch-gedreven globale zoekindex | Gepland | Bouwt voort op Dexie change streams; geplande ADR `docs/decisions/20240210-search-indexer.md`. |
+  | Bulkactie-UX (conversaties/prompts/GPT’s) | In uitvoering | Gebruikt toolbarprimitieven uit fase 2. |
+  | TXT/JSON exportservice | Gepland | Background worker voert grote batches uit. |
+  | Inline quick settings tray | Gepland | Deelt Zustand stores met dashboard. |
+- **Afhankelijkheden**: Fase 1–2 opslaglagen, background messaging, virtualisatielaag voor tabellen.
+- **Haalbaarheidsinschatting**: Middel risico door afhankelijkheden tussen worker, opslag en UI-performance.
 
-- [ ] Inline workspace surfaces
-  - [ ] ChatGPT inline quick settings drawer (language, direction, capture toggle) anchored to the composer toolbar.
-  - [ ] Conversation metadata flyout attached to the live counter for on-page triage (pin/archive/bookmark).
+## Fase 4 – Audio Suite (Status: Gepland)
+- **Scope**: Audio-antwoorden detecteren, downloaden en afspelen met aanpasbare voice-profielen.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Audio-detectieservice | Gepland | Volgt markup op ChatGPT; koppelen aan capture flags. |
+  | Downloadorkestratie in background | Gepland | Geplande ADR `docs/decisions/20240218-audio-pipeline.md` beschrijft codecs. |
+  | Popup playback & voice-presets | Gepland | UI hergebruikt bestaande componentlibrary. |
+  | Optionele WASM-audiobewerkingspipeline | Gepland | Inschatten prestaties en bundelgrootte. |
+- **Afhankelijkheden**: Chrome download API, MediaRecorder, optionele WASM toolchain.
+- **Haalbaarheidsinschatting**: Middel risico; afhankelijk van permissies en audio-assets upstream.
 
-**Test checklist**
-- Unit: storage/query helpers for GPTs, prompts, prompt chains, search index.
-- Integration: search results respect filters (Vitest + jsdom or Playwright component test).
-- Manual: bulk select + action flows behave without regressions (check undo/back confirms).
-- Manual: exported TXT/JSON files open and content is correct.
-- Command: `npm run lint` plus future `npm run test` when added.
+## Fase 5 – Sync & Collaboration (Status: Gepland)
+- **Scope**: Betrouwbare multi-device ervaring met diffinzicht, versleutelde backups en gedeelde voorkeuren.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Diff/merge-helpers + conflictdialoog | Gepland | Referentie: geplande ADR `docs/decisions/20240305-sync-strategy.md`. |
+  | Cloud-backupproviders (WebDAV, Drive, disk) | Gepland | Versleutelingslagen delen modules met fase 8. |
+  | Sync-instellingen + sleutelbeheer UI | Gepland | Vereist duidelijke onboarding en herstelpaden. |
+  | Samenwerkingsmetadata (gedeelde labels) | Gepland | Gebruikt background command queue uit fase 3. |
+- **Afhankelijkheden**: Uitgebreide telemetry (fase 8), storage bridge, encryptiebibliotheken.
+- **Haalbaarheidsinschatting**: Middel/hoog risico door quota, encryptie UX en provider-API’s.
 
-## Milestone 3 - Audio Suite
-- [ ] Audio capture & download
-  - [ ] Detect audio replies + transcripts in ChatGPT DOM.
-  - [ ] Background download handler (filename strategy, download location prompt toggle).
-- [ ] Voice options
-  - [ ] Voice profile management (built-in list + custom provider placeholders).
-  - [ ] Playback controls in popup (speed, pitch, volume when available).
-- [ ] Advanced voice mode
-  - [ ] MediaRecorder integration for user recordings.
-  - [ ] Optional WASM audio processor pipeline (pitch shift, denoise).
-  - [ ] UI to chain prompts + voice responses.
+## Fase 6 – Intelligence & Assistive Features (Status: Gepland)
+- **Scope**: Proactieve aanbevelingen en workflow-automatiseringen bouwen op basis van opgeslagen data.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Suggestie-engine voor vervolgstappen | Gepland | Gebruikt zoekindex en conversation analytics. |
+  | Workflow-automatiseringen (reminders, chaining) | Gepland | Vereist command queue-uitbreiding. |
+  | Samenvattings- en analyseworkers | Gepland | Onder beheer van privacyrichtlijnen uit geplande ADR `docs/decisions/20240320-intelligence-guardrails.md`. |
+  | Notificatie- & insights-oppervlakken | Gepland | Popup/options + toekomstige side panel surface. |
+- **Afhankelijkheden**: Telemetry, storage analytics, model-API’s, privacyreviews.
+- **Haalbaarheidsinschatting**: Hoog risico; afhankelijk van externe AI-diensten en databescherming.
 
-**Test checklist**
-- Manual: audio detection works on both domains, downloads trigger, saved files playable.
-- Manual: voice playback controls respond and remember settings.
-- Manual: advanced voice mode flow from recording to playback.
-- Unit: audio pipeline helpers (mock web APIs where possible).
-- Integration: background <-> content messaging around downloads.
-- Command: `npm run lint` plus audio-specific tests when introduced.
+## Fase 7 – Platform Extensibility (Status: Gepland)
+- **Scope**: Uitbreidbaarheid naar side panel en partnerintegraties borgen.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Chrome side panel workspace | Gepland | Performantie-audits noodzakelijk (zie architecture-roadmap). |
+  | Extensie-API’s voor partners | Gepland | Vereist permissiemodel + documentatie. |
+  | Integratiekaders (webhooks/exports) | Gepland | Hergebruikt exportservice en command queue. |
+  | Partner-onboardinghandleiding | Gepland | Documenteert contracten en QA.
+- **Afhankelijkheden**: Productivity automation, telemetry dashboards, security checklist.
+- **Haalbaarheidsinschatting**: Middel risico; nieuwe oppervlaktes vragen extra QA en governance.
 
-## Milestone 4 - Sync & Multi-Device
-- [ ] Cross-browser profile sync enhancements (diff resolution, manual merge).
-- [ ] Optional cloud backup connector abstraction (export to disk, WebDAV, GDrive placeholder).
-- [ ] Settings page for sync preferences, encryption key management.
+## Fase 8 – Quality, Telemetry & Growth (Status: Gepland)
+- **Scope**: Structurele kwaliteits- en groeikanalen realiseren.
+- **Deliverables**:
+  | Deliverable | Status | Opmerkingen |
+  | --- | --- | --- |
+  | Observabilitystack (metrics + logging) | Gepland | Zie geplande ADR `docs/decisions/20240130-observability.md`. |
+  | Releasekwaliteit-scorecard | Gepland | Combineert testdekking, bugintake en MTTR-metrics. |
+  | Lokalisatie-uitbreiding & toegankelijkheidsaudit | Gepland | Kwartaalrapportage met WCAG-score. |
+  | Dataretentie & governancebeleid | Gepland | Samenhang met privacy-ADR’s en sync beleid. |
+- **Afhankelijkheden**: Bestaande lint/build pipelines, telemetry hooks uit fase 3+, product analytics tooling.
+- **Haalbaarheidsinschatting**: Middel risico; vereist doorlopende inzet en teamcapaciteit.
 
-**Test checklist**
-- Manual: sync scenario (browser A <-> B) including conflict cases.
-- Manual: backup export/import round-trip.
-- Unit: diff/merge helpers.
-- Integration: storage.sync listeners and offline fallback behaviour.
-- Security review: key management and encryption routines.
-- Command: `npm run lint` plus end-to-end sync test script.
-
-## Milestone 5 - Polish & Side Panel
-- [ ] Chrome side panel workspace with resizable views.
-- [ ] Telemetry opt-in & diagnostics (error reporting, performance metrics).
-- [ ] Localization expansion (prioritized languages, add translations).
-- [ ] Accessibility pass (focus order, screen-reader hints, contrast checks).
-- [ ] Performance tuning (lazy loading large histories, batching DOM writes).
-
-**Test checklist**
-- Manual: side panel UI flows and resize behaviour.
-- Manual: assistive tech smoke test (keyboard navigation, screen reader labels).
-- Manual: verify new languages and RTL support.
-- Performance: Lighthouse or Chrome Performance with large history dataset.
-- Command: `npm run lint` plus visual regression tests if tooling available.
-
-## Cross-Cutting Tasks
-- [ ] Automated tests
-  - [ ] Unit: storage services, search, exporters.
-  - [ ] Integration: content <-> background messaging (Vitest or Playwright).
-  - [ ] End-to-end (Playwright extension harness).
-- [ ] Documentation
-  - [ ] Update README as features ship.
-  - [ ] Maintain API docs for storage/search/audio modules.
-  - [ ] Keep milestone status current in this plan.
-
-## Decision Log Template
-For significant architectural choices, add entries to `docs/decisions/` following `{YYYYMMDD}-concise-title.md`:
-```
-# Context
-- Problem / motivation
-
-# Decision
-- Chosen approach
-
-# Consequences
-- Positive / negative trade-offs
-```
-
-## Definition of Done (per feature)
-- [ ] Types pass `npm run lint`.
-- [ ] User-facing copy localized (EN + NL) and RTL verified when relevant.
-- [ ] Screenshots or Loom (optional) for UI-heavy changes.
-- [ ] README / docs updated.
-- [ ] Tests (or rationale for omission) noted in PR.
+## Cross-Cutting Initiatieven & Meetpunten
+- **Testautomatisering**: Vergroot dekking met Vitest, Playwright en rooktests voor content/background messaging. Meetpunten: percentage geslaagde CI-runs, gemiddelde doorlooptijd naar fix bij falende run.
+- **Telemetry & observability**: Meet capture-latency, sync-queue diepte, zoek-responstijd. Koppel dashboards aan Roadmap 2.0 fase- en releasebesluitvorming.
+- **Toegankelijkheid & lokalisatie**: Kwartaalreviews met WCAG-checklist en EN/NL vertaaldichtheid; rapporteer score in release notes.
+- **Security & privacy**: Voor nieuwe dataflows verplicht ADR-referentie (sync, audio, intelligence) en threat-model checklist vóór implementatie.
+- **Documentatie-hygiëne**: Featureplan en architecture-roadmap gelijktijdig bijwerken; markeer updates in changelog en verwijs naar relevante ADR’s zodat contributors actuele context behouden.
