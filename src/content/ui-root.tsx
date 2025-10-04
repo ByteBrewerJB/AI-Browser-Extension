@@ -12,6 +12,14 @@ const SIDEBAR_SELECTORS = [
   'nav[aria-label="Chat History"]',
   'nav[aria-label="ChatGPT history"]',
   'nav[aria-label="Conversation history"]',
+  'nav[aria-label*="chat history" i]',
+  'nav[aria-label*="chatgpt history" i]',
+  'nav[aria-label*="conversation history" i]',
+  'nav[aria-label*="history" i]',
+  '[data-testid="left-sidebar"] nav',
+  '[data-testid="left-sidebar"] aside',
+  '[data-testid="left-sidebar"]',
+  '[data-testid="left_sidebar"]',
 ];
 
 let sidebarMutationObserver: MutationObserver | null = null;
@@ -32,6 +40,18 @@ function findSidebarContainer(): HTMLElement | null {
   const sidebarTestId = document.querySelector('[data-testid="left-sidebar"]');
   if (sidebarTestId instanceof HTMLElement) {
     return sidebarTestId;
+  }
+
+  const genericNav = document.querySelector(
+    'nav[aria-label*="history" i], nav[aria-label*="recent" i]',
+  );
+  if (genericNav instanceof HTMLElement) {
+    return genericNav.parentElement instanceof HTMLElement ? genericNav.parentElement : genericNav;
+  }
+
+  const genericSidebar = document.querySelector('[data-testid*="sidebar" i]');
+  if (genericSidebar instanceof HTMLElement) {
+    return genericSidebar;
   }
 
   return null;
