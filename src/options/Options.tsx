@@ -40,6 +40,7 @@ import { usePrompts } from '@/shared/hooks/usePrompts';
 import { usePromptChains } from '@/shared/hooks/usePromptChains';
 import { initI18n } from '@/shared/i18n';
 import { useSettingsStore } from '@/shared/state/settingsStore';
+import { sendRuntimeMessage } from '@/shared/messaging/router';
 
 const featureColumns = [
   {
@@ -158,6 +159,9 @@ export function Options() {
   const gpts = useGpts();
   const prompts = usePrompts();
   const promptChains = usePromptChains();
+  const [isSchedulingExport, setIsSchedulingExport] = useState(false);
+  const [exportScheduledAt, setExportScheduledAt] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const gptFolders = useFolders('gpt');
   const promptFolders = useFolders('prompt');
   const conversationPresets = useConversationPresets();
@@ -189,6 +193,24 @@ export function Options() {
   const [promptChainName, setPromptChainName] = useState('');
   const [promptChainNodeIds, setPromptChainNodeIds] = useState<string[]>([]);
   const [editingPromptChain, setEditingPromptChain] = useState<EditingPromptChainState | null>(null);
+
+  const scheduleExportJob = async () => {
+    setIsSchedulingExport(true);
+    setExportError(null);
+    try {
+      const response = await sendRuntimeMessage('jobs/schedule-export', {
+        exportId: crypto.randomUUID(),
+        runAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+        payload: { scope: 'conversations' },
+        maxAttempts: 5
+      });
+      setExportScheduledAt(response.scheduledFor);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsSchedulingExport(false);
+    }
+  };
 
   useEffect(() => {
     initI18n();
@@ -620,6 +642,29 @@ export function Options() {
       </header>
 
       <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
+        <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+          <header className="mb-2 flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Scheduled exports</h2>
+              <p className="text-xs text-slate-400">Plan conversation backups via the background job queue.</p>
+            </div>
+            <button
+              className="rounded-md bg-emerald-500 px-3 py-1 text-xs font-semibold text-emerald-950 shadow-sm disabled:opacity-60"
+              onClick={() => void scheduleExportJob()}
+              disabled={isSchedulingExport}
+              type="button"
+            >
+              {isSchedulingExport ? 'Scheduling…' : 'Schedule export in 5 min'}
+            </button>
+          </header>
+          {exportScheduledAt ? (
+            <p className="text-xs text-slate-300">Next export scheduled for {new Date(exportScheduledAt).toLocaleString()}</p>
+          ) : (
+            <p className="text-xs text-slate-400">No export scheduled yet.</p>
+          )}
+          {exportError ? <p className="mt-2 text-xs text-rose-400">{exportError}</p> : null}
+        </section>
+
         <section className="flex flex-col gap-6 md:flex-row">
           <aside className="md:w-64">
             <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4">

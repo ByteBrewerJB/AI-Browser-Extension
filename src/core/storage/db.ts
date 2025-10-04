@@ -4,6 +4,7 @@ import type {
   ConversationRecord,
   FolderRecord,
   GPTRecord,
+  JobRecord,
   MessageRecord,
   PromptChainRecord,
   PromptRecord,
@@ -19,6 +20,7 @@ export class CompanionDatabase extends Dexie {
   folders!: Table<FolderRecord, string>;
   bookmarks!: Table<BookmarkRecord, string>;
   settings!: Table<SettingsRecord, string>;
+  jobs!: Table<JobRecord, string>;
 
   constructor() {
     super('AICompanionDB');
@@ -55,6 +57,18 @@ export class CompanionDatabase extends Dexie {
           }
         });
       });
+
+    this.version(3).stores({
+      conversations: 'id, updatedAt, folderId, pinned, archived',
+      messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+      gpts: 'id, folderId, updatedAt',
+      prompts: 'id, folderId, gptId, updatedAt',
+      promptChains: 'id, updatedAt',
+      folders: 'id, parentId, kind',
+      bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+      settings: 'id',
+      jobs: 'id, status, runAt'
+    });
   }
 }
 

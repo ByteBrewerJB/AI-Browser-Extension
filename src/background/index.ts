@@ -1,4 +1,24 @@
-﻿chrome.runtime.onInstalled.addListener(() => {
+import { createAuthManager } from './auth';
+import { createJobScheduler } from './jobs/scheduler';
+import { initializeMessaging } from './messaging';
+import { sendTabMessage } from '@/shared/messaging/router';
+
+const authManager = createAuthManager();
+const jobScheduler = createJobScheduler();
+
+authManager.initialize().catch((error) => {
+  console.warn('[ai-companion] failed to initialize auth manager', error);
+});
+
+jobScheduler.registerHandler('export', async (job) => {
+  console.info('[ai-companion] processing export job', job.payload);
+});
+
+jobScheduler.start();
+
+initializeMessaging({ auth: authManager, scheduler: jobScheduler });
+
+function setupContextMenus() {
   chrome.contextMenus.create({
     id: 'ai-companion-save-audio',
     title: 'Save audio from ChatGPT reply',
@@ -12,28 +32,30 @@
     contexts: ['page'],
     documentUrlPatterns: ['https://chat.openai.com/*', 'https://chatgpt.com/*']
   });
-});
+}
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
   if (!tab?.id) {
     return;
   }
 
   if (info.menuItemId === 'ai-companion-bookmark-chat') {
-    chrome.tabs
-      .sendMessage(tab.id, { type: 'bookmark-chat' })
-      .catch((error) => console.error('[ai-companion] failed to send message', error));
+    sendTabMessage(tab.id, 'content/bookmark', {}).catch((error) => {
+      console.error('[ai-companion] failed to send bookmark request', error);
+    });
   }
 
   if (info.menuItemId === 'ai-companion-save-audio') {
-    chrome.tabs
-      .sendMessage(tab.id, { type: 'download-audio' })
-      .catch((error) => console.error('[ai-companion] failed to send message', error));
+    sendTabMessage(tab.id, 'content/audio-download', {}).catch((error) => {
+      console.error('[ai-companion] failed to send audio request', error);
+    });
   }
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  setupContextMenus();
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'ping') {
-    sendResponse({ type: 'pong' });
-  }
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  handleContextMenuClick(info, tab);
 });

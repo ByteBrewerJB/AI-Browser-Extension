@@ -24,12 +24,14 @@ const emptySnapshot: SyncSnapshot = {
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
 
-function getSyncArea(): chrome.storage.SyncStorageArea | undefined {
-  if (typeof chrome === 'undefined') {
-    return undefined;
-  }
+function getChromeApi() {
+  return (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+}
 
-  return chrome.storage?.sync;
+function getSyncArea(): chrome.storage.SyncStorageArea | undefined {
+  const chromeApi = getChromeApi();
+  const sync = chromeApi?.storage?.sync;
+  return sync;
 }
 
 async function storageGet<T>(key: string): Promise<T | undefined> {
@@ -46,7 +48,7 @@ async function storageGet<T>(key: string): Promise<T | undefined> {
   return new Promise<T | undefined>((resolve, reject) => {
     try {
       sync.get(key, (result) => {
-        const error = chrome.runtime?.lastError;
+        const error = getChromeApi()?.runtime?.lastError;
         if (error) {
           reject(error);
           return;
@@ -73,7 +75,7 @@ async function storageSet<T extends object>(items: T): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     try {
       sync.set(items, () => {
-        const error = chrome.runtime?.lastError;
+        const error = getChromeApi()?.runtime?.lastError;
         if (error) {
           reject(error);
           return;
@@ -153,7 +155,8 @@ function ensureChangeListener() {
     return;
   }
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  const chromeApi = getChromeApi();
+  chromeApi?.storage?.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'sync') {
       return;
     }

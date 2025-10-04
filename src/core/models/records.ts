@@ -103,4 +103,20 @@ export interface SettingsRecord {
   updatedAt: string;
 }
 
+export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface JobRecord {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  status: JobStatus;
+  runAt: string;
+  createdAt: string;
+  updatedAt: string;
+  attempts: number;
+  maxAttempts: number;
+  lastRunAt?: string;
+  lastError?: string;
+}
+
 
