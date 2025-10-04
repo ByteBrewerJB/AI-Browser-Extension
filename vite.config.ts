@@ -46,6 +46,19 @@ export default defineConfig(async () => {
     },
     build: {
       sourcemap: true
+    },
+    server: {
+      host: 'localhost',
+      port: 5173,
+      strictPort: true,
+      cors: {
+        origin: '*'
+      },
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+      }
     }
   };
 });
