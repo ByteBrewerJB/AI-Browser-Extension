@@ -5,7 +5,6 @@ import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import type { JobSnapshot } from '@/core/models';
-import { initI18n } from '@/shared/i18n';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 
@@ -48,10 +47,6 @@ export function Options() {
   const [jobsFetchedAt, setJobsFetchedAt] = useState<string | null>(null);
   const [isFetchingJobs, setIsFetchingJobs] = useState(false);
   const [jobLoadError, setJobLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void initI18n();
-  }, []);
 
   useEffect(() => {
     document.documentElement.dir = direction;

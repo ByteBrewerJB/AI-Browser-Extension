@@ -40,3 +40,5 @@ export function getCurrentLanguage() {
   return i18n.language;
 }
 
+export { i18n };
+
