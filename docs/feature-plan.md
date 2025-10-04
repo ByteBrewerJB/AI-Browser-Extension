@@ -1,4 +1,4 @@
-﻿# Feature Delivery Plan
+# Feature Delivery Plan
 
 This plan refines the high-level roadmap into concrete, traceable work items derived from the requested feature set. Each item should move from **TODO -> IN PROGRESS -> DONE**, with status tracked in issues or PRs.
 
@@ -17,7 +17,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 ## Milestone 1 - Conversation Capture Backbone
 - [x] Storage layer
   - [x] Dexie schema covering conversations, messages, prompts, GPTs, folders, settings (see `src/core/storage/db.ts`).
-  - [x] Sync bridge to `chrome.storage.sync` for metadata mirroring and conflict resolution strategy (`src/core/storage/syncBridge.ts`).
+  - [x] Sync bridge to `chrome.storage.sync` for metadata mirroring and conflict resolution strategy (`src/core/storage/syncBridge.ts`, wired via `src/core/storage/conversations.ts`).
 - [x] Content collection
   - [x] DOM observer on chat.openai.com/chatgpt.com capturing message bodies (user + assistant) with metadata.
   - [x] Conversation normalization into storage, update counters to use stored stats.
@@ -29,7 +29,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [x] Folder tree sidebar (folders + subfolders).
 - [ ] Polish & verification
   - [ ] Saved filters/column presets for the conversation table.
-  - [ ] Shared empty/error state components across dashboard modules.
+  - [x] Shared empty/error state components across dashboard modules (`StateMessage` + `EmptyState`).
   - [ ] Manual regression script documented for both chat domains.
   - [ ] Additional Vitest coverage for DOM ingestion edge cases (system messages, streaming edits).
 
@@ -44,7 +44,8 @@ This plan refines the high-level roadmap into concrete, traceable work items der
 - [ ] GPT & prompt management
   - [x] GPT folder hierarchy CRUD.
   - [x] Prompt template creation + organization.
-  - [x] Prompt chains UI (drag-and-drop ordering).
+  - [x] Prompt chains UI (step-by-step reordering controls with move buttons; dedicated drag-and-drop UX tracked below).
+  - [ ] Drag-and-drop ordering for prompt chains (compare `dnd-kit` vs native HTML drag handles).
   - [ ] Shared toolbar patterns (bulk actions, search, filters) defined for reuse.
 - [ ] Bulk actions
   - [ ] Multi-select conversations with bulk archive/delete/export.
@@ -60,6 +61,10 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [ ] TXT/JSON export service with settings (include metadata, include audio links).
   - [ ] Bulk export wizard in dashboard.
   - [ ] Background orchestration for long-running exports + notification surface.
+
+- [ ] Inline workspace surfaces
+  - [ ] ChatGPT inline quick settings drawer (language, direction, capture toggle) anchored to the composer toolbar.
+  - [ ] Conversation metadata flyout attached to the live counter for on-page triage (pin/archive/bookmark).
 
 **Test checklist**
 - Unit: storage/query helpers for GPTs, prompts, prompt chains, search index.

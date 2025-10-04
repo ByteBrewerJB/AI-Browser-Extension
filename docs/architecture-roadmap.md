@@ -9,6 +9,7 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - **Options / dashboard page** for full management: chat archive, GPTs, prompt chains, bulk actions, exports.
 - **Background service worker** to centralize storage sync, schedule backups, and broker audio downloads.
 - **Side panel (optional)** leveraging the Chrome side panel API for persistent workspace tools.
+- **Inline quick settings tray (planned)** embedded next to the ChatGPT composer for quick toggles and filters.
 
 ## Tech Stack
 - TypeScript + React 18 UI components.
@@ -34,6 +35,7 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - Sync tiers:
   1. Browser-level sync using `chrome.storage.sync` for metadata (names, ids, timestamps) to enable multi-device awareness.
   2. Optional encrypted backup to user-selected provider (future enhancement) to fully share message bodies.
+- Metadata sync pipeline: conversation mutations trigger `syncBridge` updates (`src/core/storage/conversations.ts`), keeping counts/pin/archive state mirrored remotely.
 - Search: build incremental index using MiniSearch stored in IndexedDB, refreshed per change batch.
 
 ## Accessibility & Localization
@@ -46,14 +48,14 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
 - ✅ **Shared foundations are in place.** Tailwind theming, Zustand store scaffolding, route wiring, and localization utilities are functional across popup, options, and content script surfaces.
 - ✅ **Developer experience is stable.** Vite dev flow, CRXJS bundling, and lint/test scripts run reliably for day-to-day iteration.
 - ✅ **Prompt chain builder shipped.** Options dashboard now provides a prompt chain composer with accessible ordering controls backed by the new storage API and Node-based unit tests.
-- ✅ **Milestone 1 capture work reached feature-complete.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; table filtering refinements and broader regression coverage remain as polish tasks.
+- ✅ **Milestone 1 capture work reached feature-complete.** Dexie storage, conversation/bookmark metadata sync, DOM ingestion, popup stats, and the options folder tree/table are live; the sync bridge now mirrors counts/pin/archive state via `chrome.storage.sync`, with table filtering and broader regression coverage still on deck as polish.
 - 🚧 **Milestone 2 productivity tooling is underway.** Prompt & GPT management flows are shipping; bulk actions, global search, and export orchestration are the next large workstreams.
 
 The next stages focus on layering robust storage, capture, and productivity systems atop this baseline.
 
 ## Feature Delivery Roadmap
 1. **MVP**: baseline extension shell (popup, options, background), conversation capture, bookmarks, exports, word/character counter, basic multilingual UI.
-2. **Productivity**: GPT folders, prompt creation & chains, pinned chats, advanced search, bulk actions.
+2. **Productivity**: GPT folders, prompt creation & chains, pinned chats, advanced search, bulk actions, inline quick-settings surfaces inside ChatGPT.
 3. **Audio Suite**: audio download integration with ChatGPT responses, voice options UI, advanced voice mode pipeline.
 4. **Sync & Collaboration**: enhanced multi-device sync, per-browser profile settings, optional cloud backup connectors.
 5. **Polish**: side panel experience, performance profiling, telemetry opt-in, expanded localization.
@@ -61,7 +63,7 @@ The next stages focus on layering robust storage, capture, and productivity syst
 ## Remaining Milestone 1 Hardening
 1. **Dashboards polish**
    - Layer column filtering and saved views onto the conversations table without regressing virtualization performance.
-   - Instrument a lightweight empty/error state system that the options dashboard can reuse across modules.
+   - Extend the shared `StateMessage` / `EmptyState` components across dashboard modules as they roll out (search, exports, inline tray).
 2. **Reliability & QA**
    - Expand unit coverage for the DOM ingestion pipeline (edge cases: system messages, code blocks, streaming edits).
    - Capture a repeatable manual regression script spanning chat.openai.com & chatgpt.com to unblock contributor testing.
@@ -78,7 +80,10 @@ The next stages focus on layering robust storage, capture, and productivity syst
 3. **Export service**
    - Design a normalized export payload schema shared across TXT/JSON formats, supporting localization-ready metadata labels.
    - Provide UI entry points in both popup quick actions and the dashboard bulk wizard, ensuring background execution handles large datasets.
-4. **UX systematization**
+4. **Inline composer tray**
+   - Ship a lightweight drawer inside the ChatGPT UI exposing capture toggles, language/RTL switches, and quick archive/bookmark actions.
+   - Reuse dashboard stores so inline changes immediately reflect in popup/options views.
+5. **UX systematization**
    - Document shared toolbar, table, and modal patterns to keep productivity surfaces consistent.
    - Extend the design tokens/global Tailwind config where necessary to cover new interaction states (selected rows, search chips, wizard steps).
 

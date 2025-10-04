@@ -1,4 +1,5 @@
-﻿import { db } from './db';
+import { db } from './db';
+import { removeConversationMetadata, syncConversationMetadata } from './syncBridge';
 import type { BookmarkRecord, ConversationRecord, MessageRecord } from '@/core/models';
 import { computeTextMetrics, sumTextMetrics } from '@/core/utils/textMetrics';
 
@@ -35,7 +36,7 @@ function nowIso() {
 
 export async function upsertConversation(input: ConversationUpsertInput) {
   const timestamp = input.updatedAt ?? nowIso();
-  return db.conversations.put({
+  const result = await db.conversations.put({
     id: input.id,
     title: input.title,
     folderId: input.folderId,
@@ -46,6 +47,13 @@ export async function upsertConversation(input: ConversationUpsertInput) {
     wordCount: input.wordCount ?? 0,
     charCount: input.charCount ?? 0
   });
+
+  const stored = await db.conversations.get(input.id);
+  if (stored) {
+    await syncConversationMetadata(stored);
+  }
+
+  return result;
 }
 
 export async function addMessages(messages: MessageInput[]) {
@@ -75,12 +83,13 @@ export async function addMessages(messages: MessageInput[]) {
   const metricsToApply = sumTextMetrics(records.map((record) => ({
     wordCount: record.wordCount,
     charCount: record.charCount
-  })));
+  }))));
+
+  const conversationId = records[0].conversationId;
 
   await db.transaction('rw', db.messages, db.conversations, async () => {
     await db.messages.bulkPut(records);
 
-    const conversationId = records[0].conversationId;
     const existing = await db.conversations.get(conversationId);
     if (!existing) {
       throw new Error(`Conversation ${conversationId} missing. Call upsertConversation first.`);
@@ -92,6 +101,11 @@ export async function addMessages(messages: MessageInput[]) {
       charCount: (existing.charCount ?? 0) + metricsToApply.charCount
     });
   });
+
+  const updatedConversation = await db.conversations.get(conversationId);
+  if (updatedConversation) {
+    await syncConversationMetadata(updatedConversation);
+  }
 }
 
 export async function getRecentConversations(limit = 10): Promise<ConversationOverview[]> {
@@ -154,6 +168,11 @@ export async function togglePinned(conversationId: string) {
     updatedAt: nowIso()
   });
 
+  const updatedConversation = await db.conversations.get(conversationId);
+  if (updatedConversation) {
+    await syncConversationMetadata(updatedConversation);
+  }
+
   return { pinned: nextPinned };
 }
 
@@ -170,6 +189,8 @@ export async function deleteConversations(ids: string[]) {
     await db.bookmarks.where('conversationId').anyOf(ids).delete();
     await db.conversations.bulkDelete(ids);
   });
+
+  await Promise.all(ids.map((id) => removeConversationMetadata(id)));
 }
 
 export async function archiveConversations(ids: string[], archived: boolean) {
@@ -182,11 +203,9 @@ export async function archiveConversations(ids: string[], archived: boolean) {
       archived,
       updatedAt: nowIso()
     }
-  })));
+  }))));
+
+  const conversations = await db.conversations.where('id').anyOf(ids).toArray();
+  await Promise.all(conversations.map((conversation) => syncConversationMetadata(conversation)));
 }
-
-
-
-
-
 
