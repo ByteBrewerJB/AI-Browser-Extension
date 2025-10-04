@@ -80,10 +80,12 @@ export async function addMessages(messages: MessageInput[]) {
     };
   });
 
-  const metricsToApply = sumTextMetrics(records.map((record) => ({
-    wordCount: record.wordCount,
-    charCount: record.charCount
-  }))));
+  const metricsToApply = sumTextMetrics(
+    records.map((record) => ({
+      wordCount: record.wordCount,
+      charCount: record.charCount
+    }))
+  );
 
   const conversationId = records[0].conversationId;
 
@@ -197,13 +199,15 @@ export async function archiveConversations(ids: string[], archived: boolean) {
   if (!ids.length) {
     return;
   }
-  await db.conversations.bulkUpdate(ids.map((id) => ({
-    key: id,
-    changes: {
-      archived,
-      updatedAt: nowIso()
-    }
-  }))));
+  await db.conversations.bulkUpdate(
+    ids.map((id) => ({
+      key: id,
+      changes: {
+        archived,
+        updatedAt: nowIso()
+      }
+    }))
+  );
 
   const conversations = await db.conversations.where('id').anyOf(ids).toArray();
   await Promise.all(conversations.map((conversation) => syncConversationMetadata(conversation)));

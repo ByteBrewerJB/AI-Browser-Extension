@@ -93,4 +93,4 @@ async function run() {
   }
 }
 
-void run();
+await run();

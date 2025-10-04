@@ -42,7 +42,8 @@ This runs TypeScript in `--noEmit` mode. Add ESLint/Prettier if you need additio
 ```bash
 npm run test
 ```
-Runs the Node-based unit tests for the storage layer (prompt chain workflows currently).
+Runs the Node-based test harness (prompt chain storage and the content-script ingestion suite). The command uses the custom
+loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks required by the Vitest-style specs.
 
 ## Project Structure
 - `docs/` – architecture overview and roadmap.

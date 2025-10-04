@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "test": "node --loader ts-node/esm --experimental-specifier-resolution=node tests/promptChains.spec.ts"
+    "test": "node --loader ./tests/ts-node-loader.mjs --experimental-specifier-resolution=node tests/runAll.ts"
   },
   "keywords": [
     "chrome-extension",
