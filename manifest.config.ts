@@ -43,7 +43,7 @@ const manifest = defineManifest({
   content_scripts: [
     {
       matches: ['https://chat.openai.com/*', 'https://chatgpt.com/*'],
-      js: ['src/content/index.ts']
+      js: ['src/content/index.ts', 'src/content/ui-root.tsx']
     }
   ]
 });
