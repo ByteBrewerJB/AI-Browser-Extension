@@ -1022,8 +1022,8 @@ export function Options() {
                     </li>
                   ))}
                 </ul>
+              )}
               </div>
-            ))}
           </div>
         </section>
       </main>
