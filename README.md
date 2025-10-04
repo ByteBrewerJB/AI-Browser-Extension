@@ -3,7 +3,7 @@
 A Chrome / Edge extension that captures your ChatGPT conversations, keeps live word and character counts, and provides a multilingual popup/options UI for organizing chats, custom GPTs, and prompt templates. Audio tooling and deeper productivity workflows are planned in upcoming milestones.
 
 ## Prerequisites
-- Node.js 18 or newer
+- Node.js 20.19 or newer
 - npm 9+
 
 ## Setup
