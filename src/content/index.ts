@@ -1,10 +1,14 @@
 ﻿import { addMessages, db, upsertConversation } from '@/core/storage';
 import type { MessageRecord } from '@/core/models';
+import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
+import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messaging/router';
 
 const COUNTER_ID = 'ai-companion-word-counter';
 const processedMessageIds = new Set<string>();
 let scanTimeout: number | null = null;
 let currentConversationId: string | null = null;
+
+const messageRouter = createRuntimeMessageRouter<RuntimeMessageMap>();
 
 function ensureCounter(): HTMLElement {
   let counter = document.getElementById(COUNTER_ID);
@@ -195,35 +199,31 @@ function startInputListeners() {
   });
 }
 
-function handleRuntimeMessages() {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.type === 'bookmark-chat') {
-      console.debug('[ai-companion] bookmark-chat triggered');
-      sendResponse({ type: 'bookmark:queued' });
-      return true;
-    }
-
-    if (message.type === 'download-audio') {
-      console.debug('[ai-companion] download audio requested');
-      sendResponse({ type: 'audio:pending' });
-      return true;
-    }
-
-    return undefined;
+function registerMessageHandlers() {
+  messageRouter.register('content/bookmark', async () => {
+    console.debug('[ai-companion] bookmark-chat triggered');
+    return { status: 'queued' } as const;
   });
+
+  messageRouter.register('content/audio-download', async () => {
+    console.debug('[ai-companion] download audio requested');
+    return { status: 'pending' } as const;
+  });
+
+  messageRouter.attach();
 }
 
 async function init() {
   ensureCounter();
   startInputListeners();
-  handleRuntimeMessages();
+  registerMessageHandlers();
   setupObserver();
   observeLocationChanges();
   resetStateForConversation(getConversationId());
   await scanConversation();
-  chrome.runtime
-    .sendMessage({ type: 'ping' })
-    .catch((error) => console.error('[ai-companion] failed to send message', error));
+  sendRuntimeMessage('runtime/ping', { surface: 'content' }).catch((error) =>
+    console.error('[ai-companion] failed to send message', error)
+  );
 }
 
 if (document.readyState === 'loading') {

@@ -4,6 +4,7 @@ import type {
   ConversationRecord,
   FolderRecord,
   GPTRecord,
+  JobRecord,
   MessageRecord,
   PromptChainRecord,
   PromptRecord,
@@ -49,7 +50,7 @@ export class CompanionDatabase extends Dexie {
   folders!: Table<FolderRecord, string>;
   bookmarks!: Table<BookmarkRecord, string>;
   settings!: Table<SettingsRecord, string>;
-  metadata!: Table<MetadataRecord, string>;
+  jobs!: Table<JobRecord, string>;
 
   constructor() {
     super('AICompanionDB');
@@ -87,50 +88,17 @@ export class CompanionDatabase extends Dexie {
         });
       });
 
-    this.version(3)
-      .stores({
-        conversations: 'id, updatedAt, folderId, pinned, archived',
-        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
-        gpts: 'id, folderId, updatedAt',
-        prompts: 'id, folderId, gptId, updatedAt',
-        promptChains: 'id, updatedAt',
-        folders: 'id, parentId, kind',
-        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
-        settings: 'id',
-        metadata: 'key'
-      })
-      .upgrade(async (transaction) => {
-        const metadataTable = transaction.table('metadata') as Table<MetadataRecord>;
-        const now = new Date().toISOString();
-
-        const existing = await metadataTable.get(ENCRYPTION_METADATA_KEY);
-        if (!existing) {
-          const encryptionMetadata: EncryptionMetadataRecord = {
-            key: ENCRYPTION_METADATA_KEY,
-            value: {
-              schemaVersion: 3,
-              dataVersion: 0,
-              pending: true
-            },
-            updatedAt: now
-          };
-          await metadataTable.put(encryptionMetadata);
-          return;
-        }
-
-        const value = existing.value as Partial<EncryptionMetadataValue>;
-        const merged: EncryptionMetadataRecord = {
-          ...existing,
-          value: {
-            schemaVersion: Math.max(value?.schemaVersion ?? 0, 3),
-            dataVersion: value?.dataVersion ?? 0,
-            pending: value?.pending ?? true,
-            lastMigrationAt: value?.lastMigrationAt
-          },
-          updatedAt: now
-        };
-        await metadataTable.put(merged);
-      });
+    this.version(3).stores({
+      conversations: 'id, updatedAt, folderId, pinned, archived',
+      messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+      gpts: 'id, folderId, updatedAt',
+      prompts: 'id, folderId, gptId, updatedAt',
+      promptChains: 'id, updatedAt',
+      folders: 'id, parentId, kind',
+      bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+      settings: 'id',
+      jobs: 'id, status, runAt'
+    });
   }
 }
 

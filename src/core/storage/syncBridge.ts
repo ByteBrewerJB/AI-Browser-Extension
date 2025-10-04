@@ -28,6 +28,70 @@ const emptySnapshot: SyncSnapshot = {
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
 
+function getChromeApi() {
+  return (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+}
+
+function getSyncArea(): chrome.storage.SyncStorageArea | undefined {
+  const chromeApi = getChromeApi();
+  const sync = chromeApi?.storage?.sync;
+  return sync;
+}
+
+async function storageGet<T>(key: string): Promise<T | undefined> {
+  const sync = getSyncArea();
+  if (!sync) {
+    return undefined;
+  }
+
+  if ('get' in sync && sync.get.length === 1) {
+    // MV3 promise-based API
+    return (sync.get as (keys: string) => Promise<T>)(key);
+  }
+
+  return new Promise<T | undefined>((resolve, reject) => {
+    try {
+      sync.get(key, (result) => {
+        const error = getChromeApi()?.runtime?.lastError;
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result as T);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function storageSet<T extends object>(items: T): Promise<void> {
+  const sync = getSyncArea();
+  if (!sync) {
+    return;
+  }
+
+  if ('set' in sync && sync.set.length === 1) {
+    await (sync.set as (items: T) => Promise<void>)(items);
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    try {
+      sync.set(items, () => {
+        const error = getChromeApi()?.runtime?.lastError;
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 function coerceSnapshot(raw: unknown): SyncSnapshot {
   if (!raw || typeof raw !== 'object') {
     return { ...emptySnapshot };
@@ -109,7 +173,8 @@ function ensureChangeListener() {
     return;
   }
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  const chromeApi = getChromeApi();
+  chromeApi?.storage?.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'sync') {
       return;
     }

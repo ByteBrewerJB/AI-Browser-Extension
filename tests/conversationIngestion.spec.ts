@@ -21,7 +21,7 @@ interface ChromeRuntime {
   onMessage: {
     addListener(listener: (message: unknown, sender: unknown, sendResponse: (response: unknown) => void) => void): void;
   };
-  sendMessage(message: unknown): Promise<void>;
+  sendMessage(message: unknown, callback?: (response: unknown) => void): Promise<void>;
   lastError?: Error;
 }
 
@@ -61,8 +61,8 @@ function createChromeMock(): ChromeLike {
         // No-op for tests.
       }
     },
-    async sendMessage() {
-      return;
+    async sendMessage(_message, callback) {
+      callback?.({ type: 'pong', receivedAt: new Date().toISOString() });
     },
     lastError: undefined
   };
@@ -76,7 +76,9 @@ function createChromeMock(): ChromeLike {
 
 const dom = setupDomEnvironment();
 dom.document.readyState = 'complete';
+const previousChrome = (globalThis as any).chrome;
 const chromeMock = createChromeMock();
+Object.defineProperty(globalThis, 'chrome', { value: chromeMock, configurable: true, writable: true });
 (globalThis as any).chrome = chromeMock;
 const originalSyncSet = chromeMock.storage.sync.set.bind(chromeMock.storage.sync);
 chromeMock.storage.sync.set = async (items) => {
@@ -124,6 +126,8 @@ async function importContentScript() {
   if (contentScriptImported) {
     return;
   }
+  Object.defineProperty(globalThis, 'chrome', { value: chromeMock, configurable: true, writable: true });
+  (globalThis as any).chrome = chromeMock;
   await import('@/content/index');
   contentScriptImported = true;
 }
@@ -294,7 +298,15 @@ async function run() {
     }
   }
 
-  process.exit(hasFailure ? 1 : 0);
+  if (hasFailure) {
+    process.exitCode = 1;
+  }
 }
 
 await run();
+
+if (previousChrome === undefined) {
+  delete (globalThis as any).chrome;
+} else {
+  (globalThis as any).chrome = previousChrome;
+}

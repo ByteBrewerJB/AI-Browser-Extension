@@ -1,10 +1,11 @@
-﻿import { useEffect } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toggleBookmark, togglePinned } from '@/core/storage';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { initI18n, setLanguage } from '@/shared/i18n';
 import { useSettingsStore } from '@/shared/state/settingsStore';
+import { sendRuntimeMessage } from '@/shared/messaging/router';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -26,6 +27,7 @@ export function Popup() {
   const { t, i18n } = useTranslation();
   const { language, direction, setLanguage: setStoreLanguage, toggleDirection } = useSettingsStore();
   const conversations = useRecentConversations(5);
+  const [authStatus, setAuthStatus] = useState<{ authenticated: boolean; premium: boolean } | null>(null);
 
   const handlePinClick = async (conversationId: string) => {
     await togglePinned(conversationId);
@@ -34,6 +36,12 @@ export function Popup() {
   const handleBookmarkClick = async (conversationId: string) => {
     await toggleBookmark(conversationId);
   };
+
+  useEffect(() => {
+    sendRuntimeMessage('auth/status', { includeToken: false })
+      .then((status) => setAuthStatus({ authenticated: status.authenticated, premium: status.premium }))
+      .catch((error) => console.error('[ai-companion] failed to fetch auth status', error));
+  }, []);
 
   useEffect(() => {
     initI18n();
@@ -51,6 +59,15 @@ export function Popup() {
       <header className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold tracking-tight">{t('app.title')}</h1>
         <p className="text-sm text-slate-300">{t('app.tagline')}</p>
+        {authStatus && (
+          <p className="text-xs text-slate-400">
+            {authStatus.premium
+              ? 'Premium features unlocked'
+              : authStatus.authenticated
+                ? 'Signed in (free tier)'
+                : 'Offline mode'}
+          </p>
+        )}
       </header>
 
       <section className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
