@@ -18,6 +18,7 @@ import {
   updatePrompt,
   updatePromptChain
 } from '@/core/storage';
+import { EmptyState } from '@/shared/components';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useFolders } from '@/shared/hooks/useFolders';
@@ -451,23 +452,26 @@ export function Options() {
     });
   };
 
-  const renderConversationTree = conversationFolders.length === 0 ? (
-    <p className="text-sm text-slate-300">{t('options.folderEmpty')}</p>
-  ) : (
-    <FolderTreeList nodes={conversationFolders} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
-  );
+  const renderConversationTree =
+    conversationFolders.length === 0 ? (
+      <EmptyState title={t('options.folderEmpty')} align="start" className="px-4 py-6 text-sm" />
+    ) : (
+      <FolderTreeList nodes={conversationFolders} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
+    );
 
-  const renderGptTree = gptFolderTree.length === 0 ? (
-    <p className="text-sm text-slate-300">{t('options.folderEmpty')}</p>
-  ) : (
-    <FolderTreeList nodes={gptFolderTree} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
-  );
+  const renderGptTree =
+    gptFolderTree.length === 0 ? (
+      <EmptyState title={t('options.folderEmpty')} align="start" className="px-4 py-6 text-sm" />
+    ) : (
+      <FolderTreeList nodes={gptFolderTree} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
+    );
 
-  const renderPromptTree = promptFolderTree.length === 0 ? (
-    <p className="text-sm text-slate-300">{t('options.folderEmpty')}</p>
-  ) : (
-    <FolderTreeList nodes={promptFolderTree} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
-  );
+  const renderPromptTree =
+    promptFolderTree.length === 0 ? (
+      <EmptyState title={t('options.folderEmpty')} align="start" className="px-4 py-6 text-sm" />
+    ) : (
+      <FolderTreeList nodes={promptFolderTree} deleteLabel={t('options.deleteFolder')} onDelete={handleDeleteFolder} />
+    );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100" dir={direction}>
@@ -537,8 +541,8 @@ export function Options() {
                 <tbody className="divide-y divide-slate-900/60">
                   {conversations.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-6 text-center text-sm text-slate-400" colSpan={6}>
-                        {t('options.conversationEmpty')}
+                      <td className="px-4 py-6" colSpan={6}>
+                        <EmptyState title={t('options.conversationEmpty')} className="py-8" />
                       </td>
                     </tr>
                   ) : (
@@ -685,8 +689,8 @@ export function Options() {
                 <tbody className="divide-y divide-slate-900/60">
                   {gpts.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-6 text-center text-sm text-slate-400" colSpan={5}>
-                        {t('options.gptEmpty')}
+                      <td className="px-4 py-6" colSpan={5}>
+                        <EmptyState title={t('options.gptEmpty')} className="py-8" />
                       </td>
                     </tr>
                   ) : (
@@ -957,8 +961,8 @@ export function Options() {
                 <tbody className="divide-y divide-slate-900/60">
                   {prompts.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-6 text-center text-sm text-slate-400" colSpan={5}>
-                        {t('options.promptEmpty')}
+                      <td className="px-4 py-6" colSpan={5}>
+                        <EmptyState title={t('options.promptEmpty')} className="py-8" />
                       </td>
                     </tr>
                   ) : (
@@ -1144,7 +1148,7 @@ export function Options() {
                 <p className="text-xs text-slate-400">{t('options.promptChainListDescription')}</p>
               </header>
               {promptChains.length === 0 ? (
-                <p className="text-sm text-slate-300">{t('options.promptChainEmpty')}</p>
+                <EmptyState title={t('options.promptChainEmpty')} align="start" className="px-4 py-6 text-sm" />
               ) : (
                 <ul className="space-y-3">
                   {promptChains.map((chain) => (
@@ -1208,7 +1212,11 @@ export function Options() {
                       <p className="text-xs text-slate-400">{t('options.promptChainAvailableDescription')}</p>
                     </div>
                     {availableChainPrompts.length === 0 ? (
-                      <p className="text-sm text-slate-400">{t('options.promptChainAvailableEmpty')}</p>
+                      <EmptyState
+                        title={t('options.promptChainAvailableEmpty')}
+                        align="start"
+                        className="px-4 py-6 text-sm"
+                      />
                     ) : (
                       <ul className="space-y-2" role="list">
                         {availableChainPrompts.map((prompt) => (
@@ -1239,7 +1247,11 @@ export function Options() {
                       <p className="text-xs text-slate-400">{t('options.promptChainStepsDescription')}</p>
                     </div>
                     {selectedChainPrompts.length === 0 ? (
-                      <p className="text-sm text-slate-400">{t('options.promptChainSelectedEmpty')}</p>
+                      <EmptyState
+                        title={t('options.promptChainSelectedEmpty')}
+                        align="start"
+                        className="px-4 py-6 text-sm"
+                      />
                     ) : (
                       <ol className="space-y-2" role="list">
                         {selectedChainPrompts.map((prompt, index) => (
