@@ -32,6 +32,8 @@ export interface JobSchedulerOptions {
   alarms?: AlarmApi | null;
   now?: () => Date;
   onError?: (job: JobRecord, error: unknown) => void;
+  backoffMultiplier?: number;
+  maxBackoffMs?: number;
 }
 
 export interface JobScheduler {
@@ -55,6 +57,8 @@ export function createJobScheduler(options: JobSchedulerOptions = {}): JobSchedu
   const intervalMs = options.intervalMs ?? 60_000;
   const alarmApi = options.alarms ?? (typeof chrome !== 'undefined' ? chrome.alarms : null);
   const now = options.now ?? (() => new Date());
+  const backoffMultiplier = options.backoffMultiplier ?? 2;
+  const maxBackoffMs = Math.max(intervalMs, options.maxBackoffMs ?? intervalMs * 8);
   const handlers = new Map<string, JobHandler>();
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -100,7 +104,10 @@ export function createJobScheduler(options: JobSchedulerOptions = {}): JobSchedu
 
   async function handleJobFailure(job: JobRecord, error: unknown) {
     const retryAvailable = job.attempts < job.maxAttempts;
-    const nextRun = retryAvailable ? new Date(now().getTime() + intervalMs).toISOString() : undefined;
+    const exponent = Math.max(job.attempts - 1, 0);
+    const delayMultiplier = Math.max(1, Math.pow(backoffMultiplier, exponent));
+    const retryDelay = Math.min(intervalMs * delayMultiplier, maxBackoffMs);
+    const nextRun = retryAvailable ? new Date(now().getTime() + retryDelay).toISOString() : undefined;
     const failureOptions: ErrorResponseOptions = {
       error: error instanceof Error ? error.message : String(error),
       retryAt: nextRun,

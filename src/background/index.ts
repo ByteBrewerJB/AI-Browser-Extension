@@ -1,18 +1,21 @@
 import { createAuthManager } from './auth';
+import { createExportJobHandler } from './jobs/exportHandler';
 import { createJobScheduler } from './jobs/scheduler';
 import { initializeMessaging } from './messaging';
 import { sendTabMessage } from '@/shared/messaging/router';
 
 const authManager = createAuthManager();
-const jobScheduler = createJobScheduler();
+const jobScheduler = createJobScheduler({
+  onError(job, error) {
+    console.error('[ai-companion] job failed', job.id, error);
+  }
+});
 
 authManager.initialize().catch((error) => {
   console.warn('[ai-companion] failed to initialize auth manager', error);
 });
 
-jobScheduler.registerHandler('export', async (job) => {
-  console.info('[ai-companion] processing export job', job.payload);
-});
+jobScheduler.registerHandler('export', createExportJobHandler());
 
 jobScheduler.start();
 
