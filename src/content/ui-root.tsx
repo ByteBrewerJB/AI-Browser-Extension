@@ -5,18 +5,150 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Moda
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
 import globalStylesUrl from '@/styles/global.css?url';
 
-function ensureShadowHost(): HTMLElement {
-  const existing = document.getElementById('ai-companion-shadow-host');
+const HOST_ID = 'ai-companion-shadow-host';
+
+const SIDEBAR_SELECTORS = [
+  'nav[aria-label="Chat history"]',
+  'nav[aria-label="Chat History"]',
+  'nav[aria-label="ChatGPT history"]',
+  'nav[aria-label="Conversation history"]',
+];
+
+let sidebarMutationObserver: MutationObserver | null = null;
+let sidebarResizeObserver: ResizeObserver | null = null;
+let observedSidebar: HTMLElement | null = null;
+let activeHost: HTMLElement | null = null;
+let locationWatcher: number | null = null;
+let lastKnownHref = typeof window !== 'undefined' ? window.location.href : '';
+
+function findSidebarContainer(): HTMLElement | null {
+  for (const selector of SIDEBAR_SELECTORS) {
+    const nav = document.querySelector(selector) as HTMLElement | null;
+    if (nav) {
+      return nav.parentElement instanceof HTMLElement ? nav.parentElement : nav;
+    }
+  }
+
+  const sidebarTestId = document.querySelector('[data-testid="left-sidebar"]');
+  if (sidebarTestId instanceof HTMLElement) {
+    return sidebarTestId;
+  }
+
+  return null;
+}
+
+function ensureHostPlacement(): void {
+  if (!activeHost) {
+    return;
+  }
+  const sidebar = findSidebarContainer();
+  const fallbackContainer = document.documentElement;
+
+  if (!sidebar) {
+    activeHost.setAttribute('data-ai-companion-collapsed', 'true');
+    if (fallbackContainer && activeHost.parentElement !== fallbackContainer) {
+      fallbackContainer.appendChild(activeHost);
+    }
+    if (observedSidebar && sidebarResizeObserver) {
+      sidebarResizeObserver.unobserve(observedSidebar);
+    }
+    observedSidebar = null;
+    return;
+  }
+
+  const rect = sidebar.getBoundingClientRect();
+  const collapsed = rect.width < 80 || sidebar.offsetParent === null;
+
+  if (collapsed) {
+    activeHost.setAttribute('data-ai-companion-collapsed', 'true');
+    if (fallbackContainer && activeHost.parentElement !== fallbackContainer) {
+      fallbackContainer.appendChild(activeHost);
+    }
+  } else {
+    activeHost.removeAttribute('data-ai-companion-collapsed');
+    if (activeHost.parentElement !== sidebar) {
+      sidebar.appendChild(activeHost);
+    }
+  }
+
+  if (!sidebarResizeObserver) {
+    sidebarResizeObserver = new ResizeObserver(() => {
+      ensureHostPlacement();
+    });
+  }
+
+  if (observedSidebar !== sidebar) {
+    if (observedSidebar && sidebarResizeObserver) {
+      sidebarResizeObserver.unobserve(observedSidebar);
+    }
+
+    observedSidebar = sidebar;
+    sidebarResizeObserver.observe(sidebar);
+  }
+}
+
+async function waitForSidebarContainer(): Promise<HTMLElement> {
+  const existing = findSidebarContainer();
   if (existing) {
     return existing;
   }
+
+  return new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      const candidate = findSidebarContainer();
+      if (candidate) {
+        observer.disconnect();
+        resolve(candidate);
+      }
+    });
+
+    const target = document.body ?? document.documentElement;
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+    }
+  });
+}
+
+function initializeSidebarWatchers(host: HTMLElement) {
+  activeHost = host;
+  ensureHostPlacement();
+
+  if (!sidebarMutationObserver) {
+    sidebarMutationObserver = new MutationObserver(() => {
+      ensureHostPlacement();
+    });
+
+    const target = document.body ?? document.documentElement;
+    if (target) {
+      sidebarMutationObserver.observe(target, {
+        childList: true,
+        subtree: true,
+      });
+    }
+  }
+
+  if (locationWatcher === null) {
+    locationWatcher = window.setInterval(() => {
+      if (lastKnownHref !== window.location.href) {
+        lastKnownHref = window.location.href;
+        ensureHostPlacement();
+      }
+    }, 750);
+  }
+}
+
+async function ensureShadowHost(): Promise<HTMLElement> {
+  const existing = document.getElementById(HOST_ID);
+  if (existing) {
+    initializeSidebarWatchers(existing);
+    return existing;
+  }
+
+  const sidebar = await waitForSidebarContainer();
   const host = document.createElement('div');
-  host.id = 'ai-companion-shadow-host';
-  host.style.position = 'fixed';
-  host.style.top = '16px';
-  host.style.right = '16px';
-  host.style.zIndex = '2147483646';
-  document.documentElement.appendChild(host);
+  host.id = HOST_ID;
+  sidebar.appendChild(host);
+  initializeSidebarWatchers(host);
   return host;
 }
 
@@ -27,7 +159,15 @@ function mountReact(rootElement: HTMLElement) {
   const shadow = rootElement.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = `
-    :host { all: initial; }
+    :host { all: initial; display: block; width: 100%; }
+    :host([data-ai-companion-collapsed="true"]) {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: min(20rem, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
+      z-index: 2147483646;
+    }
     *, *::before, *::after { box-sizing: border-box; }
     button { font: inherit; }
   `;
@@ -58,7 +198,7 @@ function CompanionOverlay() {
   }, [activeToolbar]);
 
   return (
-    <div className="pointer-events-auto w-80 rounded-xl border border-slate-800 bg-slate-950/95 p-4 text-slate-100 shadow-2xl">
+    <div className="pointer-events-auto w-full rounded-xl border border-slate-800 bg-slate-950/95 p-4 text-slate-100 shadow-xl">
       <header className="mb-4 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-emerald-400">AI Companion</p>
@@ -127,18 +267,19 @@ function CompanionOverlay() {
 }
 
 function init() {
-  const host = ensureShadowHost();
-  const shadow = mountReact(host);
-  const container = shadow.querySelector('div:last-of-type') as HTMLDivElement | null;
-  if (!container) {
-    throw new Error('Failed to initialize companion overlay container');
-  }
-  const root = createRoot(container);
-  root.render(
-    <StrictMode>
-      <CompanionOverlay />
-    </StrictMode>
-  );
+  ensureShadowHost().then((host) => {
+    const shadow = mountReact(host);
+    const container = shadow.querySelector('div:last-of-type') as HTMLDivElement | null;
+    if (!container) {
+      throw new Error('Failed to initialize companion overlay container');
+    }
+    const root = createRoot(container);
+    root.render(
+      <StrictMode>
+        <CompanionOverlay />
+      </StrictMode>
+    );
+  });
 }
 
 if (document.readyState === 'loading') {
