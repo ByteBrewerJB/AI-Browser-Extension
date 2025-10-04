@@ -117,6 +117,9 @@ export interface JobRecord {
   maxAttempts: number;
   lastRunAt?: string;
   lastError?: string;
+  completedAt?: string;
 }
+
+export type JobSnapshot = Omit<JobRecord, 'payload'>;
 
 

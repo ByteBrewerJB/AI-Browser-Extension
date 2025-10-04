@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import type { AuthStatus } from '../src/background/auth';
 import { initializeMessaging } from '../src/background/messaging';
+import { enqueueJob, resetJobQueueForTests } from '../src/background/jobs/queue';
 import type { JobRecord } from '../src/core/models';
 
 type AsyncTest = [name: string, execute: () => Promise<void>];
@@ -125,6 +126,47 @@ const tests: AsyncTest[] = [
       assert.equal(scheduled.jobId, 'job-3');
       assert.equal(scheduledPayloads.length, 1);
       assert.equal((scheduledPayloads[0] as { type: string }).type, 'export');
+    }
+  ],
+  [
+    'lists recent jobs via messaging router without exposing payloads',
+    async () => {
+      await resetJobQueueForTests();
+
+      const auth = {
+        getStatus: () => ({ authenticated: false, premium: false })
+      } as unknown as import('../src/background/auth').AuthManager;
+
+      const scheduler = {
+        async schedule(input: { type: string; runAt: Date | string; payload?: Record<string, unknown>; maxAttempts?: number }) {
+          return {
+            id: 'job-list',
+            type: input.type,
+            payload: input.payload ?? {},
+            status: 'pending',
+            runAt: typeof input.runAt === 'string' ? input.runAt : input.runAt.toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            attempts: 0,
+            maxAttempts: input.maxAttempts ?? 3
+          } satisfies JobRecord;
+        }
+      } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
+
+      const { router } = initializeMessaging({ auth, scheduler });
+
+      const seeded = await enqueueJob({
+        type: 'export',
+        runAt: new Date().toISOString(),
+        payload: { scope: 'all' },
+        maxAttempts: 3
+      });
+
+      const response = await router.handle({ type: 'jobs/list', payload: { limit: 5 } });
+
+      assert.equal(response.jobs.length > 0, true);
+      assert.equal(response.jobs[0].id, seeded.id);
+      assert.equal('payload' in (response.jobs[0] as Record<string, unknown>), false);
     }
   ]
 ];

@@ -1,3 +1,5 @@
+import type { JobSnapshot, JobStatus } from '@/core/models';
+
 export interface MessageSchema {
   request: unknown;
   response: unknown;
@@ -41,6 +43,10 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
       maxAttempts?: number;
     };
     response: { jobId: string; scheduledFor: string };
+  };
+  'jobs/list': {
+    request: { limit?: number; statuses?: JobStatus[] };
+    response: { jobs: JobSnapshot[]; fetchedAt: string };
   };
 }
 

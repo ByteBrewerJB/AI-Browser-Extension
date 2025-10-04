@@ -150,17 +150,22 @@ export async function markJobRunning(id: string) {
     attempts: current.attempts + 1,
     updatedAt: timestamp,
     lastRunAt: timestamp,
-    lastError: undefined
+    lastError: undefined,
+    completedAt: undefined
   }));
 }
 
 export interface MarkJobFailedOptions {
   error?: string;
   retryAt?: string;
+  forceFailure?: boolean;
 }
 
-function resolveFailureStatus(job: JobRecord, retryAt?: string): JobStatus {
-  if (retryAt && job.attempts < job.maxAttempts) {
+function resolveFailureStatus(job: JobRecord, options: MarkJobFailedOptions): JobStatus {
+  if (options.forceFailure) {
+    return 'failed';
+  }
+  if (options.retryAt && job.attempts < job.maxAttempts) {
     return 'pending';
   }
   return 'failed';
@@ -168,13 +173,16 @@ function resolveFailureStatus(job: JobRecord, retryAt?: string): JobStatus {
 
 export async function markJobFailed(id: string, options: MarkJobFailedOptions = {}) {
   const timestamp = nowIso();
-  return jobStore.update(id, (current) => ({
-    ...current,
-    status: resolveFailureStatus(current, options.retryAt),
-    runAt: options.retryAt ?? current.runAt,
-    updatedAt: timestamp,
-    lastError: options.error ?? current.lastError
-  }));
+  return jobStore.update(id, (current) => {
+    const status = resolveFailureStatus(current, options);
+    return {
+      ...current,
+      status,
+      runAt: options.retryAt && status === 'pending' ? options.retryAt : current.runAt,
+      updatedAt: timestamp,
+      lastError: options.error ?? current.lastError
+    };
+  });
 }
 
 export async function markJobCompleted(id: string) {
@@ -182,7 +190,8 @@ export async function markJobCompleted(id: string) {
   return jobStore.update(id, (current) => ({
     ...current,
     status: 'completed',
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    completedAt: timestamp
   }));
 }
 

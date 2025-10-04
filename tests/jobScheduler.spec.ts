@@ -33,6 +33,7 @@ const tests: AsyncTest[] = [
       assert.equal(processed.length, 1);
       assert.equal(stored?.status, 'completed');
       assert.equal(stored?.attempts, 1);
+      assert.ok(stored?.completedAt);
     }
   ],
   [
@@ -74,6 +75,7 @@ const tests: AsyncTest[] = [
       assert.equal(stored?.status, 'completed');
       assert.equal(stored?.attempts, 2);
       assert.equal(attempts, 2);
+      assert.ok(stored?.completedAt);
     }
   ],
   [
@@ -109,6 +111,7 @@ const tests: AsyncTest[] = [
       assert.equal(processed.length, 1);
       assert.equal(stored?.status, 'completed');
       assert.equal(stored?.attempts, 2);
+      assert.ok(stored?.completedAt);
 
       scheduler.stop();
     }
