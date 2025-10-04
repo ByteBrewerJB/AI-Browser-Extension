@@ -1,33 +1,66 @@
-﻿# Retrofitplan voor voorbeeldfunctionaliteit
+# Retrofitplan voor voorbeeldfunctionaliteit
+
+## Samenvatting
+
+Dit document is het leidende werkdossier om de `example/example/1`-mockups in lijn te brengen met de huidige extensie. Het bundelt welke flows al live zijn, wat actief ontwikkeld wordt, en welke items nog in de ontwerpfase zitten.
+
+| Featuregroep | Scope in dit retrofit | Status | Laatste update |
+| --- | --- | --- | --- |
+| Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
+| Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
+| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
+| Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 📝 Ontwerp | _nog te plannen_ |
+| Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
+| Conversatieanalyse & export | Full-text search, analytics, export-UI | 📝 Ontwerp | _nog te plannen_ |
+| Media & audio | Audio capture, mediagalerij, voice presets, audio cues | 💤 Gepland | _nog te plannen_ |
+| Richting & instellingen | Dynamische taal/dir, settings-tab | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
+| Info & betalingen | Release notes, billing CTA, webhook-poller | 📝 Ontwerp | _nog te plannen_ |
+| Composer uitbreidingen | Telleroverlay, placeholderhelper, instructieoverlay, ketentab | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
+| Onboarding & gidsen | Guides dataset, kaart in options/popup, modal in content | 📝 Ontwerp | _nog te plannen_ |
+| Internationalisatie | Locale-generator, initI18n updates, RTL helpers, tests | 📝 Ontwerp | _nog te plannen_ |
+| Iconen, beelden & audio | Icon-generator, styleguide, media-assets, notificatiesound | 📝 Ontwerp | _nog te plannen_ |
+| Account & premium | Auth-service, account-store, premium gating, sync-job | 📝 Ontwerp | _nog te plannen_ |
+| Sync, database & export | Backup schema, sync queue, uitgebreide export, QA | 📝 Ontwerp | _nog te plannen_ |
+
+> **Onderhoudstip** – Werk de kolom “Laatste update” telkens bij met datum + commit (bijv. `2024-07-10 – abc1234`). Voeg extra rijen toe als een featuregroep moet worden opgesplitst of gedelegeerd.
 
 ## Context
+
 - De map `example\example\1` bevat uitsluitend mappenamen (zoals `scripts/chatMenu`, `scripts/pinnedChats`, `html/promptLibrary`). Ze geven de gewenste surfaces en workflows weer, maar bevatten geen bronbestanden.
 - In deze sessie is `src/content/textareaPrompts.ts` toegevoegd en aangesloten vanuit `src/content/index.ts`. Hiermee bestaat nu een floating promptlauncher die opgeslagen prompts in de ChatGPT-composer kan invoegen.
-- De content-zijbalk (`src/content/ui-root.tsx`) toont nu vastgezette gesprekken, recente updates, bladwijzers en een snelle promptlijst binnen dezelfde shadow-root. Verdere toggles en voorkeuren staan hieronder in de checklist.
-- Rechts onderin staat nu een bubble dock met snelkoppelingen (prompts, dashboard).
-- Popup en Options tonen nu een schakelaar om de ChatGPT-zijbalk te activeren of verbergen (gesynchroniseerd via de gedeelde store).
+- Het conversatiedock aan de rechterzijde (`src/content/ui-root.tsx`) is nu het primaire navigatiepunt. Vanuit de shadow-root worden bubbels voor prompts, dashboard, bookmarks en toekomstige workflows aangestuurd.
+- De inline zijbalk op de linkerkant is uitgefaseerd; alle navigatie en acties worden vanuit het bubblemenu rechts gestart.
+- Popup en Options tonen nu een schakelaar om het bubbledock te activeren of verbergen (gesynchroniseerd via de gedeelde store).
 - Onderstaande acties beschrijven hoe de overige "scripts" en "html" mappen uit het voorbeeld vertaald kunnen worden naar onze huidige architectuur (Dexie + Zustand + React voor popup/options + vanilla overlay in content).
+
+## Werkwijze
+
+1. **Prioriteer per tranche** – Focus op de onderdelen die in bovenstaande tabel als “🚧 Ontwikkeling” staan. Dat zijn de paden die direct waarde leveren bovenop bestaande componenten binnen het bubblemenu.
+2. **Check ondersteunende documentatie** – Spiegel keuzes met `docs/roadmap.md` (planning) en `docs/testing/manual-regression.md` (kwaliteitsborging). Leg structurele beslissingen vast in `docs/decisions/`.
+3. **Log voortgang** – Noteer onderaan in het logboek welke stappen afgerond zijn, inclusief datum, commit, tests en openstaande acties.
+4. **Bewaar pariteit met voorbeeldfunctionaliteit** – Controleer per onderdeel welke UX-elementen in de voorbeeldmap beschreven zijn en documenteer expliciet wanneer je ervan afwijkt.
 
 ## Prioriteiten en stappen per featuregroep
 
-### 1. Conversatiebeheer en zijbalk (`scripts/sidebar`, `scripts/manageChats`, `scripts/featuresCollapse`)
-- [x] **Shadow-root container:** gerealiseerd via `src/content/sidebar-host.ts` + `src/content/ui-root.tsx`; React surface mounted in ChatGPT-zijbalk.
-- [x] **Zustand bridge:** `src/shared/state/settingsStore.ts` hydrateert nu `showSidebar` via `chrome.storage` en synchroniseert popup/options/content.
-- [x] **Datalaag:** huidige sidebar gebruikt `usePinnedConversations`, `useRecentConversations`, `useRecentBookmarks`, `usePrompts` voor basispanelen.
-- [x] **Collapse functionaliteit:** collapsible secties via `useSidebarStore` met persistente `chrome.storage.local` snapshot (`sidebarStore.ts`).
-- [x] **Toetscombinaties en focus:** `Alt+Shift+K` toggelt de zijbalk, `Escape` sluit de overlay en focus wordt teruggezet naar de vorige context.
+
+### 1. Conversatiedock en bubbels (`scripts/sidebar`, `scripts/manageChats`, `scripts/featuresCollapse`)
+- [x] **Shadow-root container:** gerealiseerd via `src/content/sidebar-host.ts` + `src/content/ui-root.tsx`; React surface gemount in het rechter dock en losstaand van de standaard ChatGPT-zijbalk.
+- [x] **Zustand bridge:** `src/shared/state/settingsStore.ts` hydrateert nu `showDock` via `chrome.storage` en synchroniseert popup/options/content.
+- [x] **Bubbelrouter:** het dock gebruikt `useBubbleLauncherStore` om per bubbel (prompts, dashboard, bladwijzers, instellingen) state te bewaren en overlays te openen.
+- [x] **Contextuele panelen:** elke bubbel laadt een eigen paneel met `usePinnedConversations`, `useRecentConversations`, `useRecentBookmarks`, `usePrompts` als basis.
+- [x] **Toetscombinaties en focus:** `Alt+Shift+K` toggelt het dock, `Escape` sluit de actieve bubbeloverlay en focus wordt teruggezet naar de vorige context.
 
 ### 2. Pinnen, verplaatsen en bulkacties (`scripts/manageChats`, `scripts/moveChat`, `scripts/pinnedChats`, `scripts/pinnedFolders`)
-1. **Pinned surface:** breid de nieuwe zijbalk uit met een sectie die `togglePinned` en `archiveConversations` gebruikt als inline acties. Toon twee kolommen: vastgezette gesprekken en snelkoppelingen naar mapstructuur (`useFolderTree('conversation')`).
+1. **Pinned bubblepaneel:** breid de dock-bubbel "Pinned" uit met een paneel dat `togglePinned` en `archiveConversations` als kaartacties aanbiedt. Toon twee kolommen: vastgezette gesprekken en snelkoppelingen naar mapstructuur (`useFolderTree('conversation')`).
 2. **Bulkselectie:** voeg in `HistorySection` (options) selectievakjes toe (Zustand store uitbreiden om selectie bij te houden). Gebruik nieuwe helper `toggleSelection` en voer `archiveConversations`/`deleteConversations` uit op de selectie.
-3. **Verplaatsen naar map:** roep `upsertConversation` aan met nieuw `folderId` vanuit een "Move"-dialoog. Bouw een gedeelde component `MoveDialog` in `src/ui/components` die zowel in popup als in de toekomstige sidebar hergebruikt kan worden.
-4. **Pinned folders:** uitbreiden van `folders.ts` met een boolean `favorite` om sneltoetsen naar mappen te tonen. Voeg migratie toe in `db.version(6)` met `favorite` index. Exposeer helpers `toggleFavoriteFolder`.
+3. **Verplaatsen naar map:** roep `upsertConversation` aan met nieuw `folderId` vanuit een "Move"-dialoog. Bouw een gedeelde component `MoveDialog` in `src/ui/components` die zowel in popup als in het dockpaneel hergebruikt kan worden.
+4. **Pinned folders:** breid `folders.ts` uit met een boolean `favorite` om snelkoppelingen naar mappen direct in de bubbel te tonen. Voeg migratie toe in `db.version(6)` met `favorite` index. Exposeer helpers `toggleFavoriteFolder` en zorg dat `useBubbleLauncherStore` deze indices cachet voor snelle rendering.
 
 ### 3. Bladwijzers in de conversatie (`scripts/bookmarkMessage`, `scripts/chatMenu`)
-1. **Inline actieknoppen:** in `src/content/index.ts` voeg tijdens `collectMessageElements()` extra knoppen toe in elke ChatGPT-berichtbubble (gebruik `element.querySelector('[data-message-author-role]')`). Maak een utility die voorkomt dat we dubbele knoppen plaatsen.
-2. **Bookmark API-koppeling:** gebruik `toggleBookmark(conversationId, messageId, note)` om bladwijzers te beheren. Voorzie een modaal (shadow-root) om notities toe te voegen. Hergebruik `Modal` component (render via portal naar shadow-root).
-3. **Context menu (`chatMenu`):** implementeer een rechtsklik-menu (custom contextmenu) dat acties bevat als "Opslaan als prompt", "Pin gesprek", "Open in dashboard".
-4. **Synchronisatie naar popup/options:** zorg dat `useRecentBookmarks` de nieuwe metadata (notities, messagePreview) kan tonen; breid `db.bookmarks` uit met `messagePreview` door bij het opslaan eerste 200 chars op te nemen.
+1. **Bubbelgestuurde acties:** koppel `collectMessageElements()` aan een contextuele actie-trigger die vanuit de "Actions"-bubbel wordt geopend in plaats van inline knoppen. De gebruiker selecteert berichten waarna het bubbelpaneel relevante opties toont.
+2. **Bookmark API-koppeling:** gebruik `toggleBookmark(conversationId, messageId, note)` om bladwijzers te beheren. Voorzie een modaal (shadow-root) om notities toe te voegen. Hergebruik `Modal` component (render via portal naar shadow-root) en open het via de bubbel "Bookmarks".
+3. **Context menu (`chatMenu`):** implementeer een rechtsklik-menu (custom contextmenu) dat acties bevat als "Opslaan als prompt", "Pin gesprek", "Open in dashboard" en deze via `useBubbleLauncherStore` koppelt aan de corresponderende bubbels.
+4. **Synchronisatie naar popup/options:** zorg dat `useRecentBookmarks` de nieuwe metadata (notities, messagePreview) kan tonen; breid `db.bookmarks` uit met `messagePreview` door bij het opslaan eerste 200 chars op te nemen en surface dit in zowel de bubbel als popup/options.
 
 ### 4. Promptbibliotheek en waardeketens (`scripts/promptLibrary`, `scripts/promptValues`, `scripts/chainValues`)
 1. **Prompt variabelen:** voeg in `PromptRecord` een veld `variables: string[]` toe (Dexie migratie). Update UI-formulieren in `PromptsSection` om variabele tags te beheren.
@@ -37,7 +70,7 @@
 
 ### 5. Mapbeheer voor prompts en GPT's (`scripts/addFolder`, `scripts/manageFolder`, `scripts/manageFolders`, `scripts/GPTs`, `scripts/managePrompts`)
 1. **Submap UI:** breid `FolderTreeList` in `src/options/features/shared.tsx` uit met drag & drop (bijv. `@dnd-kit/core`). Maak API-functies `reparentFolder`, `reorderFolder` in `core/storage/folders.ts`.
-2. **Inline toevoeging (`addFolder`):** in popup en sidebar een compacte input die `createFolder` met `kind` parameter gebruikt. Valideer op duplicaten binnen dezelfde parent.
+2. **Inline toevoeging (`addFolder`):** in popup en dockpaneel een compacte input die `createFolder` met `kind` parameter gebruikt. Valideer op duplicaten binnen dezelfde parent.
 3. **GPT detailmodaal:** voeg modal in `PromptsSection` om GPT-details te bewerken inclusief weergave van gekoppelde prompts (`promptCounts`). Sta toe om GPT uit content script te selecteren voor "set assistant" scenario's.
 4. **Bulkimport/exports:** implementeer `importPrompts(payload)` en `exportPrompts()` in `core/services/exportService.ts`, zodat promptbibliotheek synchroniseert met JSON.
 
@@ -55,25 +88,12 @@
 ### 8. Richting (RTL) en instellingen (`scripts/direction`, `scripts/settings`, `html/direction`)
 1. **Taalwissel on-the-fly:** luister in content script naar `chrome.storage.onChanged` voor `settings:language` en wissel `document.documentElement.dir` en `mountPromptLauncher` labels.
 2. **Direction toggles:** voeg in popup een switch die `useSettingsStore.toggleDirection()` aanroept. Content script moet op `messageRouter` kanaal `settings/direction` luisteren en inline UI spiegelen.
-3. **Instellingenpagina:** bouw in options een nieuw tabblad "Instellingen" dat alle toggles (auto download, show sidebar, direction) groepeert en storage service gebruikt voor persistente schrijf/lees.
+3. **Instellingenpagina:** bouw in options een nieuw tabblad "Instellingen" dat alle toggles (auto download, show dock, direction) groepeert en storage service gebruikt voor persistente schrijf/lees.
 
 ### 9. Info & betalingen (`scripts/infoAndUpdates`, `scripts/payments`)
 1. **Release notes surface:** voeg in popup een collapsible kaart die markdown release notes laadt uit `public/updates.json`. Maak een Dexie tabel `announcements` om gezien-status te bewaren.
 2. **Billing CTA:** implementeer in options een sectie "AI Companion Plus" met knoppen die `chrome.tabs.create` naar billing-URL openen. Gebruik `settingsStore` om premium-flag op te slaan (al aanwezig in auth status response).
 3. **Webhook poller:** breid `background/jobs/scheduler` uit met jobtype `billing-sync` dat periodiek status ophaalt (stub API). Toon resultaten in popup kaart "Abonnement".
-
-## Technische overwegingen
-- Voeg nieuwe Dexie-versie 6 toe voor extra velden (`favorite`, `variables`, `mediaAssets`). Update tests in `tests/storage` zodra beschikbaar.
-- Houd rekening met `approval_policy=never`; scripts mogen geen destructieve bewerkingen doen zonder fallback.
-- Documenteer elke nieuwe surface in `docs/architecture.md` zodat toekomstige sessies ingestoken features herkennen.
-- Breid `tests` uit met Playwright/E2E scenario's voor prompt-insert, sidebar toggle, bookmark flows.
-
-## Afronding
-- Wanneer de bovengenoemde stappen afgerond zijn, actualiseer `README.md` met nieuwe surface-screenshots en korte featurelijst.
-- Hergebruik `retrofit.md` als checklist: vink secties af en noteer datum + commit in een log onderaan dit document.
-
-
-
 
 ### 10. Composer uitbreidingen (`scripts/counter`, `scripts/textareaPrompts`)
 1. Introduceer `initComposerCounters` in `src/content/textareaPrompts.ts` die, naar analogie met `example/example/1/scripts/counter/injectWordsCounter.js`, via een `MutationObserver` de actieve ChatGPT-composer detecteert. Render een `div[data-ai-companion="composer-counters"]` in dezelfde shadow-root als de promptlauncher en toon woorden-, tekens- en tokenaantallen. Baseer tokenlimits op `settingsStore.maxTokens` (fallback 4096) en kleur de badge rood zodra limieten overschreden worden.
@@ -88,14 +108,14 @@
 4. Plaats in het promptlauncher-dock een nieuwe bubble "Guides" die de `GuideResourcesCard` in een modal opent. Gebruik `Modal` component en zorg dat het modaal in de content-shadow-root rendert zodat de gebruiker in-context hulp krijgt zoals in `html/infoAndUpdates`.
 
 ### 12. Internationalisatie en direction (`locales/*.json`)
-1. Importeer de talen uit `example/example/1/locales` (ar, de, en, es, fr, he, hi, it, ja, zh). Schrijf een script `scripts/generate-locales.ts` dat de sleutel-naamgeving omzet naar onze `content.sidebar.*` structuur en voeg de resultaten toe aan `src/shared/i18n/locales/<lang>/common.json`.
+1. Importeer de talen uit `example/example/1/locales` (ar, de, en, es, fr, he, hi, it, ja, zh). Schrijf een script `scripts/generate-locales.ts` dat de sleutel-naamgeving omzet naar onze `content.dock.*` structuur en voeg de resultaten toe aan `src/shared/i18n/locales/<lang>/common.json`.
 2. Breid `initI18n` uit met `supportedLngs` en detecteer de taal van ChatGPT (`document.documentElement.lang`). Val terug op Engels indien onbekend en update `settingsStore.language` automatisch, met respect voor handmatige overrides.
 3. Koppel `document.documentElement.dir` aan de taalrichting (zoals `isLTR` in de voorbeeldbestanden). Voeg in content een helper `applyDirectionToComposer(dir)` toe die body-, sidebar- en launcherklassen bijwerkt zodat RTL-aanpassingen correct renderen.
 4. Schrijf Vitest-unit tests voor `generate-locales` (validate dat placeholders `{{ }}` intact blijven) en Playwright-scenario's die controleren dat een RTL-taal (bijv. Arabic) zowel in popup, options als content correct omschakelt.
 
 ### 13. Iconen, beelden en audio (`assets/icons`, `assets/images`, `assets/sounds/alert.mp3`)
 1. Maak een generator `scripts/build-icons.ts` die de string-exporten uit `example/example/1/assets/icons/*.ts` omzet naar typed React-componenten in `src/ui/icons/*.tsx`. Voeg automatische booleaanse props toe (`size`, `strokeWidth`) en exporteer een index `@/ui/icons`.
-2. Vervang hardgecodeerde Heroicons in sidebar/promptlauncher door de nieuwe iconen zodat de look overeenkomt met de voorbeeldextensie. Documenteer in `docs/styleguide.md` hoe iconen gekozen worden (lineair 1px, kleur via currentColor).
+2. Vervang hardgecodeerde Heroicons in dock/promptlauncher door de nieuwe iconen zodat de look overeenkomt met de voorbeeldextensie. Documenteer in `docs/styleguide.md` hoe iconen gekozen worden (lineair 1px, kleur via currentColor).
 3. Selecteer uit `assets/images` een set achtergrondplaten (bijv. `ai-toolbox-banner.png`) en plaats ze in `public/media`. Gebruik ze in `infoAndUpdates` en premium-cards met `picture` voor responsive weergave.
 4. Koppel `assets/sounds/alert.mp3` aan onze snackbar/notification flow: voeg in `src/shared/utils/notifications.ts` een optie `audible: true` die bij premium-events het mp3-bestand via `chrome.runtime.getURL` laadt en afspeelt. Respecteer een nieuwe instelling `settingsStore.playSounds`.
 
@@ -110,3 +130,22 @@
 2. Introduceer `SyncQueue` in `src/core/storage/syncBridge.ts` dat de logica uit `example/.../scripts/sync.js` vertaalt: queue items (type, payload, retries) in `chrome.storage.local`, verstuur via background worker en markeer status.
 3. Breng exportfunctionaliteit naar parity met `scripts/exportConversations.js`: voeg in `background/jobs/exportHandler.ts` support voor PDF, Markdown en CSV toe. Gebruik `assets/html/templates` (te maken) om exports te stylen en bied in options bulkselectie + progressbar.
 4. Schrijf jest-tests voor `SyncQueue` (retry/backoff) en end-to-end tests die verifiëren dat bulkexport een zip met per-conversatie-bestanden oplevert. Documenteer in `docs/data-safety.md` hoe back-ups, sync en export samenwerken.
+
+## Technische overwegingen
+
+- Voeg nieuwe Dexie-versie 6 toe voor extra velden (`favorite`, `variables`, `mediaAssets`). Update tests in `tests/storage` zodra beschikbaar.
+- Houd rekening met `approval_policy=never`; scripts mogen geen destructieve bewerkingen doen zonder fallback.
+- Documenteer elke nieuwe surface in `docs/architecture.md` zodat toekomstige sessies ingestoken features herkennen.
+- Breid `tests` uit met Playwright/E2E scenario's voor prompt-insert, dock toggle, bookmark flows.
+
+## Afronding
+
+- Wanneer de bovengenoemde stappen afgerond zijn, actualiseer `README.md` met nieuwe surface-screenshots en korte featurelijst.
+- Hergebruik `retrofit.md` als checklist: vink secties af en noteer datum + commit in een log onderaan dit document.
+
+## Logboek
+
+| Datum | Commit | Featuregroep(en) | Opmerkingen |
+| --- | --- | --- | --- |
+| _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
+
