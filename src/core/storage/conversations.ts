@@ -83,7 +83,7 @@ export async function addMessages(messages: MessageInput[]) {
   const metricsToApply = sumTextMetrics(records.map((record) => ({
     wordCount: record.wordCount,
     charCount: record.charCount
-  }))));
+  })));
 
   const conversationId = records[0].conversationId;
 
@@ -203,7 +203,7 @@ export async function archiveConversations(ids: string[], archived: boolean) {
       archived,
       updatedAt: nowIso()
     }
-  }))));
+  })));
 
   const conversations = await db.conversations.where('id').anyOf(ids).toArray();
   await Promise.all(conversations.map((conversation) => syncConversationMetadata(conversation)));
