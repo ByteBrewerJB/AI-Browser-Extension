@@ -9,12 +9,12 @@ This living document combines the architectural snapshot, delivery status, and p
 ### Surfaces
 - **Content script** – Captures conversations from ChatGPT, keeps a live draft counter, and persists structured messages via Dexie when DOM mutations are observed.【F:src/content/index.ts†L1-L129】
 - **Popup** – Shows the five most recent conversations with pin/bookmark toggles, language/RTL controls, and quick links to open chats in new tabs. Placeholder cards reserve space for future bookmarks, pinned, and activity dashboards.【F:src/popup/Popup.tsx†L1-L143】【F:src/popup/Popup.tsx†L145-L199】
-- **Options / dashboard** – Provides folders, filters, conversation tables, prompt/GPT management, and background export scheduling within a single surface. Settings respect the shared direction/i18n state.【F:src/options/Options.tsx†L1-L94】【F:src/options/features/history/HistorySection.tsx†L1-L110】
+- **Options / dashboard** – Composes history, prompts, and media management sections while wiring scheduled exports and direction-aware layout.【F:src/options/Options.tsx†L1-L122】【F:src/options/features/history/HistorySection.tsx†L1-L110】
 - **Background service worker** – Hosts authentication state, the in-browser job queue, and messaging routes consumed by popup/options surfaces.【F:src/background/auth.ts†L1-L107】【F:src/background/jobs/queue.ts†L1-L96】
 
 ### State & shared services
-- **Dexie data model** – IndexedDB contains conversations, messages, prompts, GPTs, folders, bookmarks, settings, and background jobs; there is no metadata/encryption table yet despite helper types.【F:src/core/storage/db.ts†L1-L87】
-- **Search** – A MiniSearch index is built lazily and kept only in memory; persistence to IndexedDB is not implemented. Deleting a conversation only removes conversation documents from the index today.【F:src/core/services/searchService.ts†L1-L60】【F:src/core/services/searchService.ts†L78-L102】
+- **Dexie data model** – IndexedDB contains conversations, messages, prompts, GPTs, folders, bookmarks, settings, jobs, and metadata entries for persisted search snapshots; encryption helpers remain unused for now.【F:src/core/storage/db.ts†L1-L115】
+- **Search** – A MiniSearch index persists to IndexedDB and is restored on startup through the shared metadata table. Conversation and message documents stay in sync when records are removed from storage.【F:src/core/services/searchService.ts†L13-L120】
 - **Export** – TXT/JSON export helpers gather conversations, messages, and bookmarks entirely on the client. Background jobs trigger the exports, but the worker currently just logs payloads.【F:src/core/services/exportService.ts†L1-L43】【F:src/background/jobs/queue.ts†L1-L96】
 - **Authentication** – Tokens are decoded locally to derive premium state; JWKS key fetching is supported but signatures are not validated yet. No audit trail or entitlement storage exists.【F:src/background/auth.ts†L1-L107】
 
@@ -33,7 +33,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 8 | Quality & growth | 💤 Planned | Telemetry, observability, and localization scorecards remain future work. |
 
 ### Near-term backlog (Phase 3 focus)
-- Persist the MiniSearch index or move indexing into a worker to avoid rebuilding on every session start.
+- Move MiniSearch indexing into a worker or incremental task so large datasets do not block the UI on rebuild.
 - Promote the TXT/JSON export flow beyond manual scheduling by integrating the background handler and download APIs.
 - Flesh out job retry/backoff handling and surface status in the dashboard.
 - Align feature toggles and placeholder cards with actual data (bookmarks/pinned/activity).
