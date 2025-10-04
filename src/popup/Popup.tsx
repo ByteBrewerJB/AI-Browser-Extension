@@ -8,8 +8,8 @@ import { useRecentActivity } from '@/shared/hooks/useRecentActivity';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { initI18n, setLanguage } from '@/shared/i18n';
-import { useSettingsStore } from '@/shared/state/settingsStore';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
+import { useSettingsStore } from '@/shared/state/settingsStore';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -100,19 +100,11 @@ function getActivityAccent(item: ActivityItem) {
 
 export function Popup() {
   const { t, i18n } = useTranslation();
-  const {
-    language,
-    direction,
-    setLanguage: setStoreLanguage,
-    toggleDirection,
-    hydrated
-  } = useSettingsStore((state) => ({
-    language: state.language,
-    direction: state.direction,
-    setLanguage: state.setLanguage,
-    toggleDirection: state.toggleDirection,
-    hydrated: state.hydrated
-  }));
+  const language = useSettingsStore((state) => state.language);
+  const direction = useSettingsStore((state) => state.direction);
+  const setStoreLanguage = useSettingsStore((state) => state.setLanguage);
+  const toggleDirection = useSettingsStore((state) => state.toggleDirection);
+  const hydrated = useSettingsStore((state) => state.hydrated);
   const conversations = useRecentConversations(5);
   const pinnedConversations = usePinnedConversations(4);
   const recentBookmarks = useRecentBookmarks(4);
