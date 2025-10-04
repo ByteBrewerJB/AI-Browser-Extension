@@ -10,6 +10,11 @@
     "openDashboard": "Open dashboard",
     "recentConversations": "Recent conversations",
     "noConversations": "Start chatting to see history here.",
+    "untitledConversation": "Untitled conversation",
+    "bookmarkConversationOnly": "Conversation bookmark",
+    "bookmarkSaved": "Saved {{time}}",
+    "bookmarkNote": "Note: {{note}}",
+    "pinnedBadge": "Pinned",
     "words": "Words",
     "characters": "Characters",
     "messages": "Messages",
@@ -17,7 +22,32 @@
     "unpin": "Unpin",
     "bookmark": "Bookmark",
     "unbookmark": "Remove bookmark",
-    "openConversation": "Open"
+    "openConversation": "Open",
+    "bookmarkTotal": "Bookmarks",
+    "noBookmarks": "Save bookmarks to see them here.",
+    "noPinned": "Pin important conversations to keep them handy.",
+    "noActivity": "Recent conversation edits, bookmarks, and exports will show up here.",
+    "recentActivityDescription": "Latest conversations, bookmarks, and exports at a glance.",
+    "activityConversation": "{{title}} updated",
+    "activityConversationMetrics": "{{messages}} messages · {{words}} words",
+    "activityConversationBookmarks": "{{formattedCount}} bookmarks",
+    "activityBookmark": "Bookmark saved in {{title}}",
+    "activityJob": "{{type}} job {{status}}",
+    "activityJobStatus": {
+      "pending": "Scheduled",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "activityJobType": {
+      "export": "Export"
+    },
+    "activityJobFailedWithError": "Failed: {{error}}",
+    "activityJobFailed": "Job failed after {{attempts}} attempts",
+    "activityJobCompleted": "Completed {{time}}",
+    "activityJobRunning": "Running since {{time}}",
+    "activityJobScheduled": "Scheduled for {{time}}",
+    "activityJobAttempts": "{{attempts}} / {{max}} attempts"
   },
   "options": {
     "heading": "AI Companion Dashboard",
