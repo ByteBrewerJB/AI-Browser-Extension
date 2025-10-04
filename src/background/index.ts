@@ -20,11 +20,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 
   if (info.menuItemId === 'ai-companion-bookmark-chat') {
-    chrome.tabs.sendMessage(tab.id, { type: 'bookmark-chat' }).catch(() => undefined);
+    chrome.tabs
+      .sendMessage(tab.id, { type: 'bookmark-chat' })
+      .catch((error) => console.error('[ai-companion] failed to send message', error));
   }
 
   if (info.menuItemId === 'ai-companion-save-audio') {
-    chrome.tabs.sendMessage(tab.id, { type: 'download-audio' }).catch(() => undefined);
+    chrome.tabs
+      .sendMessage(tab.id, { type: 'download-audio' })
+      .catch((error) => console.error('[ai-companion] failed to send message', error));
   }
 });
 
