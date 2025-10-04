@@ -88,7 +88,7 @@
     "conversationEmpty": "No conversations captured yet.",
     "conversationFilteredEmpty": "No conversations match the current filters.",
     "conversationFiltersHeading": "Filters & sorting",
-    "conversationFiltersDescription": "Adjust folders, pin state, archive status, and sort order.",
+    "conversationFiltersDescription": "Toggle filters with the bubbles to adjust folders, pin state, archive status, and sort order.",
     "filterFolderLabel": "Folder filter",
     "filterFolderAll": "All folders",
     "filterPinnedLabel": "Pinned",
@@ -134,7 +134,7 @@
     "columnActions": "Actions",
     "untitledConversation": "Untitled conversation",
     "gptFolderHeading": "GPT folders",
-    "gptFolderDescription": "Group custom GPTs by workflow or domain.",
+    "gptFolderDescription": "Pick, remove, or add GPT folders with the bubbles. The active choice applies to new entries.",
     "gptHeading": "Custom GPT library",
     "gptDescription": "Catalog reusable GPT configurations with descriptions and folders.",
     "gptNameLabel": "Name",
@@ -147,7 +147,7 @@
     "gptTablePrompts": "Prompts",
     "gptEmpty": "No custom GPTs yet.",
     "promptFolderHeading": "Prompt folders",
-    "promptFolderDescription": "Organize reusable templates by team or project.",
+    "promptFolderDescription": "Use the bubbles to choose where prompts live and to create or remove folders.",
     "promptHeading": "Prompt templates",
     "promptDescription": "Draft and store reusable prompt snippets. Link them to GPTs for quick sequencing.",
     "promptNameLabel": "Title",
@@ -192,7 +192,13 @@
     "sidebarToggleLabel": "Sidebar visibility",
     "sidebarToggleHelp": "Toggle the floating sidebar in the ChatGPT interface.",
     "sidebarToggleOn": "Enabled",
-    "sidebarToggleOff": "Disabled"
+    "sidebarToggleOff": "Disabled",
+    "gptFolderActiveLabel": "Active folder: {{name}}",
+    "promptFolderActiveLabel": "Active folder: {{name}}",
+    "promptGptActiveLabel": "Linked GPT: {{name}}",
+    "promptFormHeading": "Create prompt template",
+    "promptFormDescription": "Your folder, GPT link, and chains follow the bubble selections above.",
+    "promptChainBubbleHelper": "Select an existing chain to edit or tap + to start a new sequence."
   },
   "content": {
     "sidebar": {
