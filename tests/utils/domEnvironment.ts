@@ -25,6 +25,7 @@ export class FakeElement {
   parentNode: FakeElement | null = null;
   private attributes = new Map<string, string>();
   private text = '';
+  private boundingRectWidth: number | null = null;
 
   constructor(public readonly ownerDocument: FakeDocument, public readonly tagName: string) {}
 
@@ -83,6 +84,16 @@ export class FakeElement {
     return this.attributes.has(name);
   }
 
+  removeAttribute(name: string) {
+    if (name === 'id') {
+      const previous = this.attributes.get(name);
+      if (previous) {
+        this.ownerDocument.unregisterId(previous);
+      }
+    }
+    this.attributes.delete(name);
+  }
+
   get id() {
     return this.attributes.get('id') ?? '';
   }
@@ -107,6 +118,31 @@ export class FakeElement {
     return this.children.map((child) => child.textContent).join('');
   }
 
+  get parentElement(): FakeElement | null {
+    return this.parentNode;
+  }
+
+  setBoundingRectWidth(width: number) {
+    this.boundingRectWidth = width;
+  }
+
+  getBoundingClientRect(): DOMRect {
+    const width = this.boundingRectWidth ?? 0;
+    return {
+      width,
+      height: 0,
+      top: 0,
+      left: 0,
+      right: width,
+      bottom: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return { width };
+      }
+    } as DOMRect;
+  }
+
   matches(selector: string): boolean {
     if (selector.startsWith('#')) {
       return this.id === selector.slice(1);
@@ -127,6 +163,28 @@ export class FakeElement {
       return true;
     }
     return this.tagName.toLowerCase() === selector.toLowerCase();
+  }
+
+  querySelector(selector: string) {
+    return this.querySelectorAll(selector)[0] ?? null;
+  }
+
+  querySelectorAll(selector: string) {
+    const results: FakeElement[] = [];
+    const traverse = (element: FakeElement) => {
+      if (element.matches(selector)) {
+        results.push(element);
+      }
+      for (const child of element.children) {
+        traverse(child);
+      }
+    };
+
+    for (const child of this.children) {
+      traverse(child);
+    }
+
+    return results;
   }
 
   isDescendantOf(ancestor: FakeElement) {
