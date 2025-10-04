@@ -65,6 +65,10 @@ function disableWorker(error?: unknown) {
   }
 
   workerAvailable = false;
+  const wasIndexReady = indexReady;
+  indexReady = false;
+  fallbackMiniSearch = null;
+  buildPromise = null;
 
   if (error) {
     console.warn('searchService: disabling worker, falling back to main-thread indexing', error);
@@ -84,8 +88,10 @@ function disableWorker(error?: unknown) {
     pendingWorkerRequests.clear();
   }
 
-  if (!fallbackMiniSearch) {
-    fallbackMiniSearch = createMiniSearch();
+  if (wasIndexReady) {
+    void buildSearchIndex().catch(rebuildError => {
+      console.error('searchService: failed to rebuild search index after disabling worker', rebuildError);
+    });
   }
 }
 
@@ -308,7 +314,12 @@ export async function search(query: string): Promise<string[]> {
       return response.result.conversationIds;
     } catch (error) {
       disableWorker(error);
+      await buildSearchIndex();
     }
+  }
+
+  if (!indexReady) {
+    return [];
   }
 
   if (!fallbackMiniSearch) {
@@ -321,7 +332,13 @@ export async function search(query: string): Promise<string[]> {
 }
 
 export async function upsertIntoIndex(items: Array<ConversationRecord | MessageRecord>) {
-  if (!indexReady || items.length === 0) return;
+  if (items.length === 0) return;
+
+  if (!indexReady) {
+    await buildSearchIndex();
+  }
+
+  if (!indexReady) return;
 
   const documents: SearchDocument[] = items.map(item => {
     if ('title' in item) {
@@ -347,7 +364,12 @@ export async function upsertIntoIndex(items: Array<ConversationRecord | MessageR
       return;
     } catch (error) {
       disableWorker(error);
+      await buildSearchIndex();
     }
+  }
+
+  if (!indexReady) {
+    return;
   }
 
   if (!fallbackMiniSearch) {
@@ -366,7 +388,13 @@ export async function upsertIntoIndex(items: Array<ConversationRecord | MessageR
 }
 
 export async function removeFromIndex(ids: string[]) {
-  if (!indexReady || ids.length === 0) return;
+  if (ids.length === 0) return;
+
+  if (!indexReady) {
+    await buildSearchIndex();
+  }
+
+  if (!indexReady) return;
 
   const messageIds = await db.messages
     .where('conversationId')
@@ -385,7 +413,12 @@ export async function removeFromIndex(ids: string[]) {
       return;
     } catch (error) {
       disableWorker(error);
+      await buildSearchIndex();
     }
+  }
+
+  if (!indexReady) {
+    return;
   }
 
   if (!fallbackMiniSearch) {
