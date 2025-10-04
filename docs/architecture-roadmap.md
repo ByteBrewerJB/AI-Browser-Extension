@@ -36,6 +36,7 @@ This Chrome/Edge extension augments ChatGPT with richer conversation management,
   1. Browser-level sync using `chrome.storage.sync` for metadata (names, ids, timestamps) to enable multi-device awareness.
   2. Optional encrypted backup to user-selected provider (future enhancement) to fully share message bodies.
 - Metadata sync pipeline: conversation mutations trigger `syncBridge` updates (`src/core/storage/conversations.ts`), keeping counts/pin/archive state mirrored remotely.
+- Encryption & key management: IndexedDB tables track an `encryption` metadata record (Dexie v3) and the storage service provisions an AES-GCM key stored in `chrome.storage.local` only. The key never leaves the device, snapshots in `chrome.storage.sync` are encrypted with per-write salts, and future migrations can roll keys by bumping the metadata dataVersion and re-encrypting rows.
 - Search: build incremental index using MiniSearch stored in IndexedDB, refreshed per change batch.
 
 ## Accessibility & Localization

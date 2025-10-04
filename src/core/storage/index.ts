@@ -6,3 +6,4 @@ export * from './prompts';
 export * from './promptChains';
 export * from './settings';
 export * from './syncBridge';
+export * from './service';
