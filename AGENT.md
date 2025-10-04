@@ -3,7 +3,7 @@
 Guidelines for agents contributing to the AI ChatGPT Companion extension.
 
 ## 1. Environment & Tooling
-- Node.js 18+, npm 9+.
+- Node.js >=20.19.0, npm 9+.
 - Install deps via `npm install` after cloning.
 - Use Vite dev server (`npm run dev`) for popup/options hot reload; content script requires extension reload.
 
