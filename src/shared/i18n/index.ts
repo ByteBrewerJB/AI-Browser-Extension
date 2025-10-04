@@ -1,13 +1,18 @@
 ﻿import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import en from './locales/en/common.json';
-import nl from './locales/nl/common.json';
+import en from './locales/en/common.json' with { type: 'json' };
+import nl from './locales/nl/common.json' with { type: 'json' };
 
 let initialized = false;
 
 export async function initI18n(): Promise<typeof i18n> {
+  const targetLanguage = navigator.language?.startsWith('nl') ? 'nl' : 'en';
+
   if (initialized) {
+    if (i18n.language !== targetLanguage) {
+      await i18n.changeLanguage(targetLanguage);
+    }
     return i18n;
   }
 
@@ -16,7 +21,7 @@ export async function initI18n(): Promise<typeof i18n> {
       en: { translation: en },
       nl: { translation: nl }
     },
-    lng: navigator.language?.startsWith('nl') ? 'nl' : 'en',
+    lng: targetLanguage,
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false
@@ -34,3 +39,4 @@ export function setLanguage(lng: string) {
 export function getCurrentLanguage() {
   return i18n.language;
 }
+
