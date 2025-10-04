@@ -1,6 +1,10 @@
-﻿import type { ConversationRecord } from '@/core/models';
+import { storageService } from './service';
+import type { ConversationRecord } from '@/core/models';
 
-const STORAGE_KEY = 'ai-companion:snapshot:v1';
+const STORAGE_KEY = 'ai-companion:snapshot:v2';
+const LEGACY_STORAGE_KEY = 'ai-companion:snapshot:v1';
+const SNAPSHOT_PAYLOAD_VERSION = 2;
+const SYNC_SNAPSHOT_QUOTA_BYTES = 80 * 1024; // Reserve buffer below Chrome's 100KB per-item cap.
 
 export interface SyncConversationMetadata {
   id: string;
@@ -20,71 +24,9 @@ export interface SyncSnapshot {
 
 const emptySnapshot: SyncSnapshot = {
   conversations: {},
-  version: 1,
+  version: SNAPSHOT_PAYLOAD_VERSION,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
-
-function getSyncArea(): chrome.storage.SyncStorageArea | undefined {
-  if (typeof chrome === 'undefined') {
-    return undefined;
-  }
-
-  return chrome.storage?.sync;
-}
-
-async function storageGet<T>(key: string): Promise<T | undefined> {
-  const sync = getSyncArea();
-  if (!sync) {
-    return undefined;
-  }
-
-  if ('get' in sync && sync.get.length === 1) {
-    // MV3 promise-based API
-    return (sync.get as (keys: string) => Promise<T>)(key);
-  }
-
-  return new Promise<T | undefined>((resolve, reject) => {
-    try {
-      sync.get(key, (result) => {
-        const error = chrome.runtime?.lastError;
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(result as T);
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-async function storageSet<T extends object>(items: T): Promise<void> {
-  const sync = getSyncArea();
-  if (!sync) {
-    return;
-  }
-
-  if ('set' in sync && sync.set.length === 1) {
-    await (sync.set as (items: T) => Promise<void>)(items);
-    return;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    try {
-      sync.set(items, () => {
-        const error = chrome.runtime?.lastError;
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
 
 function coerceSnapshot(raw: unknown): SyncSnapshot {
   if (!raw || typeof raw !== 'object') {
@@ -100,15 +42,30 @@ function coerceSnapshot(raw: unknown): SyncSnapshot {
 }
 
 export async function readSyncSnapshot(): Promise<SyncSnapshot> {
-  const result = await storageGet<Record<string, SyncSnapshot>>(STORAGE_KEY);
-  if (!result) {
-    return { ...emptySnapshot };
+  const snapshot = await storageService.readEncrypted(STORAGE_KEY, {
+    fallback: { ...emptySnapshot },
+    expectedVersion: SNAPSHOT_PAYLOAD_VERSION,
+    upgrade: (payload) => coerceSnapshot(payload)
+  });
+
+  if (Object.keys(snapshot.conversations).length === 0 && snapshot.updatedAt === emptySnapshot.updatedAt) {
+    const legacy = await readLegacySnapshot();
+    if (legacy) {
+      const migrated = { ...coerceSnapshot(legacy), version: SNAPSHOT_PAYLOAD_VERSION };
+      await writeSyncSnapshot(migrated);
+      await removeLegacySnapshot();
+      return migrated;
+    }
   }
-  return coerceSnapshot(result[STORAGE_KEY]);
+
+  return snapshot;
 }
 
 export async function writeSyncSnapshot(snapshot: SyncSnapshot): Promise<void> {
-  await storageSet({ [STORAGE_KEY]: snapshot });
+  await storageService.writeEncrypted(STORAGE_KEY, snapshot, {
+    payloadVersion: SNAPSHOT_PAYLOAD_VERSION,
+    quotaBytes: SYNC_SNAPSHOT_QUOTA_BYTES
+  });
 }
 
 export async function syncConversationMetadata(conversation: ConversationRecord): Promise<void> {
@@ -148,8 +105,7 @@ function ensureChangeListener() {
   if (initializedListener) {
     return;
   }
-  const sync = getSyncArea();
-  if (!sync) {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
     return;
   }
 
@@ -161,9 +117,74 @@ function ensureChangeListener() {
       return;
     }
     const newValue = changes[STORAGE_KEY].newValue;
-    const snapshot = coerceSnapshot(newValue);
-    listeners.forEach((listener) => listener(snapshot));
+    storageService
+      .decodeEnvelope(newValue, STORAGE_KEY, {
+        fallback: { ...emptySnapshot },
+        expectedVersion: SNAPSHOT_PAYLOAD_VERSION,
+        upgrade: (payload) => coerceSnapshot(payload)
+      })
+      .then((snapshot) => {
+        listeners.forEach((listener) => listener(snapshot));
+      })
+      .catch((error) => {
+        console.warn('[syncBridge] Failed to decode snapshot change', error);
+      });
   });
 
   initializedListener = true;
+}
+
+async function readLegacySnapshot(): Promise<SyncSnapshot | undefined> {
+  if (typeof chrome === 'undefined' || !chrome.storage?.sync) {
+    return undefined;
+  }
+
+  const sync = chrome.storage.sync;
+  try {
+    if ('get' in sync && sync.get.length === 1) {
+      const result = await (sync.get as (key: string) => Promise<Record<string, SyncSnapshot>>)(LEGACY_STORAGE_KEY);
+      return result?.[LEGACY_STORAGE_KEY];
+    }
+
+    return await new Promise<SyncSnapshot | undefined>((resolve, reject) => {
+      sync.get(LEGACY_STORAGE_KEY, (result) => {
+        const error = chrome.runtime?.lastError;
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve((result as Record<string, SyncSnapshot>)?.[LEGACY_STORAGE_KEY]);
+      });
+    });
+  } catch (error) {
+    console.warn('[syncBridge] Failed to read legacy snapshot', error);
+    return undefined;
+  }
+}
+
+async function removeLegacySnapshot() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.sync) {
+    return;
+  }
+
+  const sync = chrome.storage.sync;
+  try {
+    if ('remove' in sync && sync.remove.length === 1) {
+      await (sync.remove as (key: string) => Promise<void>)(LEGACY_STORAGE_KEY);
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      sync.remove(LEGACY_STORAGE_KEY, () => {
+        const error = chrome.runtime?.lastError;
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.warn('[syncBridge] Failed to remove legacy snapshot', error);
+  }
 }

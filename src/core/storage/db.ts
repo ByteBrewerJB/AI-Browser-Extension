@@ -1,4 +1,4 @@
-﻿import Dexie, { Table } from 'dexie';
+import Dexie, { Table } from 'dexie';
 import type {
   BookmarkRecord,
   ConversationRecord,
@@ -10,6 +10,36 @@ import type {
   SettingsRecord
 } from '@/core/models';
 
+export interface MetadataRecord<T = unknown> {
+  key: string;
+  value: T;
+  updatedAt: string;
+}
+
+export interface EncryptionMetadataValue {
+  /**
+   * Highest Dexie schema version that has been migrated with encryption aware logic.
+   */
+  schemaVersion: number;
+  /**
+   * Version of the encryption format currently applied to IndexedDB rows.
+   */
+  dataVersion: number;
+  /**
+   * Timestamp of the last completed encryption sweep across tables.
+   */
+  lastMigrationAt?: string;
+  /**
+   * Flag indicating whether plaintext rows still need to be upgraded.
+   */
+  pending: boolean;
+}
+
+export type EncryptionMetadataRecord = MetadataRecord<EncryptionMetadataValue>;
+
+export const ENCRYPTION_DATA_VERSION = 1;
+export const ENCRYPTION_METADATA_KEY = 'encryption';
+
 export class CompanionDatabase extends Dexie {
   conversations!: Table<ConversationRecord, string>;
   messages!: Table<MessageRecord, string>;
@@ -19,6 +49,7 @@ export class CompanionDatabase extends Dexie {
   folders!: Table<FolderRecord, string>;
   bookmarks!: Table<BookmarkRecord, string>;
   settings!: Table<SettingsRecord, string>;
+  metadata!: Table<MetadataRecord, string>;
 
   constructor() {
     super('AICompanionDB');
@@ -55,6 +86,51 @@ export class CompanionDatabase extends Dexie {
           }
         });
       });
+
+    this.version(3)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id',
+        metadata: 'key'
+      })
+      .upgrade(async (transaction) => {
+        const metadataTable = transaction.table('metadata') as Table<MetadataRecord>;
+        const now = new Date().toISOString();
+
+        const existing = await metadataTable.get(ENCRYPTION_METADATA_KEY);
+        if (!existing) {
+          const encryptionMetadata: EncryptionMetadataRecord = {
+            key: ENCRYPTION_METADATA_KEY,
+            value: {
+              schemaVersion: 3,
+              dataVersion: 0,
+              pending: true
+            },
+            updatedAt: now
+          };
+          await metadataTable.put(encryptionMetadata);
+          return;
+        }
+
+        const value = existing.value as Partial<EncryptionMetadataValue>;
+        const merged: EncryptionMetadataRecord = {
+          ...existing,
+          value: {
+            schemaVersion: Math.max(value?.schemaVersion ?? 0, 3),
+            dataVersion: value?.dataVersion ?? 0,
+            pending: value?.pending ?? true,
+            lastMigrationAt: value?.lastMigrationAt
+          },
+          updatedAt: now
+        };
+        await metadataTable.put(merged);
+      });
   }
 }
 
@@ -64,5 +140,3 @@ export async function resetDatabase() {
   await db.delete();
   await db.open();
 }
-
-

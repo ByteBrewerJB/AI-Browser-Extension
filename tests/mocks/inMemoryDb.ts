@@ -5,6 +5,9 @@ import type {
   PromptChainRecord
 } from '@/core/models';
 
+export const ENCRYPTION_DATA_VERSION = 1;
+export const ENCRYPTION_METADATA_KEY = 'encryption';
+
 type RecordWithId = { id: string };
 
 type WhereResult<T extends RecordWithId> = {
@@ -210,16 +213,41 @@ class PromptChainTable extends InMemoryTable<PromptChainRecord> {
   }
 }
 
+type MetadataRecord = {
+  key: string;
+  value: unknown;
+  updatedAt: string;
+};
+
+class MetadataTable {
+  private store = new Map<string, MetadataRecord>();
+
+  async get(key: string) {
+    const record = this.store.get(key);
+    return record ? clone(record) : undefined;
+  }
+
+  async put(record: MetadataRecord) {
+    this.store.set(record.key, clone(record));
+  }
+
+  async clear() {
+    this.store.clear();
+  }
+}
+
 const conversations = new ConversationTable();
 const messages = new MessageTable();
 const bookmarks = new BookmarkTable();
 const promptChains = new PromptChainTable();
+const metadata = new MetadataTable();
 
 export const db = {
   conversations,
   messages,
   bookmarks,
   promptChains,
+  metadata,
   async transaction(_mode: string, ...args: unknown[]) {
     const maybeCallback = args[args.length - 1];
     if (typeof maybeCallback === 'function') {
@@ -229,12 +257,13 @@ export const db = {
 };
 
 export async function resetDatabase() {
-  await Promise.all([conversations.clear(), messages.clear(), bookmarks.clear(), promptChains.clear()]);
+  await Promise.all([conversations.clear(), messages.clear(), bookmarks.clear(), promptChains.clear(), metadata.clear()]);
 }
 
 export const __stores = {
   conversations,
   messages,
   bookmarks,
-  promptChains
+  promptChains,
+  metadata
 };
