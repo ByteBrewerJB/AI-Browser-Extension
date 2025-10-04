@@ -20,7 +20,7 @@ class ResizeObserverMock implements ResizeObserver {
 
 type AsyncTest = [name: string, execute: () => Promise<void>];
 
-function createSidebarEnvironment(language: string) {
+function createSidebarEnvironment(language: string, ariaLabel = 'Chat history') {
   const env = setupDomEnvironment();
   const { document } = env;
 
@@ -36,7 +36,7 @@ function createSidebarEnvironment(language: string) {
   (wrapper as any).offsetParent = wrapper;
 
   const nav = document.createElement('nav');
-  nav.setAttribute('aria-label', 'Chat history');
+  nav.setAttribute('aria-label', ariaLabel);
 
   const list = document.createElement('ol');
   nav.appendChild(list);
@@ -105,6 +105,21 @@ for (const [locale, expected] of localeExpectations) {
     }
   ]);
 }
+
+tests.push([
+  'finds the sidebar when aria-label is localized to Dutch',
+  async () => {
+    const env = createSidebarEnvironment('nl-NL', 'Chatgeschiedenis');
+
+    try {
+      const host = await ensureShadowHost();
+      assert.equal(host.parentElement, env.list);
+      assert.equal(host.getAttribute('data-ai-companion-collapsed'), null);
+    } finally {
+      env.cleanup();
+    }
+  }
+]);
 
 async function run() {
   let hasFailure = false;
