@@ -49,12 +49,12 @@ loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks
 - Follow the [popup/dashboard/bookmark/counter regression script](docs/testing/manual-regression.md) on both ChatGPT domains before shipping UX changes.
 
 ## Project Structure
-- `docs/` – architecture overview and roadmap.
+- `docs/` – consolidated architecture & delivery roadmap plus decisions and QA guides.
 - `src/background` – service worker for context menus and messaging stubs (bookmark/audio actions).
 - `src/content` – DOM integrations on chat.openai.com/chatgpt.com for conversation capture and live metrics.
 - `src/core` – Dexie storage, models, and sync bridge helpers shared across surfaces.
 - `src/options` – dashboard for conversations, folders, custom GPTs, and prompt template management.
-- `src/popup` – quick-access UI for bookmarks, pinned chats, language/direction controls.
+- `src/popup` – quick-access UI for recent conversations with pin/bookmark toggles, language/direction controls, and upcoming-feature placeholders.
 - `src/shared` – localization, Zustand stores, and shared hooks.
 - `assets/icons` – placeholder extension icons.
 
@@ -64,5 +64,5 @@ loader in `tests/ts-node-loader.mjs` to provide in-memory Chrome/IndexedDB mocks
 - Expand the manual regression script with additional dashboard filters or audio scenarios as they land.
 
 ## Next Steps
-See `docs/architecture-roadmap.md` for the feature roadmap (audio downloads, bulk actions, sync tiers, etc.). Milestone status is tracked in `docs/feature-plan.md`.
+See `docs/roadmap.md` for the architecture snapshot, delivery status, and premium planning.
 

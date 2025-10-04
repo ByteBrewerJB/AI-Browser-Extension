@@ -16,7 +16,7 @@ Guidelines for agents contributing to the AI ChatGPT Companion extension.
 - Maintain ASCII unless extending existing localized copy.
 
 ## 3. Features & Architecture
-- Consult `docs/feature-plan.md` for active milestones; update statuses as you complete work.
+- Consult `docs/roadmap.md` for active milestones and premium planning; update statuses as you complete work.
 - Storage interactions go through a central service (add in `src/shared` or a dedicated `core/` namespace).
 - Background service worker handles downloads, alarms, cross-surface messaging.
 - Keep localization keys in `src/shared/i18n/locales/{lang}/common.json`; update both EN and NL.
