@@ -28,7 +28,7 @@ This plan refines the high-level roadmap into concrete, traceable work items der
   - [x] Conversations table view showing latest chats (filtering controls still pending).
   - [x] Folder tree sidebar (folders + subfolders).
 - [ ] Polish & verification
-  - [ ] Saved filters/column presets for the conversation table.
+- [x] Saved filters/column presets for the conversation table.
   - [x] Shared empty/error state components across dashboard modules (`StateMessage` + `EmptyState`).
   - [ ] Manual regression script documented for both chat domains.
   - [ ] Additional Vitest coverage for DOM ingestion edge cases (system messages, streaming edits).

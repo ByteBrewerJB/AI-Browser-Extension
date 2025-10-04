@@ -69,12 +69,37 @@ export interface BookmarkRecord {
   note?: string;
 }
 
+export type ConversationPinnedFilter = 'all' | 'pinned' | 'unpinned';
+
+export type ConversationArchivedFilter = 'all' | 'archived' | 'active';
+
+export type ConversationSortField = 'updatedAt' | 'title' | 'messageCount' | 'wordCount' | 'charCount';
+
+export type ConversationSortDirection = 'asc' | 'desc';
+
+export interface ConversationTableConfig {
+  folderId: string | 'all';
+  pinned: ConversationPinnedFilter;
+  archived: ConversationArchivedFilter;
+  sortField: ConversationSortField;
+  sortDirection: ConversationSortDirection;
+}
+
+export interface ConversationTablePreset {
+  id: string;
+  name: string;
+  config: ConversationTableConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SettingsRecord {
   id: string;
-  language: string;
-  direction: 'ltr' | 'rtl';
-  autoSync: boolean;
-  enableVoicePlayback: boolean;
+  language?: string;
+  direction?: 'ltr' | 'rtl';
+  autoSync?: boolean;
+  enableVoicePlayback?: boolean;
+  conversationPresets?: ConversationTablePreset[];
   updatedAt: string;
 }
 

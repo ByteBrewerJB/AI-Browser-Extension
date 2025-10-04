@@ -4,4 +4,5 @@ export * from './folders';
 export * from './gpts';
 export * from './prompts';
 export * from './promptChains';
+export * from './settings';
 export * from './syncBridge';
