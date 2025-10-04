@@ -34,6 +34,42 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+async function getConversationCounters(conversationId: string) {
+  const [messageCount, bookmarkCount] = await Promise.all([
+    db.messages.where('conversationId').equals(conversationId).count(),
+    db.bookmarks.where('conversationId').equals(conversationId).count()
+  ]);
+
+  return { messageCount, bookmarkCount };
+}
+
+async function toConversationOverview(conversation: ConversationRecord): Promise<ConversationOverview> {
+  const { messageCount, bookmarkCount } = await getConversationCounters(conversation.id);
+
+  return {
+    ...conversation,
+    messageCount,
+    bookmarkCount
+  } satisfies ConversationOverview;
+}
+
+export async function extendConversationsWithCounts(
+  conversations: ConversationRecord[]
+): Promise<ConversationOverview[]> {
+  return Promise.all(conversations.map((conversation) => toConversationOverview(conversation)));
+}
+
+export async function getConversationOverviewById(
+  conversationId: string
+): Promise<ConversationOverview | undefined> {
+  const conversation = await db.conversations.get(conversationId);
+  if (!conversation) {
+    return undefined;
+  }
+
+  return toConversationOverview(conversation);
+}
+
 export async function upsertConversation(input: ConversationUpsertInput) {
   const timestamp = input.updatedAt ?? nowIso();
   const result = await db.conversations.put({
@@ -112,22 +148,14 @@ export async function addMessages(messages: MessageInput[]) {
 
 export async function getRecentConversations(limit = 10): Promise<ConversationOverview[]> {
   const conversations = await db.conversations.orderBy('updatedAt').reverse().limit(limit).toArray();
-  const overview = await Promise.all(
-    conversations.map(async (conversation) => {
-      const [messageCount, bookmarkCount] = await Promise.all([
-        db.messages.where('conversationId').equals(conversation.id).count(),
-        db.bookmarks.where('conversationId').equals(conversation.id).count()
-      ]);
+  return extendConversationsWithCounts(conversations);
+}
 
-      return {
-        ...conversation,
-        messageCount,
-        bookmarkCount
-      } satisfies ConversationOverview;
-    })
-  );
-
-  return overview;
+export async function getPinnedConversations(limit = 10): Promise<ConversationOverview[]> {
+  const conversations = await db.conversations.filter((conversation) => conversation.pinned).toArray();
+  conversations.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+  const trimmed = typeof limit === 'number' && limit >= 0 ? conversations.slice(0, limit) : conversations;
+  return extendConversationsWithCounts(trimmed);
 }
 
 export async function toggleBookmark(conversationId: string, messageId?: string, note?: string) {

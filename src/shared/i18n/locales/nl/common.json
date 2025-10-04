@@ -10,6 +10,11 @@
     "openDashboard": "Open dashboard",
     "recentConversations": "Recente gesprekken",
     "noConversations": "Start een chat om je geschiedenis hier te zien.",
+    "untitledConversation": "Naamloos gesprek",
+    "bookmarkConversationOnly": "Gespreksbladwijzer",
+    "bookmarkSaved": "Opgeslagen {{time}}",
+    "bookmarkNote": "Notitie: {{note}}",
+    "pinnedBadge": "Vastgezet",
     "words": "Woorden",
     "characters": "Karakters",
     "messages": "Berichten",
@@ -17,7 +22,32 @@
     "unpin": "Losmaken",
     "bookmark": "Bladwijzer",
     "unbookmark": "Bladwijzer verwijderen",
-    "openConversation": "Openen"
+    "openConversation": "Openen",
+    "bookmarkTotal": "Bladwijzers",
+    "noBookmarks": "Sla bladwijzers op om ze hier te zien.",
+    "noPinned": "Zet belangrijke gesprekken vast voor snelle toegang.",
+    "noActivity": "Recente gesprekswijzigingen, bladwijzers en exports verschijnen hier.",
+    "recentActivityDescription": "Laatste gesprekken, bladwijzers en exports in één overzicht.",
+    "activityConversation": "{{title}} bijgewerkt",
+    "activityConversationMetrics": "{{messages}} berichten · {{words}} woorden",
+    "activityConversationBookmarks": "{{formattedCount}} bladwijzers",
+    "activityBookmark": "Bladwijzer opgeslagen in {{title}}",
+    "activityJob": "{{type}}-taak {{status}}",
+    "activityJobStatus": {
+      "pending": "Gepland",
+      "running": "Actief",
+      "completed": "Voltooid",
+      "failed": "Mislukt"
+    },
+    "activityJobType": {
+      "export": "Export"
+    },
+    "activityJobFailedWithError": "Mislukt: {{error}}",
+    "activityJobFailed": "Taak mislukt na {{attempts}} pogingen",
+    "activityJobCompleted": "Voltooid {{time}}",
+    "activityJobRunning": "Actief sinds {{time}}",
+    "activityJobScheduled": "Gepland voor {{time}}",
+    "activityJobAttempts": "{{attempts}} / {{max}} pogingen"
   },
   "options": {
     "heading": "AI Companion Dashboard",

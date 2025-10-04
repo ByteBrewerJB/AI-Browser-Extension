@@ -113,6 +113,19 @@ export class CompanionDatabase extends Dexie {
       jobs: 'id, status, runAt',
       metadata: 'key'
     });
+
+    this.version(5).stores({
+      conversations: 'id, updatedAt, folderId, pinned, archived',
+      messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+      gpts: 'id, folderId, updatedAt',
+      prompts: 'id, folderId, gptId, updatedAt',
+      promptChains: 'id, updatedAt',
+      folders: 'id, parentId, kind',
+      bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+      settings: 'id',
+      jobs: 'id, status, runAt, updatedAt',
+      metadata: 'key'
+    });
   }
 }
 

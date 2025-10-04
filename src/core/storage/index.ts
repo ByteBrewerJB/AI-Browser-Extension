@@ -7,3 +7,4 @@ export * from './promptChains';
 export * from './settings';
 export * from './syncBridge';
 export * from './service';
+export * from './insights';
