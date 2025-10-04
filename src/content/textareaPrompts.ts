@@ -533,27 +533,31 @@ function renderPromptList() {
 }
 
 function openDashboard() {
+  const dashboardUrl =
+    chrome.runtime?.getURL?.('src/options/index.html') ??
+    chrome.runtime?.getURL?.('options.html');
+
   if (chrome.runtime?.openOptionsPage) {
     chrome.runtime.openOptionsPage(() => {
       const lastError = chrome.runtime?.lastError;
       if (lastError) {
         console.error('[ai-companion] failed to open options page', lastError);
-        const fallbackUrl = chrome.runtime?.getURL?.('options.html');
-        if (fallbackUrl) {
-          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        if (dashboardUrl) {
+          window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          console.error('[ai-companion] unable to resolve dashboard URL for fallback navigation');
         }
       }
     });
     return;
   }
 
-  const url = chrome.runtime?.getURL?.('options.html');
-  if (url) {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  if (dashboardUrl) {
+    window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
     return;
   }
 
-  window.open('/options.html', '_blank', 'noopener,noreferrer');
+  console.error('[ai-companion] dashboard URL could not be resolved');
 }
 
 function matchesPrompt(prompt: PromptRecord, term: string) {

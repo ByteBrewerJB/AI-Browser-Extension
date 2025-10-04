@@ -113,27 +113,44 @@ function openConversationTab(conversationId: string) {
 }
 
 function openDashboard() {
-  if (typeof chrome !== 'undefined') {
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage(() => {
-        const lastError = chrome.runtime?.lastError;
-        if (lastError) {
-          console.error('[ai-companion] failed to open options page', lastError);
-        }
-      });
-      return;
-    }
+  const dashboardUrl =
+    typeof chrome !== 'undefined'
+      ? chrome.runtime?.getURL?.('src/options/index.html') ?? chrome.runtime?.getURL?.('options.html')
+      : undefined;
 
-    const url = chrome.runtime?.getURL?.('options.html');
-    if (url) {
-      chrome.tabs?.create({ url }).catch((error) => {
-        console.error('[ai-companion] failed to open dashboard tab', error);
-      });
-      return;
-    }
+  if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+    chrome.runtime.openOptionsPage(() => {
+      const lastError = chrome.runtime?.lastError;
+      if (lastError) {
+        console.error('[ai-companion] failed to open options page', lastError);
+        if (dashboardUrl) {
+          if (chrome.tabs?.create) {
+            chrome.tabs
+              .create({ url: dashboardUrl })
+              .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+          } else {
+            window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
+          }
+        } else {
+          console.error('[ai-companion] unable to resolve dashboard URL for fallback navigation');
+        }
+      }
+    });
+    return;
   }
 
-  window.open('/options.html', '_blank', 'noopener,noreferrer');
+  if (dashboardUrl) {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs
+        .create({ url: dashboardUrl })
+        .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+    } else {
+      window.open(dashboardUrl, '_blank', 'noopener,noreferrer');
+    }
+    return;
+  }
+
+  console.error('[ai-companion] dashboard URL could not be resolved');
 }
 
 interface SidebarSectionProps {
