@@ -50,6 +50,10 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 6. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
 7. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
 8. Select at least two conversations and click “Move selection”. Choose a destination folder, confirm the success notice reports the count, and ensure the selection clears after the move. Repeat once for moving back to the top level.
+9. Open the new “Settings” tab in the dashboard and verify the toggles:
+   - Flip “Show conversation dock” off and on; the bubble dock should hide/show in an active chat tab within two seconds.
+   - Switch “Composer direction” to RTL and back to LTR; confirm the content overlay and popup reflect the change immediately.
+   - Toggle “Auto-download response audio”, refresh the options page, and confirm the setting persists.
 
 ## Bookmark & pin workflow
 
@@ -60,6 +64,11 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
    - Toggle a folder to favorite via the star button and confirm the “Fav” badge appears next to the name.
    - Refresh the tab or hide/show the dock to ensure the cached favorites render immediately without flicker.
    - Remove the favorite and note the star button disables while the change is persisted.
+5. With the same conversation in view, open the “Actions” bubble and select a message from the list. Verify that:
+   - “Bookmark” opens the inline bookmark modal with the selected message preselected.
+   - “Save as prompt” persists a new prompt and shows the success toast; deselecting the message disables text-based actions.
+   - “Copy text” places the message content on the clipboard.
+   - “Pin conversation” toggles the conversation state and updates the status line; “Refresh” repopulates the list after new messages arrive.
 
 ## Bookmark overlay smoke test
 

@@ -155,6 +155,31 @@ interface BookmarkTarget {
 
 type ContextMenuAction = 'pin' | 'prompt' | 'copy';
 
+type PanelPendingAction = ContextMenuAction | 'bookmark';
+
+interface ActionTargetOption {
+  key: string;
+  messageId: string | null;
+  title: string;
+  subtitle: string;
+  text: string;
+  hasText: boolean;
+}
+
+interface ActionsPanelLoadResult {
+  conversationId: string | null;
+  conversationTitle: string;
+  pinned: boolean | null;
+  targets: ActionTargetOption[];
+  error: string | null;
+}
+
+interface ActionsPanelProps {
+  onOpenBookmarkDialog: (target?: BookmarkTarget) => void;
+  showToast: (message: string, tone?: ActionTone) => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
 type ActionTone = 'neutral' | 'success' | 'error';
 
 interface ActionToast {
@@ -610,6 +635,457 @@ function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps
         </ModalFooter>
       </form>
     </Modal>
+  );
+}
+
+function ActionsPanel({ onOpenBookmarkDialog, showToast, t }: ActionsPanelProps): ReactElement {
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState('');
+  const [pinned, setPinned] = useState<boolean | null>(null);
+  const [targets, setTargets] = useState<ActionTargetOption[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PanelPendingAction | null>(null);
+
+  const applyLoadResult = useCallback((result: ActionsPanelLoadResult) => {
+    setConversationId(result.conversationId);
+    setConversationTitle(result.conversationTitle);
+    setPinned(result.pinned);
+    setTargets(result.targets);
+    setError(result.error);
+    setSelectedKey((current) => {
+      if (current && result.targets.some((target) => target.key === current)) {
+        return current;
+      }
+      return null;
+    });
+    setLoading(false);
+  }, []);
+
+  const loadTargets = useCallback(async (): Promise<ActionsPanelLoadResult> => {
+    const resolvedConversationId = getConversationId();
+    const resolvedConversationTitle = getConversationTitle();
+    const elements = collectMessageElements();
+    const seen = new Set<string>();
+    const nextTargets: ActionTargetOption[] = [];
+
+    if (resolvedConversationId) {
+      nextTargets.push({
+        key: CONVERSATION_BOOKMARK_KEY,
+        messageId: null,
+        title: t('content.sidebar.actionsPanel.conversationOption', { defaultValue: 'Entire conversation' }),
+        subtitle: t('content.sidebar.actionsPanel.conversationDescription', {
+          defaultValue: 'Bookmark or pin the complete thread.'
+        }),
+        text: '',
+        hasText: false
+      });
+    }
+
+    for (const element of elements) {
+      const messageId = element.getAttribute('data-message-id');
+      if (!messageId) {
+        continue;
+      }
+      const key = `message:${messageId}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+
+      const rawText = normalizeMessageContent(element.textContent ?? '');
+      const hasText = rawText.length > 0;
+      const role = element.getAttribute('data-message-author-role');
+      const roleLabel = formatBookmarkRole(role, t);
+      const title = t('content.sidebar.actionsPanel.messageTitle', {
+        role: roleLabel,
+        defaultValue: '{{role}} message'
+      });
+      const subtitle = hasText
+        ? createSnippet(rawText, 160)
+        : t('content.sidebar.actionsPanel.messageEmpty', {
+            defaultValue: 'No reusable text detected in this message.'
+          });
+
+      nextTargets.push({
+        key,
+        messageId,
+        title,
+        subtitle,
+        text: rawText,
+        hasText
+      });
+    }
+
+    let pinnedState: boolean | null = null;
+    if (resolvedConversationId) {
+      try {
+        const overview = await getConversationOverviewById(resolvedConversationId);
+        pinnedState = Boolean(overview?.pinned);
+      } catch (loadError) {
+        console.error('[ai-companion] failed to load conversation overview for actions panel', loadError);
+      }
+    }
+
+    const errorMessage =
+      nextTargets.length <= (resolvedConversationId ? 1 : 0)
+        ? t('content.sidebar.actionsPanel.noMessages', {
+            defaultValue: 'No chat messages detected yet. Send a prompt to enable message actions.'
+          })
+        : null;
+
+    return {
+      conversationId: resolvedConversationId,
+      conversationTitle: resolvedConversationTitle,
+      pinned: pinnedState,
+      targets: nextTargets,
+      error: errorMessage
+    };
+  }, [t]);
+
+  const refreshTargets = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await loadTargets();
+      applyLoadResult(result);
+    } catch (refreshError) {
+      console.error('[ai-companion] failed to refresh actions panel', refreshError);
+      setConversationId(getConversationId());
+      setConversationTitle(getConversationTitle());
+      setTargets([]);
+      setPinned(null);
+      setSelectedKey(null);
+      setError(
+        t('content.sidebar.actionsPanel.loadError', {
+          defaultValue: 'We could not load the message list. Try refreshing the page.'
+        })
+      );
+      setLoading(false);
+    }
+  }, [applyLoadResult, loadTargets, t]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await loadTargets();
+        if (cancelled) {
+          return;
+        }
+        applyLoadResult(result);
+      } catch (loadError) {
+        if (cancelled) {
+          return;
+        }
+        console.error('[ai-companion] failed to load actions panel', loadError);
+        setConversationId(getConversationId());
+        setConversationTitle(getConversationTitle());
+        setTargets([]);
+        setPinned(null);
+        setSelectedKey(null);
+        setError(
+          t('content.sidebar.actionsPanel.loadError', {
+            defaultValue: 'We could not load the message list. Try refreshing the page.'
+          })
+        );
+        setLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLoadResult, loadTargets, t]);
+
+  const selectedTarget = useMemo(
+    () => (selectedKey ? targets.find((target) => target.key === selectedKey) ?? null : null),
+    [selectedKey, targets]
+  );
+
+  const handleSelectTarget = useCallback((key: string) => {
+    setSelectedKey((current) => (current === key ? null : key));
+  }, []);
+
+  const handleBookmark = useCallback(() => {
+    if (!selectedTarget) {
+      return;
+    }
+    setPendingAction('bookmark');
+    onOpenBookmarkDialog({ messageId: selectedTarget.messageId });
+    window.setTimeout(() => {
+      setPendingAction(null);
+    }, 0);
+  }, [onOpenBookmarkDialog, selectedTarget]);
+
+  const handleSavePrompt = useCallback(async () => {
+    if (!selectedTarget?.hasText) {
+      return;
+    }
+    setPendingAction('prompt');
+    try {
+      const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
+      const titleLabel = normalizeTitle(conversationTitle, fallbackTitle);
+      const snippet = createSnippet(selectedTarget.text, 64);
+      const fallbackName = t('content.sidebar.history.contextMenuPromptFallback', {
+        title: titleLabel,
+        defaultValue: 'Prompt from {{title}}'
+      });
+      const name = snippet.length >= 3 ? snippet : fallbackName;
+      await createPrompt({ name, content: selectedTarget.text });
+      showToast(
+        t('content.sidebar.history.contextMenuPromptSaved', {
+          name,
+          defaultValue: 'Prompt "{{name}}" saved to your library.'
+        }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to save prompt from actions panel', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }, [conversationTitle, selectedTarget, showToast, t]);
+
+  const handleCopy = useCallback(async () => {
+    if (!selectedTarget?.hasText) {
+      return;
+    }
+    setPendingAction('copy');
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(selectedTarget.text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = selectedTarget.text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      showToast(
+        t('content.sidebar.history.contextMenuCopied', { defaultValue: 'Message copied to clipboard.' }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to copy message from actions panel', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }, [selectedTarget, showToast, t]);
+
+  const handleTogglePin = useCallback(async () => {
+    if (!conversationId) {
+      return;
+    }
+    setPendingAction('pin');
+    try {
+      const result = await togglePinned(conversationId);
+      const nextPinned = Boolean(result?.pinned);
+      setPinned(nextPinned);
+      showToast(
+        nextPinned
+          ? t('content.sidebar.history.contextMenuPinSuccess', { defaultValue: 'Conversation pinned.' })
+          : t('content.sidebar.history.contextMenuUnpinSuccess', { defaultValue: 'Conversation unpinned.' }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to toggle pin from actions panel', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  }, [conversationId, showToast, t]);
+
+  const handleOpenDashboard = useCallback(() => {
+    openDashboard({ searchParams: { view: 'history' } });
+  }, []);
+
+  const isBookmarkDisabled = !selectedTarget || pendingAction === 'bookmark';
+  const isPromptDisabled = !selectedTarget?.hasText || pendingAction === 'prompt';
+  const isCopyDisabled = !selectedTarget?.hasText || pendingAction === 'copy';
+  const isPinDisabled = !conversationId || pendingAction === 'pin';
+
+  return (
+    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold text-slate-100">
+            {t('content.sidebar.actionsPanel.title', { defaultValue: 'Message actions' })}
+          </h3>
+          <p className="text-xs text-slate-300">
+            {t('content.sidebar.actionsPanel.description', {
+              defaultValue: 'Select a conversation or message to run quick actions.'
+            })}
+          </p>
+          <p className="text-xs text-slate-400">
+            {conversationId
+              ? t('content.sidebar.actionsPanel.conversationLabel', {
+                  title: normalizeTitle(conversationTitle, t('popup.untitledConversation') ?? 'Untitled conversation'),
+                  defaultValue: 'Working in "{{title}}"'
+                })
+              : t('content.sidebar.actionsPanel.noConversation', {
+                  defaultValue: 'Start a conversation to enable conversation-level actions.'
+                })}
+          </p>
+          {pinned !== null ? (
+            <p className="text-xs text-emerald-200">
+              {pinned
+                ? t('content.sidebar.actionsPanel.pinned', { defaultValue: 'Conversation is pinned.' })
+                : t('content.sidebar.actionsPanel.notPinned', { defaultValue: 'Conversation is not pinned.' })}
+            </p>
+          ) : null}
+        </div>
+        <button
+          className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={loading || pendingAction !== null}
+          onClick={() => {
+            void refreshTargets();
+          }}
+          type="button"
+        >
+          {t('content.sidebar.actionsPanel.refresh', { defaultValue: 'Refresh' })}
+        </button>
+      </div>
+
+      <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+        {loading ? (
+          <p className="text-xs text-slate-300">
+            {t('content.sidebar.actionsPanel.loading', { defaultValue: 'Loading conversation messages…' })}
+          </p>
+        ) : targets.length === 0 ? (
+          <EmptyState
+            align="start"
+            className="px-3 py-6 text-xs"
+            description={
+              error ??
+              t('content.sidebar.actionsPanel.emptyDescription', {
+                defaultValue: 'Chat messages are not available yet. Send a message to populate this list.'
+              })
+            }
+            title={t('content.sidebar.actionsPanel.emptyTitle', { defaultValue: 'No messages available' })}
+          />
+        ) : (
+          <ul className="space-y-2">
+            {targets.map((target) => {
+              const isSelected = selectedKey === target.key;
+              const baseClassName =
+                'w-full rounded-md border border-white/10 bg-slate-900/40 p-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400';
+              const activeClassName = isSelected ? ' border-emerald-400 bg-emerald-500/10 text-emerald-100' : ' hover:bg-white/10';
+
+              return (
+                <li key={target.key}>
+                  <button
+                    aria-pressed={isSelected}
+                    className={`${baseClassName}${activeClassName}`}
+                    onClick={() => handleSelectTarget(target.key)}
+                    type="button"
+                  >
+                    <span className="block text-sm font-medium text-inherit">{target.title}</span>
+                    <span className="mt-1 block text-xs text-slate-300">{target.subtitle}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {error && targets.length > 0 ? (
+        <p className="mt-2 text-xs text-amber-200">{error}</p>
+      ) : null}
+
+      <div className="mt-4 space-y-3 border-t border-white/10 pt-3">
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {t('content.sidebar.actionsPanel.messageActionsHeading', { defaultValue: 'Message actions' })}
+          </h4>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isBookmarkDisabled}
+              onClick={handleBookmark}
+              type="button"
+            >
+              {t('content.sidebar.actionsPanel.bookmarkAction', { defaultValue: 'Bookmark' })}
+            </button>
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isPromptDisabled}
+              onClick={() => {
+                void handleSavePrompt();
+              }}
+              type="button"
+            >
+              {t('content.sidebar.actionsPanel.savePromptAction', { defaultValue: 'Save as prompt' })}
+            </button>
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isCopyDisabled}
+              onClick={() => {
+                void handleCopy();
+              }}
+              type="button"
+            >
+              {t('content.sidebar.actionsPanel.copyAction', { defaultValue: 'Copy text' })}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {t('content.sidebar.actionsPanel.threadActionsHeading', { defaultValue: 'Conversation actions' })}
+          </h4>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isPinDisabled}
+              onClick={() => {
+                void handleTogglePin();
+              }}
+              type="button"
+            >
+              {pinned
+                ? t('content.sidebar.actionsPanel.unpinAction', { defaultValue: 'Unpin conversation' })
+                : t('content.sidebar.actionsPanel.pinAction', { defaultValue: 'Pin conversation' })}
+            </button>
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+              onClick={handleOpenDashboard}
+              type="button"
+            >
+              {t('content.sidebar.actionsPanel.openDashboardAction', { defaultValue: 'Open dashboard' })}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1514,6 +1990,11 @@ function BubbleDock({ onShowPatterns }: BubbleDockProps): ReactElement {
       description: t('content.sidebar.toolbars.history', { defaultValue: 'Conversation tools' })
     },
     {
+      key: 'actions',
+      label: t('content.sidebar.tabs.actions', { defaultValue: 'Actions' }),
+      description: t('content.sidebar.toolbars.actions', { defaultValue: 'Message selection & actions' })
+    },
+    {
       key: 'prompts',
       label: t('content.sidebar.tabs.prompts', { defaultValue: 'Prompts' }),
       description: t('content.sidebar.toolbars.prompts', { defaultValue: 'Prompt toolbox' })
@@ -1880,6 +2361,10 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     return null;
   }
 
+  const ActionsPanelView = () => (
+    <ActionsPanel onOpenBookmarkDialog={handleOpenBookmarkDialog} showToast={showToast} t={t} />
+  );
+
   const HistoryPanel = () => (
     <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
       <HistoryTab onAddBookmark={handleOpenBookmarkDialog} />
@@ -1902,6 +2387,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     <>
       <div className="pointer-events-auto flex items-start gap-3">
         <BubbleDock onShowPatterns={() => setPatternModalOpen(true)} />
+        {activeBubble === 'actions' && <ActionsPanelView />}
         {activeBubble === 'history' && <HistoryPanel />}
         {activeBubble === 'prompts' && <PromptsPanel />}
         {activeBubble === 'media' && <MediaPanel />}
