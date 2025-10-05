@@ -1,6 +1,6 @@
 # Retrofit tracker
 
-_Last reviewed: 2025-02-16_
+_Last reviewed: 2025-02-17_
 
 Dit dossier koppelt de bestaande extensie aan de nieuwe **privacy-first, local-first** roadmap. Gebruik het om pariteit met ChatGPT Toolbox te meten, plus-features te plannen en QA/retrofit-besluiten te loggen. Synchroniseer wijzigingen steeds met [`docs/handbook/product-roadmap.md`](./product-roadmap.md), de regressiegids en relevante ADR's.
 
@@ -42,7 +42,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 - **Search & sidebar spike**
   - [x] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
   - [x] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten (cold build 1.5 s, query ~3 ms op 10k).
-  - [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
+  - [x] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 - **Launcher ervaring**
   - [ ] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen.
   - [ ] Chain DSL parser (placeholders, [[step.output]]) prototypen.
@@ -65,7 +65,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Index verrijkt met tag-tokens en volledige mappaden zodat komende UI-flows direct de juiste context tonen; cold build op 10k berichten blijft onder 1,5 s, queries rond 3 ms. Volgende stap is de zijbalk-wireframes finaliseren.
    - **Documentatie** – Retrofitlog (dit bestand) en roadmap bijgewerkt; nieuwe test `tests/core/searchService.spec.ts` documenteert conversatie/tag/folder indexing.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test` (Node 20.19.0). Handmatig: 10k-dataset benchmark via ad-hoc script (`buildSearchIndex` 1.495 s, zoekopdracht 3.067 ms, 100 resultaten).
-3. [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
+3. [x] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken. _(afgerond 2025-02-17)_
+   - **Prioritering** – Wireframes dekken pin/hide/collapse flows zodat development van Zustand-state en UI-componenten kan starten; volgende stap is toetsen met accessibility review en integratie met mapnavigatie.
+   - **Documentatie** – Nieuwe ontwerpnotitie `docs/design/sidebar-pin-wireframes.md`; tracker (dit bestand) en roadmap-tickets gelinkt voor implementatieplanning.
+   - **QA-notes** – Geautomatiseerd: n.v.t. (design deliverable). Handmatig: heuristische UX-review uitgevoerd (consistency, Fitts, keyboard flow) en acties voor A11y-tests genoteerd in ontwerpnotitie.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -121,5 +124,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-02-14 | _pending_ | Documentatie | Tracker herschreven volgens pariteit→plus roadmap; statuslegenda toegevoegd; acties voor search/launcher/privacy gepland. |
 | 2025-02-15 | _pending_ | Storage | Dexie v8 met `folder_items` pivot geland; folderhelpers + docs/QA-updates toegevoegd; lint/test/build uitgevoerd. |
 | 2025-02-16 | _pending_ | Search | MiniSearch verrijkt met tags en mappaden; nieuwe tests + 10k benchmark (build 1.495 s, query 3.067 ms) gedraaid naast lint/test. |
+| 2025-02-17 | _pending_ | UX | Zijbalk pin/hide/collapse wireframes vastgelegd; QA-aanwijzingen toegevoegd en designnotitie gepubliceerd. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
