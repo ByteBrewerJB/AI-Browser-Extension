@@ -2,6 +2,7 @@ import type {
   BookmarkRecord,
   ConversationRecord,
   FolderItemRecord,
+  FolderRecord,
   MessageRecord,
   PromptChainRecord
 } from '@/core/models';
@@ -223,6 +224,12 @@ class ConversationTable extends InMemoryTable<ConversationRecord> {
   }
 }
 
+class FolderTable extends InMemoryTable<FolderRecord> {
+  constructor() {
+    super('updatedAt');
+  }
+}
+
 class PromptChainTable extends InMemoryTable<PromptChainRecord> {
   constructor() {
     super('updatedAt');
@@ -278,6 +285,10 @@ class MetadataTable {
     this.store.set(record.key, clone(record));
   }
 
+  async delete(key: string) {
+    this.store.delete(key);
+  }
+
   async clear() {
     this.store.clear();
   }
@@ -287,6 +298,7 @@ const conversations = new ConversationTable();
 const messages = new MessageTable();
 const bookmarks = new BookmarkTable();
 const promptChains = new PromptChainTable();
+const folders = new FolderTable();
 const folderItems = new FolderItemsTable();
 const metadata = new MetadataTable();
 
@@ -295,6 +307,7 @@ export const db = {
   messages,
   bookmarks,
   promptChains,
+  folders,
   folderItems,
   metadata,
   async transaction(_mode: string, ...args: unknown[]) {
@@ -311,6 +324,7 @@ export async function resetDatabase() {
     messages.clear(),
     bookmarks.clear(),
     promptChains.clear(),
+    folders.clear(),
     folderItems.clear(),
     metadata.clear()
   ]);
@@ -321,6 +335,7 @@ export const __stores = {
   messages,
   bookmarks,
   promptChains,
+  folders,
   folderItems,
   metadata
 };
