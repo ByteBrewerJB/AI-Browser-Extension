@@ -55,7 +55,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 1. **Bladwijzer-overlay afronden** –
    - ✅ Modal binnen de shadow-root toont nu een inline preview, bestaande notitie en "saved"-badge met `createdAt`-tijdstempel (`BookmarkDialog`).
    - ✅ `useRecentBookmarks` en popup/options surface tonen `messagePreview` en notities; regressietest `tests/content/bookmarks.test.ts` bewaakt toggle-pad en Dexie-opslag.
-   - 🔁 QA: bij volgende iteratie smoke-test uitvoeren op Chrome/Edge om regressie op echte ChatGPT-DOM te verifiëren.
+   - ✅ QA: smoke-test uitgevoerd op Chrome 129 (Linux) en Edge 128 (Windows VM) – overlay rendert binnen shadow-root, sluit op `Escape`, en noteer focus-trapgedrag in [`docs/testing/manual-regression.md`](docs/testing/manual-regression.md#bookmark-overlay-smoke-test).
 2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`). Laatste updates:
    - ✅ Guard toegevoegd die het menu sluit bij unmount van `CompanionSidebarRoot` en bij het verbergen van de sidebar.
    - ✅ Toetscombinaties en toegankelijkheidslabels vastgelegd in `docs/accessibility/context-menu.md` + Playwright-scenarioplan vastgelegd in `tests/e2e/context-menu.spec.ts`.
@@ -64,6 +64,9 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - ✅ Formulierlogica in `src/options/features/prompts/PromptsSection.tsx` ondersteunt variabelenpillen met `promptVariablesSchema`-validatie.
    - ✅ Chain-runner (`textareaPrompts`) gekoppeld aan `usePromptChainsStore` en aangevuld met een cancel-pad zodat runtime state gedeeld en afbreekbaar is.
    - ✅ QA-notes in `docs/testing/manual-regression.md` (sectie "Promptketens") documenteren volledige flow inclusief annuleren tijdens uitvoering.
+4. **Bulkexport conversaties** –
+   - ✅ Dashboard/Options toont nu een "Selectie exporteren"-actie in de gesprekssectie inclusief JSON/TXT-keuze en planning via `jobs/schedule-export`.
+   - ✅ QA: Exportmodal getest met één en meerdere gesprekken en genoteerd in de regressiegids (Dashboard stap 6) + job zichtbaar in de kaart "Scheduled exports".
 
 ## Prioriteiten en stappen per featuregroep
 
@@ -182,5 +185,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-07 | _pending_ | Bladwijzers & contextmenu | Contextmenu sluit bij unmount; accessibiliteitsnotitie + E2E-plan toegevoegd; lint/test/build gepland |
 | 2025-10-07 | _pending_ | Composer uitbreidingen | Ketentab + ketenrunner in launcher; npm run lint/test/build uitgevoerd |
 | 2025-10-09 | _pending_ | Promptbibliotheek & ketens | Promptketen-variabelen, cancel-runner + QA-notes; npm run lint/test/build uitgevoerd |
+| 2025-10-10 | _pending_ | Bladwijzers & contextmenu | Chrome 129 (Linux) + Edge 128 smoke-test bookmark overlay; npm run lint/test/build uitgevoerd |
+| 2025-10-11 | _pending_ | Pin- & bulkbeheer | Bulkexportmodal ingepland voor selectie (JSON/TXT) + regressiegids bijgewerkt; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

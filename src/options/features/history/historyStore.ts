@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { ConversationTableConfig, ConversationTablePreset } from '@/core/models';
 import { archiveConversations, createFolder, deleteConversations, deleteFolder, toggleFavoriteFolder, togglePinned } from '@/core/storage';
 import { createConversationTablePreset, deleteConversationTablePreset } from '@/core/storage/settings';
+import { sendRuntimeMessage } from '@/shared/messaging/router';
 
 interface HistoryState {
   conversationConfig: ConversationTableConfig;
@@ -24,6 +25,7 @@ interface HistoryState {
   clearSelection: () => void;
   archiveSelected: (archived: boolean) => Promise<void>;
   deleteSelected: () => Promise<void>;
+  exportSelected: (format: 'json' | 'txt') => Promise<void>;
 }
 
 const initialConfig: ConversationTableConfig = {
@@ -143,6 +145,29 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       set({ selectedConversationIds: [] });
     } catch (error) {
       console.error('[historyStore] failed to delete conversations', error);
+      throw error;
+    }
+  },
+  exportSelected: async (format) => {
+    const ids = get().selectedConversationIds;
+    if (ids.length === 0) {
+      return;
+    }
+
+    const exportId = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `export-${Date.now()}`;
+    try {
+      await sendRuntimeMessage('jobs/schedule-export', {
+        exportId,
+        runAt: new Date().toISOString(),
+        payload: {
+          scope: 'conversations',
+          conversationIds: ids,
+          format
+        },
+        maxAttempts: 5
+      });
+    } catch (error) {
+      console.error('[historyStore] failed to schedule export', error);
       throw error;
     }
   }

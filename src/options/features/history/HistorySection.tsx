@@ -13,6 +13,7 @@ import { EmptyState } from '@/shared/components';
 import { useConversationPresets } from '@/shared/hooks/useConversationPresets';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 
 import { OptionBubble, flattenFolderOptions, formatDate, formatNumber } from '../shared';
 import { useHistoryStore } from './historyStore';
@@ -42,7 +43,8 @@ export function HistorySection() {
     setSelectedConversationIds,
     clearSelection,
     archiveSelected,
-    deleteSelected
+    deleteSelected,
+    exportSelected
   } = useHistoryStore();
 
   const conversationFolderOptions = useMemo(
@@ -138,6 +140,12 @@ export function HistorySection() {
   const allFilteredSelected = filteredConversationIds.length > 0 && filteredConversationIds.every((id) => selectionSet.has(id));
   const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
   const selectionCount = selectedConversationIds.length;
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'json' | 'txt'>('json');
+  const [exportPending, setExportPending] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectAllRef.current) {
@@ -210,6 +218,52 @@ export function HistorySection() {
 
   const handleDeleteSelection = async () => {
     await deleteSelected();
+  };
+
+  const handleOpenExportModal = () => {
+    if (selectionCount === 0) {
+      return;
+    }
+    setExportFormat('json');
+    setExportError(null);
+    setShowExportModal(true);
+  };
+
+  const handleExport = async () => {
+    if (selectionCount === 0) {
+      return;
+    }
+    setExportPending(true);
+    setExportError(null);
+    try {
+      await exportSelected(exportFormat);
+      setShowExportModal(false);
+      const notice =
+        t('options.bulkExportScheduled', {
+          count: selectionCount,
+          defaultValue:
+            selectionCount === 1
+              ? 'Export scheduled for 1 conversation. Track progress in the export queue.'
+              : 'Export scheduled for {{count}} conversations. Track progress in the export queue.'
+        }) ?? null;
+      setExportNotice(notice);
+    } catch (error) {
+      const fallback = 'Export could not be scheduled. Try again.';
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : t('options.bulkExportError', { defaultValue: fallback }) ?? fallback
+      );
+    } finally {
+      setExportPending(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    if (exportPending) {
+      return;
+    }
+    setShowExportModal(false);
   };
 
   return (
@@ -591,6 +645,14 @@ export function HistorySection() {
               <button
                 className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
                 disabled={selectionCount === 0}
+                onClick={handleOpenExportModal}
+                type="button"
+              >
+                {t('options.bulkExport', { defaultValue: 'Export selected' })}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
                 onClick={() => clearSelection()}
                 type="button"
               >
@@ -598,6 +660,7 @@ export function HistorySection() {
               </button>
             </div>
           </div>
+          {exportNotice ? <p className="text-xs text-emerald-300">{exportNotice}</p> : null}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-800">
@@ -685,6 +748,76 @@ export function HistorySection() {
           </table>
         </div>
       </div>
+      <Modal
+        open={showExportModal}
+        onClose={handleCloseExportModal}
+        labelledBy="bulk-export-title"
+        describedBy="bulk-export-description"
+      >
+        <ModalHeader className="mb-4 space-y-1">
+          <h2 id="bulk-export-title" className="text-lg font-semibold text-emerald-200">
+            {t('options.bulkExportTitle', { defaultValue: 'Export selected conversations' })}
+          </h2>
+          <p id="bulk-export-description" className="text-sm text-slate-300">
+            {t('options.bulkExportDescription', {
+              defaultValue:
+                'Choose a format to queue a download job for the selected conversations. The file will download when the job runs.'
+            })}
+          </p>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {t('options.bulkExportFormatLabel', { defaultValue: 'Export format' })}
+            </legend>
+            <div className="space-y-2 text-sm text-slate-200">
+              <label className="flex items-center gap-3">
+                <input
+                  checked={exportFormat === 'json'}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                  name="bulk-export-format"
+                  onChange={() => setExportFormat('json')}
+                  type="radio"
+                  value="json"
+                />
+                <span>{t('options.bulkExportFormatJson', { defaultValue: 'JSON (metadata + messages)' })}</span>
+              </label>
+              <label className="flex items-center gap-3">
+                <input
+                  checked={exportFormat === 'txt'}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                  name="bulk-export-format"
+                  onChange={() => setExportFormat('txt')}
+                  type="radio"
+                  value="txt"
+                />
+                <span>{t('options.bulkExportFormatTxt', { defaultValue: 'Plain text transcript' })}</span>
+              </label>
+            </div>
+          </fieldset>
+          {exportError ? <p className="text-sm text-rose-300">{exportError}</p> : null}
+        </ModalBody>
+        <ModalFooter className="mt-6 flex justify-end gap-3">
+          <button
+            className="rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
+            disabled={exportPending}
+            onClick={handleCloseExportModal}
+            type="button"
+          >
+            {t('options.bulkExportCancel', { defaultValue: 'Cancel' })}
+          </button>
+          <button
+            className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={exportPending}
+            onClick={() => void handleExport()}
+            type="button"
+          >
+            {exportPending
+              ? t('options.bulkExportScheduling', { defaultValue: 'Scheduling…' })
+              : t('options.bulkExportSchedule', { defaultValue: 'Schedule export' })}
+          </button>
+        </ModalFooter>
+      </Modal>
     </section>
   );
 
