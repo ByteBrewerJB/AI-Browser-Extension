@@ -1,6 +1,6 @@
 # Retrofit tracker
 
-_Last reviewed: 2025-02-14_
+_Last reviewed: 2025-02-16_
 
 Dit dossier koppelt de bestaande extensie aan de nieuwe **privacy-first, local-first** roadmap. Gebruik het om pariteit met ChatGPT Toolbox te meten, plus-features te plannen en QA/retrofit-besluiten te loggen. Synchroniseer wijzigingen steeds met [`docs/handbook/product-roadmap.md`](./product-roadmap.md), de regressiegids en relevante ADR's.
 
@@ -11,7 +11,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 | Featuregroep | Kernscope | Status | Laatste update |
 | --- | --- | --- | --- |
 | Gespreksbeheer & mappen | Onbeperkte mappen/submappen, GPT-koppeling, drag & drop, pinned folders, bulk verplaatsing | 🟥 Gap – ontwerp | 2025-02-14 – roadmap geaccepteerd |
-| Professionele zijbalk | History search (<150 ms), pin/hide, bulkacties, collapse GPTs, undo flows | 🟧 Gap – analyse | 2025-02-14 – zoekindex benchmark lopend |
+| Professionele zijbalk | History search (<150 ms), pin/hide, bulkacties, collapse GPTs, undo flows | 🟧 Gap – analyse | 2025-02-16 – MiniSearch tags/mappen, 10k build 1.5 s / query 3 ms |
 | Chat pinning & bulkacties | Pin/unpin met shortcut, bulkselectie 500+, exact filters, persistente state | 🟧 Gap – analyse | 2025-02-14 – Dexie schema review |
 | Promptbibliotheek | CRUD, tagging, versies, favorieten, `//` launcher ≤50 ms | 🟥 Gap – ontwerp | 2025-02-14 – trigger specs klaar |
 | Prompt-chaining (10 stappen) | Placeholder validatie, `..` launcher, batch-run, tussenoutput logging | 🟥 Gap – ontwerp | 2025-02-14 – DSL uitgewerkt |
@@ -28,6 +28,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 ## Samenvatting voortgang
 - Fase 1 (Pariteit MVP) is in architectuurfase: storage, search en launcher-scenario's zijn gespecificeerd maar niet gebouwd.
 - RTL/thema-herziening is in uitvoering; andere UI-pariteitsfeatures wachten op componentrefactor.
+- Zoekindex verrijkt nu titels met tag- en mappad-tokens; cold build op 10k berichten duurde ~1,5 s met queries rond 3 ms.
 - Versleutelde sync en audio/media pipelines vereisen service-worker uitbreidingen (nog niet gepland).
 - Pluslaag (branching, agent tools, enterprise) blijft op backlog totdat pariteit bereikt is.
 
@@ -40,7 +41,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 ## Actieve iteraties & deliverables
 - **Search & sidebar spike**
   - [x] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
-  - [ ] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten.
+  - [x] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten (cold build 1.5 s, query ~3 ms op 10k).
   - [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 - **Launcher ervaring**
   - [ ] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen.
@@ -60,7 +61,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Gereed: schema v8 levert stabiele sleutels voor bulkacties en toekomstige Minisearch-indexering. Volgende stap is de indexuitbreiding zodat hiërarchische queries performant blijven.
    - **Documentatie** – ADR `docs/handbook/adr-20240215-auth-and-data-model.md`, roadmap (`docs/handbook/product-roadmap.md`) en regressiegids zijn bijgewerkt met de nieuwe pivot (`folder_items`) en IndexedDB-resetinstructies.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: bij eerstvolgende browserrun DevTools → Application → IndexedDB controleren op `folders`/`folder_items`, basis CRUD uitvoeren en netwerkverkeer inspecteren (geen chatcontent POSTs) en vastleggen in logboek/regressiechecklist.
-2. [ ] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten.
+2. [x] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten. _(afgerond 2025-02-16)_
+   - **Prioritering** – Index verrijkt met tag-tokens en volledige mappaden zodat komende UI-flows direct de juiste context tonen; cold build op 10k berichten blijft onder 1,5 s, queries rond 3 ms. Volgende stap is de zijbalk-wireframes finaliseren.
+   - **Documentatie** – Retrofitlog (dit bestand) en roadmap bijgewerkt; nieuwe test `tests/core/searchService.spec.ts` documenteert conversatie/tag/folder indexing.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test` (Node 20.19.0). Handmatig: 10k-dataset benchmark via ad-hoc script (`buildSearchIndex` 1.495 s, zoekopdracht 3.067 ms, 100 resultaten).
 3. [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 
 ## Definition of done per groep
@@ -116,5 +120,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | --- | --- | --- | --- |
 | 2025-02-14 | _pending_ | Documentatie | Tracker herschreven volgens pariteit→plus roadmap; statuslegenda toegevoegd; acties voor search/launcher/privacy gepland. |
 | 2025-02-15 | _pending_ | Storage | Dexie v8 met `folder_items` pivot geland; folderhelpers + docs/QA-updates toegevoegd; lint/test/build uitgevoerd. |
+| 2025-02-16 | _pending_ | Search | MiniSearch verrijkt met tags en mappaden; nieuwe tests + 10k benchmark (build 1.495 s, query 3.067 ms) gedraaid naast lint/test. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.

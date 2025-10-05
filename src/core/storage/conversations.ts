@@ -15,6 +15,7 @@ export interface ConversationUpsertInput {
   updatedAt?: string;
   wordCount?: number;
   charCount?: number;
+  tags?: string[];
 }
 
 export interface MessageInput {
@@ -34,6 +35,22 @@ export interface ConversationOverview extends ConversationRecord {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function normalizeTags(tags?: string[]) {
+  if (!Array.isArray(tags)) {
+    return undefined;
+  }
+
+  const normalized = Array.from(
+    new Set(
+      tags
+        .map((tag) => (typeof tag === 'string' ? tag.trim() : ''))
+        .filter((tag) => tag.length > 0)
+    )
+  );
+
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 async function getConversationCounters(conversationId: string) {
@@ -76,6 +93,7 @@ export async function upsertConversation(input: ConversationUpsertInput) {
   const timestamp = input.updatedAt ?? nowIso();
   let result: string | number | undefined;
   let stored: ConversationRecord | undefined;
+  const tags = normalizeTags(input.tags);
 
   await db.transaction('rw', db.conversations, db.folderItems, async () => {
     result = await db.conversations.put({
@@ -87,7 +105,8 @@ export async function upsertConversation(input: ConversationUpsertInput) {
       createdAt: input.createdAt ?? timestamp,
       updatedAt: timestamp,
       wordCount: input.wordCount ?? 0,
-      charCount: input.charCount ?? 0
+      charCount: input.charCount ?? 0,
+      tags
     });
 
     stored = await db.conversations.get(input.id);

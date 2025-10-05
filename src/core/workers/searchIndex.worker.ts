@@ -8,7 +8,7 @@ import {
 } from './searchIndexWorker.types';
 
 const searchOptions = {
-  fields: ['title', 'text'],
+  fields: ['title', 'text', 'tags', 'folderPath'],
   storeFields: ['conversationId'],
   idField: 'id' as const,
 };

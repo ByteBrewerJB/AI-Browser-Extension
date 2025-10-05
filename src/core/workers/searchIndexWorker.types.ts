@@ -3,6 +3,8 @@ export interface SearchDocument {
   text: string;
   conversationId: string;
   title?: string;
+  tags?: string;
+  folderPath?: string;
 }
 
 export type SearchWorkerRequest =

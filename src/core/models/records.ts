@@ -10,6 +10,7 @@ export interface ConversationRecord {
   wordCount: number;
   charCount: number;
   archived?: boolean;
+  tags?: string[];
 }
 
 export interface MessageRecord {
