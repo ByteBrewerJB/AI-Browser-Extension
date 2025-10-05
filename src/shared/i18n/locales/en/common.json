@@ -214,6 +214,43 @@
     "promptChainBubbleHelper": "Select an existing chain to edit or tap + to start a new sequence."
   },
   "content": {
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Toggle prompts bubble ({{count}} available)",
+      "bookmarks": "Bookmarks",
+      "bookmarksAria": "Open bookmark bubble",
+      "pinned": "Pinned",
+      "pinnedAria": "Open pinned bubble",
+      "actions": "Actions",
+      "actionsAria": "Open actions bubble",
+      "settings": "Settings",
+      "settingsAria": "Open settings bubble",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Open dashboard",
+      "closePanelAria": "Close bubble panel"
+    },
+    "bubblePanels": {
+      "bookmarks": {
+        "title": "Conversation bookmarks",
+        "placeholderTitle": "Bookmark tools are almost here",
+        "placeholderSubtitle": "Soon you'll capture messages, add notes, and sync them across popup and dashboard from this bubble."
+      },
+      "pinned": {
+        "title": "Pinned conversations",
+        "placeholderTitle": "Quick pin controls on the way",
+        "placeholderSubtitle": "Manage pins and favorite folders without leaving ChatGPT once this bubble unlocks."
+      },
+      "actions": {
+        "title": "Actions & shortcuts",
+        "placeholderTitle": "Contextual actions arriving shortly",
+        "placeholderSubtitle": "This bubble will soon bundle quick operations like bookmarking, exporting, and sharing."
+      },
+      "settings": {
+        "title": "Settings",
+        "placeholderTitle": "Adjust the Companion without leaving the chat",
+        "placeholderSubtitle": "Dock visibility, direction, and audio toggles will land in this bubble soon."
+      }
+    },
     "sidebar": {
       "title": "AI Companion",
       "patternButton": "Patterns",

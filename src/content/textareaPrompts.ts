@@ -7,28 +7,62 @@ import type { i18n as I18nInstance } from 'i18next';
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
 const MAX_PROMPTS = 100;
 
+type PanelBubbleId = 'prompts' | 'bookmarks' | 'pinned' | 'actions' | 'settings';
+type LinkBubbleId = 'dashboard';
+type BubbleId = PanelBubbleId | LinkBubbleId;
+
 interface LauncherState {
   prompts: PromptRecord[];
   folderNames: Map<string, string>;
   filter: string;
   open: boolean;
+  activeBubble: PanelBubbleId | null;
 }
+
+interface BubbleConfigBase {
+  id: BubbleId;
+  variant: 'primary' | 'secondary';
+  labelKey: string;
+  labelFallback: string;
+  ariaKey: string;
+  ariaFallback: string;
+}
+
+interface PanelBubbleConfig extends BubbleConfigBase {
+  id: PanelBubbleId;
+  kind: 'panel';
+  showSearch: boolean;
+  panelTitleKey: string;
+  panelTitleFallback: string;
+  placeholderTitleKey: string;
+  placeholderTitleFallback: string;
+  placeholderSubtitleKey: string;
+  placeholderSubtitleFallback: string;
+}
+
+interface LinkBubbleConfig extends BubbleConfigBase {
+  id: LinkBubbleId;
+  kind: 'link';
+  action: () => void;
+}
+
+type BubbleConfig = PanelBubbleConfig | LinkBubbleConfig;
 
 const state: LauncherState = {
   prompts: [],
   folderNames: new Map(),
   filter: '',
-  open: false
+  open: false,
+  activeBubble: null
 };
 
 let container: HTMLElement | null = null;
 let shadowRoot: ShadowRoot | null = null;
-let toggleButton: HTMLButtonElement | null = null;
-let toggleButtonLabel: HTMLSpanElement | null = null;
-let dashboardButton: HTMLButtonElement | null = null;
-let dashboardButtonLabel: HTMLSpanElement | null = null;
+const bubbleButtons = new Map<BubbleId, { button: HTMLButtonElement; label: HTMLSpanElement }>();
+const panelBubbleConfigs = new Map<PanelBubbleId, PanelBubbleConfig>();
 let closeButton: HTMLButtonElement | null = null;
 let panel: HTMLDivElement | null = null;
+let searchWrapper: HTMLDivElement | null = null;
 let searchInput: HTMLInputElement | null = null;
 let promptList: HTMLUListElement | null = null;
 let emptyState: HTMLDivElement | null = null;
@@ -38,6 +72,24 @@ let titleEl: HTMLHeadingElement | null = null;
 let i18nInstance: I18nInstance | null = null;
 let promptsSubscription: { unsubscribe(): void } | null = null;
 let mounted = false;
+
+function attachEvent<K extends keyof HTMLElementEventMap>(
+  target: HTMLElement,
+  type: K,
+  handler: (event: HTMLElementEventMap[K]) => void
+) {
+  if (typeof target.addEventListener === 'function') {
+    target.addEventListener(type, handler as EventListener);
+    return;
+  }
+
+  const fallbackTarget = target as unknown as Record<string, unknown>;
+  fallbackTarget[`on${String(type)}`] = handler;
+}
+
+function attachClickHandler(target: HTMLElement, handler: (event: MouseEvent) => void) {
+  attachEvent(target, 'click', handler);
+}
 
 const LAUNCHER_STYLES = `
 :host {
@@ -95,7 +147,7 @@ button {
   color: #34d399;
   outline: none;
 }
-.bubble[data-open="true"] {
+.bubble[data-active="true"] {
   background: rgba(16, 185, 129, 0.22);
   border-color: rgba(16, 185, 129, 0.75);
   color: #34d399;
@@ -280,6 +332,103 @@ button {
 }
 `;
 
+const BUBBLE_CONFIGS: BubbleConfig[] = [
+  {
+    id: 'prompts',
+    kind: 'panel',
+    variant: 'primary',
+    labelKey: 'content.dock.prompts',
+    labelFallback: 'Prompts ({{count}})',
+    ariaKey: 'content.dock.promptsAria',
+    ariaFallback: 'Toggle prompts bubble ({{count}} available)',
+    showSearch: true,
+    panelTitleKey: 'content.promptLauncher.title',
+    panelTitleFallback: 'Saved prompts',
+    placeholderTitleKey: 'content.promptLauncher.emptyTitle',
+    placeholderTitleFallback: 'No prompts yet',
+    placeholderSubtitleKey: 'content.promptLauncher.emptySubtitle',
+    placeholderSubtitleFallback: 'Save prompts in the dashboard or popup to reuse them here.'
+  },
+  {
+    id: 'bookmarks',
+    kind: 'panel',
+    variant: 'primary',
+    labelKey: 'content.dock.bookmarks',
+    labelFallback: 'Bookmarks',
+    ariaKey: 'content.dock.bookmarksAria',
+    ariaFallback: 'Open bookmark bubble',
+    showSearch: false,
+    panelTitleKey: 'content.bubblePanels.bookmarks.title',
+    panelTitleFallback: 'Conversation bookmarks',
+    placeholderTitleKey: 'content.bubblePanels.bookmarks.placeholderTitle',
+    placeholderTitleFallback: 'Bookmark tools are almost here',
+    placeholderSubtitleKey: 'content.bubblePanels.bookmarks.placeholderSubtitle',
+    placeholderSubtitleFallback:
+      "Soon you'll capture messages, add notes, and sync them across popup and dashboard from this bubble."
+  },
+  {
+    id: 'pinned',
+    kind: 'panel',
+    variant: 'primary',
+    labelKey: 'content.dock.pinned',
+    labelFallback: 'Pinned',
+    ariaKey: 'content.dock.pinnedAria',
+    ariaFallback: 'Open pinned bubble',
+    showSearch: false,
+    panelTitleKey: 'content.bubblePanels.pinned.title',
+    panelTitleFallback: 'Pinned conversations',
+    placeholderTitleKey: 'content.bubblePanels.pinned.placeholderTitle',
+    placeholderTitleFallback: 'Quick pin controls on the way',
+    placeholderSubtitleKey: 'content.bubblePanels.pinned.placeholderSubtitle',
+    placeholderSubtitleFallback:
+      'Manage pins and favorite folders without leaving ChatGPT once this bubble unlocks.'
+  },
+  {
+    id: 'actions',
+    kind: 'panel',
+    variant: 'primary',
+    labelKey: 'content.dock.actions',
+    labelFallback: 'Actions',
+    ariaKey: 'content.dock.actionsAria',
+    ariaFallback: 'Open actions bubble',
+    showSearch: false,
+    panelTitleKey: 'content.bubblePanels.actions.title',
+    panelTitleFallback: 'Actions & shortcuts',
+    placeholderTitleKey: 'content.bubblePanels.actions.placeholderTitle',
+    placeholderTitleFallback: 'Contextual actions arriving shortly',
+    placeholderSubtitleKey: 'content.bubblePanels.actions.placeholderSubtitle',
+    placeholderSubtitleFallback:
+      'This bubble will soon bundle quick operations like bookmarking, exporting, and sharing.'
+  },
+  {
+    id: 'settings',
+    kind: 'panel',
+    variant: 'secondary',
+    labelKey: 'content.dock.settings',
+    labelFallback: 'Settings',
+    ariaKey: 'content.dock.settingsAria',
+    ariaFallback: 'Open settings bubble',
+    showSearch: false,
+    panelTitleKey: 'content.bubblePanels.settings.title',
+    panelTitleFallback: 'Settings',
+    placeholderTitleKey: 'content.bubblePanels.settings.placeholderTitle',
+    placeholderTitleFallback: 'Adjust the Companion without leaving the chat',
+    placeholderSubtitleKey: 'content.bubblePanels.settings.placeholderSubtitle',
+    placeholderSubtitleFallback:
+      'Dock visibility, direction, and audio toggles will land in this bubble soon.'
+  },
+  {
+    id: 'dashboard',
+    kind: 'link',
+    variant: 'secondary',
+    labelKey: 'content.dock.dashboard',
+    labelFallback: 'Dashboard',
+    ariaKey: 'content.dock.dashboardAria',
+    ariaFallback: 'Open dashboard',
+    action: openDashboard
+  }
+];
+
 function translate(key: string, fallback: string, options?: Record<string, unknown>): string {
   if (i18nInstance) {
     return i18nInstance.t(key, { defaultValue: fallback, ...(options ?? {}) });
@@ -318,7 +467,17 @@ function ensureContainer() {
     document.body.appendChild(container);
   }
 
-  shadowRoot = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
+  const supportsShadowDom = typeof container.attachShadow === 'function';
+  if (supportsShadowDom) {
+    shadowRoot = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
+  } else {
+    const fallbackRoot = document.createElement('div');
+    fallbackRoot.setAttribute('data-ai-companion', 'shadow-fallback');
+    container.textContent = '';
+    container.appendChild(fallbackRoot);
+    shadowRoot = fallbackRoot as unknown as ShadowRoot;
+  }
+
   shadowRoot.innerHTML = '';
 
   const style = document.createElement('style');
@@ -333,27 +492,38 @@ function ensureContainer() {
   dock.className = 'bubble-dock';
   wrapper.appendChild(dock);
 
-  toggleButton = document.createElement('button');
-  toggleButton.type = 'button';
-  toggleButton.className = 'bubble';
-  toggleButton.setAttribute('aria-haspopup', 'dialog');
-  toggleButton.setAttribute('aria-expanded', 'false');
-  toggleButton.addEventListener('click', () => {
-    setOpen(!state.open);
-  });
-  toggleButtonLabel = document.createElement('span');
-  toggleButton.appendChild(toggleButtonLabel);
-  dock.appendChild(toggleButton);
+  bubbleButtons.clear();
+  panelBubbleConfigs.clear();
 
-  dashboardButton = document.createElement('button');
-  dashboardButton.type = 'button';
-  dashboardButton.className = 'bubble bubble-secondary';
-  dashboardButton.addEventListener('click', () => {
-    openDashboard();
-  });
-  dashboardButtonLabel = document.createElement('span');
-  dashboardButton.appendChild(dashboardButtonLabel);
-  dock.appendChild(dashboardButton);
+  for (const config of BUBBLE_CONFIGS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = config.variant === 'secondary' ? 'bubble bubble-secondary' : 'bubble';
+    button.setAttribute('data-active', 'false');
+
+    const label = document.createElement('span');
+    button.appendChild(label);
+
+    if (config.kind === 'panel') {
+      panelBubbleConfigs.set(config.id, config);
+      button.setAttribute('aria-haspopup', 'dialog');
+      button.setAttribute('aria-expanded', 'false');
+      attachClickHandler(button, () => {
+        if (state.activeBubble === config.id) {
+          closePanel();
+        } else {
+          openPanel(config.id);
+        }
+      });
+    } else {
+      attachClickHandler(button, () => {
+        config.action();
+      });
+    }
+
+    dock.appendChild(button);
+    bubbleButtons.set(config.id, { button, label });
+  }
 
   panel = document.createElement('div');
   panel.className = 'panel';
@@ -375,18 +545,21 @@ function ensureContainer() {
   closeButton = document.createElement('button');
   closeButton.type = 'button';
   closeButton.className = 'close';
-  closeButton.addEventListener('click', () => setOpen(false));
+  attachClickHandler(closeButton, () => closePanel({ focusTrigger: true }));
   closeButton.textContent = '\u00D7';
   header.appendChild(closeButton);
 
-  const searchWrapper = document.createElement('div');
+  searchWrapper = document.createElement('div');
   searchWrapper.className = 'search-wrapper';
   panel.appendChild(searchWrapper);
 
   searchInput = document.createElement('input');
   searchInput.type = 'search';
   searchInput.className = 'search';
-  searchInput.addEventListener('input', () => {
+  attachEvent(searchInput, 'input', () => {
+    if (state.activeBubble !== 'prompts') {
+      return;
+    }
     state.filter = searchInput?.value ?? '';
     renderPromptList();
   });
@@ -409,51 +582,163 @@ function ensureContainer() {
   panel.appendChild(promptList);
 
   applyTranslations();
-  renderPromptList();
+  renderActivePanel();
 }
 
 function applyTranslations() {
-  if (!toggleButton || !toggleButtonLabel || !dashboardButton || !dashboardButtonLabel || !searchInput || !titleEl || !emptyTitleEl || !emptySubtitleEl || !closeButton) {
+  if (!closeButton || !searchInput || !titleEl || !emptyTitleEl || !emptySubtitleEl) {
     return;
   }
 
-  updatePromptToggleText();
-  toggleButton.setAttribute('data-open', state.open ? 'true' : 'false');
-  toggleButton.setAttribute('aria-expanded', state.open ? 'true' : 'false');
+  refreshBubbleLabels();
 
-  const dashboardLabel = translate('content.dock.dashboard', 'Dashboard');
-  dashboardButtonLabel.textContent = dashboardLabel;
-  dashboardButton.setAttribute('title', dashboardLabel);
-  dashboardButton.setAttribute(
-    'aria-label',
-    translate('content.dock.dashboardAria', 'Open dashboard')
-  );
+  const closeLabel = translate('content.dock.closePanelAria', 'Close bubble panel');
+  closeButton.setAttribute('aria-label', closeLabel);
+  closeButton.setAttribute('title', closeLabel);
 
-  titleEl.textContent = translate('content.promptLauncher.title', 'Saved prompts');
-  closeButton.setAttribute(
-    'aria-label',
-    translate('content.promptLauncher.closeAria', 'Close prompt launcher')
-  );
-  searchInput.placeholder = translate('content.promptLauncher.searchPlaceholder', 'Search prompts...');
-  emptyTitleEl.textContent = translate('content.promptLauncher.emptyTitle', 'No prompts yet');
-  emptySubtitleEl.textContent = translate(
-    'content.promptLauncher.emptySubtitle',
-    'Save prompts in the dashboard or popup to reuse them here.'
-  );
+  if (state.activeBubble === 'prompts') {
+    searchInput.placeholder = translate('content.promptLauncher.searchPlaceholder', 'Search prompts...');
+  }
+
+  if (!state.open) {
+    emptyTitleEl.textContent = translate('content.promptLauncher.emptyTitle', 'No prompts yet');
+    emptySubtitleEl.textContent = translate(
+      'content.promptLauncher.emptySubtitle',
+      'Save prompts in the dashboard or popup to reuse them here.'
+    );
+    return;
+  }
+
+  renderActivePanel();
 }
 
-function updatePromptToggleText() {
-  if (!toggleButton || !toggleButtonLabel) {
+function refreshBubbleLabels() {
+  for (const config of BUBBLE_CONFIGS) {
+    const entry = bubbleButtons.get(config.id);
+    if (!entry) {
+      continue;
+    }
+
+    const { button, label } = entry;
+    const count = config.id === 'prompts' ? state.prompts.length : undefined;
+    const options = typeof count === 'number' ? { count } : undefined;
+    const labelText = translate(config.labelKey, config.labelFallback, options);
+
+    label.textContent = labelText;
+    button.setAttribute('title', labelText);
+
+    const ariaLabel = translate(config.ariaKey, config.ariaFallback, options);
+    button.setAttribute('aria-label', ariaLabel);
+
+    if (config.kind === 'panel') {
+      const isActive = state.open && state.activeBubble === config.id;
+      button.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+      button.setAttribute('data-active', isActive ? 'true' : 'false');
+    } else {
+      button.removeAttribute('aria-expanded');
+      button.setAttribute('data-active', 'false');
+    }
+  }
+}
+
+function openPanel(bubbleId: PanelBubbleId) {
+  state.activeBubble = bubbleId;
+  state.open = true;
+
+  if (bubbleId !== 'prompts') {
+    state.filter = '';
+    if (searchInput) {
+      searchInput.value = '';
+    }
+  }
+
+  refreshBubbleLabels();
+  renderActivePanel();
+
+  if (bubbleId === 'prompts') {
+    searchInput?.focus({ preventScroll: true });
+  }
+}
+
+function closePanel(options: { focusTrigger?: boolean } = {}) {
+  if (!state.open) {
+    state.activeBubble = null;
+    refreshBubbleLabels();
     return;
   }
 
-  const count = state.prompts?.length ?? 0;
-  const promptsLabel = translate('content.dock.prompts', 'Prompts ({{count}})', { count });
-  toggleButtonLabel.textContent = promptsLabel;
-  toggleButton.setAttribute('title', promptsLabel);
-  toggleButton.setAttribute(
-    'aria-label',
-    translate('content.dock.promptsAria', 'Toggle prompts dock ({{count}} available)', { count })
+  const previousBubble = state.activeBubble;
+  state.open = false;
+  state.activeBubble = null;
+  state.filter = '';
+
+  if (searchInput) {
+    searchInput.value = '';
+  }
+
+  renderActivePanel();
+  refreshBubbleLabels();
+
+  if (options.focusTrigger && previousBubble) {
+    const entry = bubbleButtons.get(previousBubble);
+    entry?.button.focus({ preventScroll: true });
+  }
+}
+
+function renderActivePanel() {
+  if (
+    !panel ||
+    !titleEl ||
+    !emptyState ||
+    !emptyTitleEl ||
+    !emptySubtitleEl ||
+    !promptList ||
+    !searchWrapper ||
+    !closeButton
+  ) {
+    return;
+  }
+
+  if (!state.open || !state.activeBubble) {
+    panel.hidden = true;
+    panel.removeAttribute('data-bubble');
+    searchWrapper.hidden = true;
+    promptList.hidden = true;
+    emptyState.hidden = false;
+    titleEl.textContent = translate('content.promptLauncher.title', 'Saved prompts');
+    return;
+  }
+
+  const config = panelBubbleConfigs.get(state.activeBubble);
+  if (!config) {
+    panel.hidden = true;
+    panel.removeAttribute('data-bubble');
+    return;
+  }
+
+  panel.hidden = false;
+  panel.setAttribute('data-bubble', config.id);
+
+  const titleText = translate(config.panelTitleKey, config.panelTitleFallback);
+  titleEl.textContent = titleText;
+
+  if (config.showSearch) {
+    searchWrapper.hidden = false;
+    if (searchInput) {
+      searchInput.placeholder = translate('content.promptLauncher.searchPlaceholder', 'Search prompts...');
+    }
+    renderPromptList();
+    return;
+  }
+
+  searchWrapper.hidden = true;
+  promptList.innerHTML = '';
+  promptList.hidden = true;
+  emptyState.hidden = false;
+  emptyTitleEl.textContent = translate(config.placeholderTitleKey, config.placeholderTitleFallback);
+  emptySubtitleEl.textContent = translate(
+    config.placeholderSubtitleKey,
+    config.placeholderSubtitleFallback
   );
 }
 
@@ -470,7 +755,10 @@ function subscribeToPrompts() {
     next: ({ prompts, folders }) => {
       state.prompts = prompts;
       state.folderNames = new Map(folders.map((folder: FolderRecord) => [folder.id, folder.name]));
-      renderPromptList();
+      refreshBubbleLabels();
+      if (state.activeBubble === 'prompts') {
+        renderPromptList();
+      }
     },
     error: (error) => {
       console.error('[ai-companion] prompt launcher query failed', error);
@@ -478,32 +766,12 @@ function subscribeToPrompts() {
   });
 }
 
-function setOpen(open: boolean) {
-  state.open = open;
-  if (!panel || !toggleButton) {
+function renderPromptList() {
+  if (!promptList || !emptyState || !emptyTitleEl || !emptySubtitleEl) {
     return;
   }
 
-  panel.hidden = !open;
-  panel.setAttribute('data-open', open ? 'true' : 'false');
-  toggleButton.setAttribute('data-open', open ? 'true' : 'false');
-  toggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
-
-  if (open) {
-    searchInput?.focus({ preventScroll: true });
-  } else {
-    if (searchInput) {
-      searchInput.value = '';
-    }
-    state.filter = '';
-    renderPromptList();
-  }
-}
-
-function renderPromptList() {
-  updatePromptToggleText();
-
-  if (!promptList || !emptyState || !emptyTitleEl || !emptySubtitleEl) {
+  if (state.activeBubble !== 'prompts') {
     return;
   }
 
@@ -642,7 +910,7 @@ function createPromptListItem(prompt: PromptRecord) {
   insertBtn.type = 'button';
   insertBtn.className = 'insert-button';
   insertBtn.textContent = translate('content.promptLauncher.insertButton', 'Insert');
-  insertBtn.addEventListener('click', (event) => {
+  attachClickHandler(insertBtn, (event) => {
     event.preventDefault();
     event.stopPropagation();
     handleInsert(prompt);
@@ -691,8 +959,7 @@ function handleInsert(prompt: PromptRecord) {
     return;
   }
 
-  setOpen(false);
-  toggleButton?.focus({ preventScroll: true });
+  closePanel();
 }
 
 function insertIntoContentEditable(element: HTMLElement, text: string) {
@@ -779,7 +1046,7 @@ function handleDocumentClick(event: MouseEvent) {
   if (path.includes(container)) {
     return;
   }
-  setOpen(false);
+  closePanel();
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -788,8 +1055,7 @@ function handleKeyDown(event: KeyboardEvent) {
   }
   if (container && event.composedPath().includes(container)) {
     event.preventDefault();
-    setOpen(false);
-    toggleButton?.focus({ preventScroll: true });
+    closePanel({ focusTrigger: true });
   }
 }
 
@@ -798,6 +1064,7 @@ function handlePageHide() {
 }
 
 function cleanup() {
+  closePanel();
   promptsSubscription?.unsubscribe();
   promptsSubscription = null;
   document.removeEventListener('click', handleDocumentClick, true);
