@@ -49,6 +49,7 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 5. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
 6. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
 7. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
+8. Select at least two conversations and click “Move selection”. Choose a destination folder, confirm the success notice reports the count, and ensure the selection clears after the move. Repeat once for moving back to the top level.
 
 ## Bookmark & pin workflow
 

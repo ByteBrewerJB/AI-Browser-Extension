@@ -20,6 +20,10 @@ import type { ConversationOverview } from '@/core/storage';
 import { OptionBubble, flattenFolderOptions, formatDate, formatNumber } from '../shared';
 import { useHistoryStore } from './historyStore';
 
+type MoveContext =
+  | { type: 'single'; conversation: ConversationOverview }
+  | { type: 'bulk'; conversations: ConversationOverview[] };
+
 export function HistorySection() {
   const { t } = useTranslation();
   const conversations = useRecentConversations(20);
@@ -54,6 +58,14 @@ export function HistorySection() {
     () => flattenFolderOptions(conversationFolders),
     [conversationFolders]
   );
+
+  const conversationsById = useMemo(() => {
+    const map = new Map<string, ConversationOverview>();
+    conversations.forEach((conversation) => {
+      map.set(conversation.id, conversation);
+    });
+    return map;
+  }, [conversations]);
 
   const [showConversationFolderForm, setShowConversationFolderForm] = useState(false);
 
@@ -144,7 +156,7 @@ export function HistorySection() {
   const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
   const selectionCount = selectedConversationIds.length;
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
-  const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
+  const [moveContext, setMoveContext] = useState<MoveContext | null>(null);
   const [movePending, setMovePending] = useState(false);
 
   const moveDialogOptions = useMemo<MoveDialogOption[]>(
@@ -211,49 +223,117 @@ export function HistorySection() {
   };
 
   const handleOpenMoveDialog = useCallback((conversation: ConversationOverview) => {
-    setMoveTarget(conversation);
+    setMoveContext({ type: 'single', conversation });
   }, []);
 
   const handleMoveDialogClose = useCallback(() => {
     if (!movePending) {
-      setMoveTarget(null);
+      setMoveContext(null);
     }
   }, [movePending]);
 
   const handleMoveSubmit = useCallback(
     async (folderId?: string) => {
-      if (!moveTarget) {
+      if (!moveContext) {
         return;
       }
       setMovePending(true);
       try {
-        await moveConversation(moveTarget, folderId);
-        const folderName =
-          folderId !== undefined
-            ? conversationFolderOptions.find((option) => option.id === folderId)?.name
-            : undefined;
-        const notice =
-          folderName
-            ? t('options.moveConversationSuccess', {
-                folder: folderName,
-                defaultValue: `Conversation moved to ${folderName}.`
-              })
-            : t('options.moveConversationSuccessRoot', {
-                defaultValue: 'Conversation moved to the top level.'
-              });
-        setStatusNotice(notice ?? null);
-        setMoveTarget(null);
+        if (moveContext.type === 'single') {
+          const target = moveContext.conversation;
+          await moveConversation(target, folderId);
+          const folderName =
+            folderId !== undefined
+              ? conversationFolderOptions.find((option) => option.id === folderId)?.name
+              : undefined;
+          const notice =
+            folderName
+              ? t('options.moveConversationSuccess', {
+                  folder: folderName,
+                  defaultValue: `Conversation moved to ${folderName}.`
+                })
+              : t('options.moveConversationSuccessRoot', {
+                  defaultValue: 'Conversation moved to the top level.'
+                });
+          setStatusNotice(notice ?? null);
+        } else {
+          const targets = moveContext.conversations;
+          const count = targets.length;
+          await Promise.all(targets.map((conversation) => moveConversation(conversation, folderId)));
+          clearSelection();
+          const folderName =
+            folderId !== undefined
+              ? conversationFolderOptions.find((option) => option.id === folderId)?.name
+              : undefined;
+          const notice =
+            folderName
+              ? t('options.bulkMoveSuccess', {
+                  count,
+                  folder: folderName,
+                  defaultValue:
+                    count === 1
+                      ? 'Moved 1 conversation to {{folder}}.'
+                      : 'Moved {{count}} conversations to {{folder}}.'
+                })
+              : t('options.bulkMoveSuccessRoot', {
+                  count,
+                  defaultValue:
+                    count === 1
+                      ? 'Moved 1 conversation to the top level.'
+                      : 'Moved {{count}} conversations to the top level.'
+                });
+          setStatusNotice(notice ?? null);
+        }
+        setMoveContext(null);
       } catch (error) {
-        const fallback = 'Conversation could not be moved. Try again.';
-        setStatusNotice(
-          t('options.moveConversationError', { defaultValue: fallback }) ?? fallback
-        );
+        if (moveContext.type === 'single') {
+          const fallback = 'Conversation could not be moved. Try again.';
+          setStatusNotice(
+            t('options.moveConversationError', { defaultValue: fallback }) ?? fallback
+          );
+        } else {
+          const fallback =
+            moveContext.conversations.length === 1
+              ? 'Selected conversation could not be moved. Try again.'
+              : 'Selected conversations could not be moved. Try again.';
+          setStatusNotice(
+            t('options.bulkMoveError', { defaultValue: fallback }) ?? fallback
+          );
+        }
       } finally {
         setMovePending(false);
       }
     },
-    [conversationFolderOptions, moveConversation, moveTarget, t]
+    [clearSelection, conversationFolderOptions, moveContext, moveConversation, t]
   );
+
+  const handleOpenBulkMove = useCallback(() => {
+    if (selectionCount === 0) {
+      return;
+    }
+
+    const targets = selectedConversationIds
+      .map((id) => conversationsById.get(id))
+      .filter((conversation): conversation is ConversationOverview => Boolean(conversation));
+
+    if (targets.length === 0) {
+      const fallback =
+        'Selected conversations are no longer available. Refresh the list and try again.';
+      setStatusNotice(
+        t('options.bulkMoveSelectionMissing', { defaultValue: fallback }) ?? fallback
+      );
+      clearSelection();
+      return;
+    }
+
+    setMoveContext({ type: 'bulk', conversations: targets });
+  }, [
+    clearSelection,
+    conversationsById,
+    selectedConversationIds,
+    selectionCount,
+    t
+  ]);
 
   const handleToggleAll = () => {
     if (filteredConversationIds.length === 0) {
@@ -328,18 +408,36 @@ export function HistorySection() {
   };
 
   const untitledConversationLabel = t('options.untitledConversation') ?? 'Untitled conversation';
-  const normalizedMoveTitle = moveTarget?.title?.trim()
-    ? moveTarget.title
+  const singleMoveTarget = moveContext?.type === 'single' ? moveContext.conversation : null;
+  const bulkMoveCount = moveContext?.type === 'bulk' ? moveContext.conversations.length : 0;
+  const normalizedMoveTitle = singleMoveTarget?.title?.trim()
+    ? singleMoveTarget.title
     : untitledConversationLabel;
-  const moveDialogTitle = moveTarget
-    ? t('content.sidebar.history.moveDialogTitle', {
-        title: normalizedMoveTitle
-      }) ?? `Move "${normalizedMoveTitle}"`
+  const moveDialogTitle = moveContext
+    ? moveContext.type === 'bulk'
+      ? t('options.bulkMoveDialogTitle', {
+          count: bulkMoveCount,
+          defaultValue:
+            bulkMoveCount === 1
+              ? 'Move {{count}} selected conversation'
+              : 'Move {{count}} selected conversations'
+        })
+      : t('content.sidebar.history.moveDialogTitle', {
+          title: normalizedMoveTitle
+        }) ?? `Move "${normalizedMoveTitle}"`
     : t('content.sidebar.history.moveDialogTitleDefault', { defaultValue: 'Move conversation' });
-  const moveDialogDescription = moveTarget
-    ? t('content.sidebar.history.moveDialogDescription', {
-        title: normalizedMoveTitle
-      }) ?? `Choose where to store "${normalizedMoveTitle}".`
+  const moveDialogDescription = moveContext
+    ? moveContext.type === 'bulk'
+      ? t('options.bulkMoveDialogDescription', {
+          count: bulkMoveCount,
+          defaultValue:
+            bulkMoveCount === 1
+              ? 'Select a destination folder for the chosen conversation.'
+              : 'Select a destination folder for the chosen conversations.'
+        })
+      : t('content.sidebar.history.moveDialogDescription', {
+          title: normalizedMoveTitle
+        }) ?? `Choose where to store "${normalizedMoveTitle}".`
     : t('content.sidebar.history.moveDialogDescriptionDefault', {
         defaultValue: 'Select a destination folder for this conversation.'
       });
@@ -722,6 +820,14 @@ export function HistorySection() {
               </button>
               <button
                 className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0 || movePending}
+                onClick={handleOpenBulkMove}
+                type="button"
+              >
+                {t('options.bulkMove', { defaultValue: 'Move selection' })}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
                 disabled={selectionCount === 0}
                 onClick={handleOpenExportModal}
                 type="button"
@@ -906,10 +1012,10 @@ export function HistorySection() {
         </ModalFooter>
       </Modal>
       <MoveDialog
-        open={Boolean(moveTarget)}
+        open={Boolean(moveContext)}
         title={moveDialogTitle}
         description={moveDialogDescription}
-        currentFolderId={moveTarget?.folderId}
+        currentFolderId={singleMoveTarget?.folderId}
         rootOptionLabel={
           t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' })
         }
