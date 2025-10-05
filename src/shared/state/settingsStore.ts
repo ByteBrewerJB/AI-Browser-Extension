@@ -8,6 +8,7 @@ interface SettingsSnapshot {
   direction: TextDirection;
   showSidebar: boolean;
   maxTokens: number;
+  promptHint: string;
 }
 
 interface SettingsState extends SettingsSnapshot {
@@ -16,15 +17,19 @@ interface SettingsState extends SettingsSnapshot {
   toggleDirection: () => void;
   setShowSidebar: (value: boolean) => void;
   setMaxTokens: (value: number) => void;
+  setPromptHint: (value: string) => void;
 }
 
 const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
+
+export const DEFAULT_PROMPT_HINT = 'Use // to open saved prompts.';
 
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   language: 'en',
   direction: 'ltr',
   showSidebar: true,
-  maxTokens: 4096
+  maxTokens: 4096,
+  promptHint: DEFAULT_PROMPT_HINT
 };
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
@@ -40,8 +45,11 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
   const maxTokens = Number.isFinite(parsedMaxTokens) && parsedMaxTokens > 0
     ? Math.round(parsedMaxTokens)
     : DEFAULT_SNAPSHOT.maxTokens;
+  const promptHint = typeof record.promptHint === 'string' && record.promptHint.trim().length > 0
+    ? record.promptHint.trim()
+    : DEFAULT_SNAPSHOT.promptHint;
 
-  return { language, direction, showSidebar, maxTokens };
+  return { language, direction, showSidebar, maxTokens, promptHint };
 }
 
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
@@ -132,7 +140,8 @@ function toSnapshot(state: SettingsState): SettingsSnapshot {
     language: state.language,
     direction: state.direction,
     showSidebar: state.showSidebar,
-    maxTokens: state.maxTokens
+    maxTokens: state.maxTokens,
+    promptHint: state.promptHint
   };
 }
 
@@ -141,7 +150,8 @@ function areSnapshotsEqual(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
     a.language === b.language &&
     a.direction === b.direction &&
     a.showSidebar === b.showSidebar &&
-    a.maxTokens === b.maxTokens
+    a.maxTokens === b.maxTokens &&
+    a.promptHint === b.promptHint
   );
 }
 
@@ -160,7 +170,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set((state) => ({ direction: state.direction === 'ltr' ? 'rtl' : 'ltr' })),
   setShowSidebar: (value) => set({ showSidebar: value }),
   setMaxTokens: (value) =>
-    set(() => ({ maxTokens: Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_SNAPSHOT.maxTokens }))
+    set(() => ({ maxTokens: Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_SNAPSHOT.maxTokens })),
+  setPromptHint: (value) =>
+    set(() => ({ promptHint: value.trim().length > 0 ? value.trim() : DEFAULT_SNAPSHOT.promptHint }))
 }));
 
 function registerStorageListener() {

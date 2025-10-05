@@ -4,7 +4,7 @@ import type { BookmarkSummary } from '@/core/storage/insights';
 import { db } from '@/core/storage/db';
 import { getRecentBookmarks } from '@/core/storage/insights';
 import { initI18n } from '@/shared/i18n';
-import { useSettingsStore } from '@/shared/state/settingsStore';
+import { DEFAULT_PROMPT_HINT, initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 import type { i18n as I18nInstance } from 'i18next';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
@@ -100,6 +100,11 @@ let composerCountersInitialized = false;
 let unsubscribeTokenLimit: (() => void) | null = null;
 let tokenLimit = DEFAULT_TOKEN_LIMIT;
 let lastComposerMetrics = { words: 0, characters: 0, tokens: 0 };
+let composerPlaceholderText: string | null = null;
+let composerPlaceholderSignature: string | null = null;
+let composerPlaceholderUnsubscribe: (() => void) | null = null;
+let composerOriginalPlaceholder: string | null = null;
+let composerOriginalDataPlaceholder: string | null = null;
 
 function attachEvent<K extends keyof HTMLElementEventMap>(
   target: HTMLElement,
@@ -738,6 +743,133 @@ function sanitizeTokenLimit(value: number | undefined): number {
   return Math.round(value);
 }
 
+const COMPOSER_PLACEHOLDER_TEMPLATES: Record<string, string> = {
+  en: 'Message ChatGPT normally. {{hint}}',
+  nl: 'Stuur ChatGPT zoals normaal. {{hint}}',
+  default: 'Message ChatGPT normally. {{hint}}'
+};
+
+function buildComposerPlaceholder(language: string, promptHint: string | null | undefined): string {
+  const normalizedLanguage = typeof language === 'string' ? language.toLowerCase() : '';
+  const baseLanguage = normalizedLanguage.split('-')[0] ?? '';
+  const hint = typeof promptHint === 'string' && promptHint.trim().length > 0
+    ? promptHint.trim()
+    : DEFAULT_PROMPT_HINT;
+  const template =
+    COMPOSER_PLACEHOLDER_TEMPLATES[normalizedLanguage] ??
+    (baseLanguage ? COMPOSER_PLACEHOLDER_TEMPLATES[baseLanguage] : undefined) ??
+    COMPOSER_PLACEHOLDER_TEMPLATES.default;
+  return template.replace('{{hint}}', hint);
+}
+
+function setComposerPlaceholder(element: HTMLTextAreaElement | HTMLElement, placeholder: string) {
+  if (isHtmlTextAreaElement(element)) {
+    if (composerOriginalPlaceholder === null) {
+      composerOriginalPlaceholder = element.getAttribute('placeholder');
+    }
+
+    if (element.placeholder !== placeholder) {
+      element.placeholder = placeholder;
+      element.setAttribute('placeholder', placeholder);
+    }
+    return;
+  }
+
+  if (isHtmlContentEditable(element)) {
+    if (composerOriginalDataPlaceholder === null) {
+      composerOriginalDataPlaceholder = element.getAttribute('data-placeholder');
+    }
+
+    if (composerOriginalPlaceholder === null) {
+      composerOriginalPlaceholder = element.getAttribute('placeholder');
+    }
+
+    if (element.getAttribute('data-placeholder') !== placeholder) {
+      element.setAttribute('data-placeholder', placeholder);
+    }
+
+    if (element.getAttribute('placeholder') !== placeholder) {
+      element.setAttribute('placeholder', placeholder);
+    }
+  }
+}
+
+function restoreComposerPlaceholder(element: HTMLTextAreaElement | HTMLElement) {
+  if (isHtmlTextAreaElement(element)) {
+    if (composerOriginalPlaceholder === null || composerOriginalPlaceholder.length === 0) {
+      element.removeAttribute('placeholder');
+    } else {
+      element.placeholder = composerOriginalPlaceholder;
+      element.setAttribute('placeholder', composerOriginalPlaceholder);
+    }
+  } else if (isHtmlContentEditable(element)) {
+    if (composerOriginalDataPlaceholder === null || composerOriginalDataPlaceholder.length === 0) {
+      element.removeAttribute('data-placeholder');
+    } else {
+      element.setAttribute('data-placeholder', composerOriginalDataPlaceholder);
+    }
+
+    const originalAttribute = composerOriginalPlaceholder;
+    if (originalAttribute === null || originalAttribute.length === 0) {
+      element.removeAttribute('placeholder');
+    } else {
+      element.setAttribute('placeholder', originalAttribute);
+    }
+  }
+
+  composerOriginalPlaceholder = null;
+  composerOriginalDataPlaceholder = null;
+}
+
+function updateComposerPlaceholder(
+  language: string,
+  promptHint: string | null | undefined,
+  target?: HTMLTextAreaElement | HTMLElement | null
+) {
+  const placeholder = buildComposerPlaceholder(language, promptHint);
+  composerPlaceholderText = placeholder;
+
+  const candidate = target ?? activeComposer ?? getComposerElement();
+  if (!candidate) {
+    return;
+  }
+
+  setComposerPlaceholder(candidate, placeholder);
+}
+
+function handleSettingsForPlaceholder() {
+  const state = useSettingsStore.getState();
+  const signature = `${state.language}::${state.promptHint}`;
+  if (composerPlaceholderSignature === signature) {
+    return;
+  }
+
+  composerPlaceholderSignature = signature;
+  updateComposerPlaceholder(state.language, state.promptHint);
+}
+
+function initComposerPlaceholder() {
+  handleSettingsForPlaceholder();
+
+  if (composerPlaceholderUnsubscribe) {
+    return;
+  }
+
+  composerPlaceholderUnsubscribe = useSettingsStore.subscribe(() => {
+    handleSettingsForPlaceholder();
+  });
+}
+
+function teardownComposerPlaceholder() {
+  if (composerPlaceholderUnsubscribe) {
+    composerPlaceholderUnsubscribe();
+    composerPlaceholderUnsubscribe = null;
+  }
+
+  composerPlaceholderSignature = null;
+  composerPlaceholderText = null;
+}
+
 function setComposerCountersVisibility(visible: boolean) {
   if (!composerCountersContainer) {
     return;
@@ -847,6 +979,8 @@ function attachToComposer(element: HTMLTextAreaElement | HTMLElement) {
   if (activeComposer === element) {
     setComposerCountersVisibility(true);
     updateComposerCounterValues();
+    const state = useSettingsStore.getState();
+    updateComposerPlaceholder(state.language, state.promptHint, element);
     return;
   }
 
@@ -865,12 +999,19 @@ function attachToComposer(element: HTMLTextAreaElement | HTMLElement) {
 
   setComposerCountersVisibility(true);
   updateComposerCounterValues();
+
+  const state = useSettingsStore.getState();
+  updateComposerPlaceholder(state.language, state.promptHint, element);
 }
 
 function detachComposer() {
   if (activeComposer && composerInputListener) {
     activeComposer.removeEventListener('input', composerInputListener);
     activeComposer.removeEventListener('keyup', composerInputListener);
+  }
+
+  if (activeComposer) {
+    restoreComposerPlaceholder(activeComposer);
   }
 
   activeComposer = null;
@@ -1579,6 +1720,7 @@ function cleanup() {
   document.removeEventListener('click', handleDocumentClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('pagehide', handlePageHide);
+  teardownComposerPlaceholder();
   teardownComposerCounters();
   composerCountersContainer = null;
   composerWordsLabel = null;
@@ -1597,12 +1739,14 @@ export async function mountPromptLauncher(): Promise<void> {
   }
   mounted = true;
 
+  await initializeSettingsStore();
   await ensureI18n();
   ensureContainer();
   applyTranslations();
   subscribeToPrompts();
   subscribeToBookmarks();
   initComposerCounters();
+  initComposerPlaceholder();
 
   document.addEventListener('click', handleDocumentClick, true);
   document.addEventListener('keydown', handleKeyDown, true);
