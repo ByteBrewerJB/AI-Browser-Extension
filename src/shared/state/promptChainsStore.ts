@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type PromptChainRunStatus = 'idle' | 'running' | 'completed' | 'error';
+export type PromptChainRunStatus = 'idle' | 'running' | 'completed' | 'error' | 'cancelled';
 
 interface PromptChainsRuntimeState {
   activeChainId: string | null;
@@ -17,6 +17,7 @@ interface PromptChainsRuntimeActions {
   advanceRun: (completedSteps: number) => void;
   completeRun: (completedAt?: string) => void;
   failRun: (message: string) => void;
+  cancelRun: () => void;
   reset: () => void;
 }
 
@@ -77,5 +78,16 @@ export const usePromptChainsStore = create<PromptChainsStore>((set) => ({
       completedAt: new Date().toISOString(),
       completedSteps: state.completedSteps
     })),
+  cancelRun: () =>
+    set((state) => {
+      if (state.status !== 'running') {
+        return {};
+      }
+      return {
+        status: 'cancelled',
+        completedAt: new Date().toISOString(),
+        error: null
+      };
+    }),
   reset: () => set(initialState)
 }));

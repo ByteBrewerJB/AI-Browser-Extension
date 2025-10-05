@@ -9,7 +9,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
 | Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
 | Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-08 – 6361a26 (bookmark-modal preview + regressietest) |
-| Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 📝 Ontwerp | _nog te plannen_ |
+| Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 🚧 Ontwikkeling | 2025-10-09 – _pending_ (variabelen + cancel runner) |
 | Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
 | Conversatieanalyse & export | Full-text search, analytics, export-UI | 📝 Ontwerp | _nog te plannen_ |
 | Media & audio | Audio capture, mediagalerij, voice presets, audio cues | 💤 Gepland | _nog te plannen_ |
@@ -60,10 +60,10 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - ✅ Guard toegevoegd die het menu sluit bij unmount van `CompanionSidebarRoot` en bij het verbergen van de sidebar.
    - ✅ Toetscombinaties en toegankelijkheidslabels vastgelegd in `docs/accessibility/context-menu.md` + Playwright-scenarioplan vastgelegd in `tests/e2e/context-menu.spec.ts`.
 3. **Promptketens en variabelen** –
-   - Werk `src/core/models/records.ts` bij met `variables: string[]` en een `lastExecutedAt` veld zodat UX flow de meest recente keten bovenaan plaatst.
-   - Schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` met pill-componenten voor variabelen. Voeg validatie toe via Zod (`promptVariablesSchema`).
-   - Verbind de nieuwe chain-runner (`textareaPrompts`) zodat `MoveDialog`-achtige state wordt hergebruikt voor promptketens; gebruik `usePromptChainsStore` om runtime state te delen.
-   - Voorzie QA-notes in `docs/testing/manual-regression.md` (sectie "Promptketens") inclusief een scenario voor het annuleren van een keten midden in uitvoering.
+   - ✅ `src/core/models/records.ts` uitgebreid met `variables` + `lastExecutedAt` zodat recente runs bovenaan verschijnen.
+   - ✅ Formulierlogica in `src/options/features/prompts/PromptsSection.tsx` ondersteunt variabelenpillen met `promptVariablesSchema`-validatie.
+   - ✅ Chain-runner (`textareaPrompts`) gekoppeld aan `usePromptChainsStore` en aangevuld met een cancel-pad zodat runtime state gedeeld en afbreekbaar is.
+   - ✅ QA-notes in `docs/testing/manual-regression.md` (sectie "Promptketens") documenteren volledige flow inclusief annuleren tijdens uitvoering.
 
 ## Prioriteiten en stappen per featuregroep
 
@@ -181,5 +181,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-06 | _pending_ | Composer uitbreidingen | Launcher-instructiepopover + teller in settings; lint/test/build uitgevoerd |
 | 2025-10-07 | _pending_ | Bladwijzers & contextmenu | Contextmenu sluit bij unmount; accessibiliteitsnotitie + E2E-plan toegevoegd; lint/test/build gepland |
 | 2025-10-07 | _pending_ | Composer uitbreidingen | Ketentab + ketenrunner in launcher; npm run lint/test/build uitgevoerd |
+| 2025-10-09 | _pending_ | Promptbibliotheek & ketens | Promptketen-variabelen, cancel-runner + QA-notes; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
