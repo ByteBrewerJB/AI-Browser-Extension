@@ -3,23 +3,12 @@ import type { MessageRecord } from '@/core/models';
 import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
 import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messaging/router';
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
+import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import { mountPromptLauncher } from './textareaPrompts';
 
 void initializeSettingsStore();
 
-const COUNTER_ID = 'ai-companion-word-counter';
-const processedMessageIds = new Set<string>();
-let scanTimeout: number | null = null;
-let currentConversationId: string | null = null;
-
-const messageRouter = createRuntimeMessageRouter<RuntimeMessageMap>();
-
-function ensureCounter(): HTMLElement {
-  let counter = document.getElementById(COUNTER_ID);
-  if (!counter) {
-    counter = document.createElement('div');
-    counter.id = COUNTER_ID;
-    counter.style.position = 'fixed';
+
     counter.style.bottom = '16px';
     counter.style.right = '16px';
     counter.style.padding = '8px 12px';
