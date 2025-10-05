@@ -5,13 +5,14 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
-import { togglePinned } from '@/core/storage';
-import type { BookmarkSummary, ConversationOverview } from '@/core/storage';
+import { archiveConversations, togglePinned } from '@/core/storage';
+import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/core/storage';
 import type { PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
 import { EmptyState } from '@/shared/components';
 import { useFolders } from '@/shared/hooks/useFolders';
+import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
@@ -101,6 +102,19 @@ function createSnippet(content: string, maxLength = 160) {
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
+interface FolderOption {
+  id: string;
+  name: string;
+  depth: number;
+}
+
+function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderOption[] {
+  return nodes.flatMap((node) => [
+    { id: node.id, name: node.name, depth },
+    ...flattenFolderTree(node.children, depth + 1)
+  ]);
+}
+
 function openConversationTab(conversationId: string) {
   const url = conversationId ? `https://chat.openai.com/c/${conversationId}` : 'https://chat.openai.com/';
   if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
@@ -112,13 +126,43 @@ function openConversationTab(conversationId: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-function openDashboard() {
-  const dashboardUrl =
-    typeof chrome !== 'undefined'
-      ? chrome.runtime?.getURL?.('src/options/index.html') ?? chrome.runtime?.getURL?.('options.html')
-      : undefined;
+interface OpenDashboardOptions {
+  searchParams?: Record<string, string | undefined>;
+}
 
-  if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+function resolveDashboardUrl() {
+  if (typeof chrome === 'undefined') {
+    return undefined;
+  }
+  return chrome.runtime?.getURL?.('src/options/index.html') ?? chrome.runtime?.getURL?.('options.html');
+}
+
+function buildDashboardUrl(searchParams?: Record<string, string | undefined>) {
+  const baseUrl = resolveDashboardUrl();
+  if (!baseUrl) {
+    return undefined;
+  }
+
+  if (!searchParams) {
+    return baseUrl;
+  }
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value != null && value !== '') {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `${baseUrl}?${query}` : baseUrl;
+}
+
+function openDashboard(options?: OpenDashboardOptions) {
+  const searchParams = options?.searchParams;
+  const dashboardUrl = buildDashboardUrl(searchParams);
+
+  if (!searchParams && typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
     chrome.runtime.openOptionsPage(() => {
       const lastError = chrome.runtime?.lastError;
       if (lastError) {
@@ -411,6 +455,7 @@ function PromptList({ prompts, folderNames, t }: PromptListProps) {
 function HistoryTab(): ReactElement {
   const { t } = useTranslation();
   const pinnedConversations = usePinnedConversations(6);
+  const conversationFolders = useFolderTree('conversation');
   const recentConversations = useRecentConversations(6);
   const bookmarks = useRecentBookmarks(4);
 
@@ -418,77 +463,151 @@ function HistoryTab(): ReactElement {
     void togglePinned(conversationId);
   }, []);
 
+  const handleArchiveToggle = useCallback((conversationId: string, archived: boolean | undefined) => {
+    void archiveConversations([conversationId], !archived);
+  }, []);
+
+  const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
+
+  const handleNavigateToFolder = useCallback((folderId: string | undefined) => {
+    const searchParams: Record<string, string | undefined> = {
+      view: 'history',
+      historyFolder: folderId ?? 'all'
+    };
+    openDashboard({ searchParams });
+  }, []);
+
   return (
     <div className="space-y-4">
       <SidebarSection
         action={
-          pinnedConversations.length > 0 ? (
-            <button
-              className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-              onClick={() => openDashboard()}
-              type="button"
-            >
-              {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
-            </button>
-          ) : undefined
+          pinnedConversations.length > 0 || folderOptions.length > 0
+            ? (
+                <button
+                  className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                  onClick={() => openDashboard({ searchParams: { view: 'history' } })}
+                  type="button"
+                >
+                  {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
+                </button>
+              )
+            : undefined
         }
         title={t('content.sidebar.history.pinnedHeading', { defaultValue: 'Pinned conversations' })}
       >
-        {pinnedConversations.length === 0 ? (
-          <EmptyState
-            align="start"
-            className="px-4 py-6 text-sm"
-            description={t('content.sidebar.history.emptyPinned', {
-              defaultValue: 'Pin chats from ChatGPT to keep them handy.'
-            })}
-            title={t('popup.noPinned', { defaultValue: 'No pinned chats yet.' })}
-          />
-        ) : (
-          <ul className="space-y-2">
-            {pinnedConversations.map((conversation) => {
-              const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
-              const titleLabel = normalizeTitle(conversation.title, fallbackTitle);
-              const metrics = t('popup.activityConversationMetrics', {
-                messages: formatNumber(conversation.messageCount),
-                words: formatNumber(conversation.wordCount)
-              });
-              const characterLabel = `${t('popup.characters')}: ${formatNumber(conversation.charCount)}`;
-              const updatedAtLabel = formatDateTime(conversation.updatedAt);
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div>
+            {pinnedConversations.length === 0 ? (
+              <EmptyState
+                align="start"
+                className="px-4 py-6 text-sm"
+                description={t('content.sidebar.history.emptyPinned', {
+                  defaultValue: 'Pin chats from ChatGPT to keep them handy.'
+                })}
+                title={t('popup.noPinned', { defaultValue: 'No pinned chats yet.' })}
+              />
+            ) : (
+              <ul className="space-y-2">
+                {pinnedConversations.map((conversation) => {
+                  const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
+                  const titleLabel = normalizeTitle(conversation.title, fallbackTitle);
+                  const metrics = t('popup.activityConversationMetrics', {
+                    messages: formatNumber(conversation.messageCount),
+                    words: formatNumber(conversation.wordCount)
+                  });
+                  const characterLabel = `${t('popup.characters')}: ${formatNumber(conversation.charCount)}`;
+                  const updatedAtLabel = formatDateTime(conversation.updatedAt);
+                  const archiveLabel = conversation.archived
+                    ? t('content.sidebar.history.restore', { defaultValue: 'Restore' })
+                    : t('content.sidebar.history.archive', { defaultValue: 'Archive' });
 
-              return (
-                <li
-                  key={conversation.id}
-                  className="rounded-md border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-slate-100">{titleLabel}</p>
-                      <p className="text-[11px] text-slate-400">{metrics}</p>
-                      <p className="text-[11px] text-slate-500">{characterLabel}</p>
-                      <p className="text-[11px] text-slate-500">{t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2 text-right">
-                      <button
-                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                        onClick={() => openConversationTab(conversation.id)}
-                        type="button"
-                      >
-                        {t('popup.openConversation') ?? 'Open'}
-                      </button>
-                      <button
-                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                        onClick={() => handleTogglePin(conversation.id)}
-                        type="button"
-                      >
-                        {t('popup.unpin')}
-                      </button>
-                    </div>
-                  </div>
+                  return (
+                    <li
+                      key={conversation.id}
+                      className="rounded-md border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-slate-100">{titleLabel}</p>
+                          <p className="text-[11px] text-slate-400">{metrics}</p>
+                          <p className="text-[11px] text-slate-500">{characterLabel}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 text-right">
+                          <button
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                            onClick={() => openConversationTab(conversation.id)}
+                            type="button"
+                          >
+                            {t('popup.openConversation') ?? 'Open'}
+                          </button>
+                          <button
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                            onClick={() => handleTogglePin(conversation.id)}
+                            type="button"
+                          >
+                            {t('popup.unpin')}
+                          </button>
+                          <button
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                            onClick={() => handleArchiveToggle(conversation.id, conversation.archived)}
+                            type="button"
+                          >
+                            {archiveLabel}
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="rounded-md border border-white/10 bg-slate-900/60 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+              {t('content.sidebar.history.folderShortcuts', { defaultValue: 'Folder shortcuts' })}
+            </p>
+            {folderOptions.length === 0 ? (
+              <p className="mt-2 text-xs text-slate-400">
+                {t('content.sidebar.history.folderShortcutsEmpty', {
+                  defaultValue: 'Create folders in the dashboard to access them quickly here.'
+                })}
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                <li>
+                  <button
+                    className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                    onClick={() => handleNavigateToFolder(undefined)}
+                    type="button"
+                  >
+                    {t('options.filterFolderAll', { defaultValue: 'All folders' })}
+                  </button>
                 </li>
-              );
-            })}
-          </ul>
-        )}
+                {folderOptions.map((folder) => (
+                  <li key={folder.id}>
+                    <button
+                      className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                      onClick={() => handleNavigateToFolder(folder.id)}
+                      type="button"
+                    >
+                      <span className="flex items-center gap-2">
+                        {folder.depth > 0 ? (
+                          <span className="text-[10px] text-slate-500" aria-hidden>
+                            {'•'.repeat(folder.depth)}
+                          </span>
+                        ) : null}
+                        <span className="truncate">{folder.name}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </SidebarSection>
 
       <ConversationList
