@@ -56,6 +56,10 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 1. From the popup, unbookmark the second conversation and verify the action button reverts to “Bookmark”. Close and reopen the popup to confirm the state persists.
 2. Reapply the bookmark in the popup and ensure reopening the popup shows the button as “Unbookmark” again.
 3. Unpin the first conversation in the dashboard table (via row actions) and confirm the popup no longer labels it as pinned after reopening.
+4. Open the bubble dock on an active ChatGPT conversation, switch to the “History” tab, and validate the folder shortcuts:
+   - Toggle a folder to favorite via the star button and confirm the “Fav” badge appears next to the name.
+   - Refresh the tab or hide/show the dock to ensure the cached favorites render immediately without flicker.
+   - Remove the favorite and note the star button disables while the change is persisted.
 
 ## Bookmark overlay smoke test
 

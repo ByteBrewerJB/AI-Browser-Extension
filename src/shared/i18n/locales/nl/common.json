@@ -361,6 +361,8 @@
         "moveConfirm": "Verplaatsen",
         "moveCancel": "Annuleren",
         "favoriteBadge": "Fav",
+        "favoriteFolder": "Markeer als favoriet",
+        "unfavoriteFolder": "Verwijder favoriet",
         "addBookmark": "Bericht bookmarken",
         "bookmarkModalTitle": "Bladwijzer opslaan",
         "bookmarkModalDescription": "Kies een bericht en voeg optioneel een notitie toe om het in je bubbel te bewaren.",

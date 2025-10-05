@@ -361,6 +361,8 @@
         "moveConfirm": "Move",
         "moveCancel": "Cancel",
         "favoriteBadge": "Fav",
+        "favoriteFolder": "Mark as favorite",
+        "unfavoriteFolder": "Remove favorite",
         "addBookmark": "Bookmark message",
         "bookmarkModalTitle": "Save bookmark",
         "bookmarkModalDescription": "Choose a message and add an optional note to store it in your bookmark bubble.",
