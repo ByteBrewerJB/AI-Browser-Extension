@@ -1,7 +1,8 @@
-﻿import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type { ActivityItem, BookmarkSummary } from '@/core/storage';
+import type { GuideResource } from '@/core/models/guides';
 import { toggleBookmark, togglePinned } from '@/core/storage';
 import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { useRecentActivity } from '@/shared/hooks/useRecentActivity';
@@ -10,6 +11,7 @@ import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { initI18n, setLanguage } from '@/shared/i18n';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
+import { openGuideResource, useGuideResources } from '@/shared/hooks/useGuideResources';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -44,6 +46,194 @@ function formatBookmarkPreview(bookmark: BookmarkSummary, fallback: string) {
     return bookmark.messagePreview;
   }
   return fallback;
+}
+
+function GuidesPreviewSection() {
+  const { t } = useTranslation();
+  const guidesState = useGuideResources();
+  const dismissedGuideIds = useSettingsStore((state) => state.dismissedGuideIds);
+  const setGuideDismissed = useSettingsStore((state) => state.setGuideDismissed);
+  const [pendingGuideId, setPendingGuideId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const sortedGuides = useMemo(() => {
+    if (guidesState.status !== 'loaded') {
+      return [] as GuideResource[];
+    }
+    const dismissedSet = new Set(dismissedGuideIds);
+    const active: GuideResource[] = [];
+    const dismissed: GuideResource[] = [];
+    for (const guide of guidesState.guides) {
+      if (dismissedSet.has(guide.id)) {
+        dismissed.push(guide);
+      } else {
+        active.push(guide);
+      }
+    }
+    return [...active, ...dismissed].slice(0, 3);
+  }, [guidesState, dismissedGuideIds]);
+
+  const isLoading = guidesState.status === 'loading' || guidesState.status === 'idle';
+  const hasGuides = sortedGuides.length > 0;
+
+  const heading = t('popup.guides.heading', { defaultValue: 'Guides & updates' });
+  const description = t('popup.guides.description', {
+    defaultValue: 'Discover quick tips to make the most of the extension.'
+  });
+  const loadingLabel = t('popup.guides.loading', { defaultValue: 'Loading guides…' });
+  const emptyLabel = t('popup.guides.empty', { defaultValue: 'You’re all caught up.' });
+  const errorLabel = t('popup.guides.error', {
+    defaultValue: 'Guides could not be loaded. Open the dashboard to retry later.'
+  });
+  const viewedBadge = t('popup.guides.viewedBadge', { defaultValue: 'Viewed' });
+  const openLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.openCta', {
+          defaultValue: 'View',
+          title
+        }),
+    [t]
+  );
+  const openAriaLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.openAria', {
+          defaultValue: 'Open guide {{title}}',
+          title
+        }),
+    [t]
+  );
+  const markViewedLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.markViewed', {
+          defaultValue: 'Mark “{{title}}” as viewed',
+          title
+        }),
+    [t]
+  );
+  const markViewedAria = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.markViewedAria', {
+          defaultValue: 'Mark guide {{title}} as viewed',
+          title
+        }),
+    [t]
+  );
+  const markUnviewedLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.markUnviewed', {
+          defaultValue: 'Restore “{{title}}”',
+          title
+        }),
+    [t]
+  );
+  const markUnviewedAria = useMemo(
+    () =>
+      (title: string) =>
+        t('popup.guides.markUnviewedAria', {
+          defaultValue: 'Restore guide {{title}}',
+          title
+        }),
+    [t]
+  );
+
+  const handleViewGuide = useCallback(
+    async (guide: GuideResource) => {
+      setActionError(null);
+      setPendingGuideId(guide.id);
+      try {
+        await openGuideResource(guide.url);
+        await sendRuntimeMessage('jobs/log-event', {
+          event: 'guide-opened',
+          guideId: guide.id,
+          metadata: {
+            topics: guide.topics,
+            estimatedTimeMinutes: guide.estimatedTimeMinutes
+          },
+          surface: 'popup'
+        });
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : String(error));
+      } finally {
+        setPendingGuideId((current) => (current === guide.id ? null : current));
+      }
+    },
+    []
+  );
+
+  const handleToggleDismissed = useCallback(
+    (guideId: string, dismissed: boolean) => {
+      setGuideDismissed(guideId, dismissed);
+    },
+    [setGuideDismissed]
+  );
+
+  return (
+    <section className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+      <header className="mb-2">
+        <h2 className="text-sm font-semibold text-slate-100">{heading}</h2>
+        <p className="text-xs text-slate-400">{description}</p>
+      </header>
+
+      {actionError ? <p className="mb-2 text-xs text-rose-400">{actionError}</p> : null}
+
+      {guidesState.status === 'error' ? (
+        <p className="text-xs text-rose-400">{errorLabel}</p>
+      ) : isLoading ? (
+        <p className="text-xs text-slate-400">{loadingLabel}</p>
+      ) : hasGuides ? (
+        <ul className="flex flex-col gap-2">
+          {sortedGuides.map((guide) => {
+            const dismissed = dismissedGuideIds.includes(guide.id);
+            const pending = pendingGuideId === guide.id;
+            return (
+              <li key={guide.id} className="rounded-md border border-slate-700/70 bg-slate-950/50 p-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-200">{guide.title}</span>
+                      {dismissed ? (
+                        <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                          {viewedBadge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-[11px] leading-snug text-slate-300">{guide.description}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <button
+                      type="button"
+                      className="rounded bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                      onClick={() => void handleViewGuide(guide)}
+                      disabled={pending}
+                      aria-label={openAriaLabel(guide.title)}
+                    >
+                      {pending ? t('popup.guides.opening', { defaultValue: 'Opening…' }) : openLabel(guide.title)}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] font-medium text-slate-200 transition hover:border-emerald-400 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
+                      onClick={() => handleToggleDismissed(guide.id, !dismissed)}
+                      aria-pressed={dismissed}
+                      aria-label={dismissed ? markUnviewedAria(guide.title) : markViewedAria(guide.title)}
+                    >
+                      {dismissed ? markUnviewedLabel(guide.title) : markViewedLabel(guide.title)}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-xs text-slate-400">{emptyLabel}</p>
+      )}
+    </section>
+  );
 }
 
 function openDashboard() {
@@ -189,6 +379,8 @@ export function Popup() {
           </p>
         )}
       </header>
+
+      <GuidesPreviewSection />
 
       <section className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
         <div className="flex items-center justify-between">

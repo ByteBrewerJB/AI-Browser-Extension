@@ -10,6 +10,7 @@ interface SettingsSnapshot {
   maxTokens: number;
   promptHint: string;
   dismissedLauncherTips: number;
+  dismissedGuideIds: string[];
 }
 
 interface SettingsState extends SettingsSnapshot {
@@ -20,6 +21,7 @@ interface SettingsState extends SettingsSnapshot {
   setMaxTokens: (value: number) => void;
   setPromptHint: (value: string) => void;
   incrementDismissedLauncherTips: () => void;
+  setGuideDismissed: (guideId: string, dismissed: boolean) => void;
 }
 
 const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
@@ -32,8 +34,34 @@ const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   showSidebar: true,
   maxTokens: 4096,
   promptHint: DEFAULT_PROMPT_HINT,
-  dismissedLauncherTips: 0
+  dismissedLauncherTips: 0,
+  dismissedGuideIds: []
 };
+
+const MAX_DISMISSED_GUIDES = 200;
+
+function normalizeGuideIds(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const unique = new Set<string>();
+  for (const value of input) {
+    if (typeof value !== 'string') {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      continue;
+    }
+    unique.add(trimmed);
+    if (unique.size >= MAX_DISMISSED_GUIDES) {
+      break;
+    }
+  }
+
+  return Array.from(unique).sort();
+}
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
   if (!input || typeof input !== 'object') {
@@ -55,7 +83,9 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
     ? Math.max(0, Math.min(99, Math.floor(Number(record.dismissedLauncherTips))))
     : DEFAULT_SNAPSHOT.dismissedLauncherTips;
 
-  return { language, direction, showSidebar, maxTokens, promptHint, dismissedLauncherTips };
+  const dismissedGuideIds = normalizeGuideIds((record as { dismissedGuideIds?: unknown })?.dismissedGuideIds);
+
+  return { language, direction, showSidebar, maxTokens, promptHint, dismissedLauncherTips, dismissedGuideIds };
 }
 
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
@@ -148,7 +178,8 @@ function toSnapshot(state: SettingsState): SettingsSnapshot {
     showSidebar: state.showSidebar,
     maxTokens: state.maxTokens,
     promptHint: state.promptHint,
-    dismissedLauncherTips: state.dismissedLauncherTips
+    dismissedLauncherTips: state.dismissedLauncherTips,
+    dismissedGuideIds: state.dismissedGuideIds
   };
 }
 
@@ -159,7 +190,9 @@ function areSnapshotsEqual(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
     a.showSidebar === b.showSidebar &&
     a.maxTokens === b.maxTokens &&
     a.promptHint === b.promptHint &&
-    a.dismissedLauncherTips === b.dismissedLauncherTips
+    a.dismissedLauncherTips === b.dismissedLauncherTips &&
+    a.dismissedGuideIds.length === b.dismissedGuideIds.length &&
+    a.dismissedGuideIds.every((value, index) => value === b.dismissedGuideIds[index])
   );
 }
 
@@ -182,7 +215,34 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setPromptHint: (value) =>
     set(() => ({ promptHint: value.trim().length > 0 ? value.trim() : DEFAULT_SNAPSHOT.promptHint })),
   incrementDismissedLauncherTips: () =>
-    set((state) => ({ dismissedLauncherTips: Math.min(99, state.dismissedLauncherTips + 1) }))
+    set((state) => ({ dismissedLauncherTips: Math.min(99, state.dismissedLauncherTips + 1) })),
+  setGuideDismissed: (guideId, dismissed) =>
+    set((state) => {
+      const trimmed = typeof guideId === 'string' ? guideId.trim() : '';
+      if (!trimmed) {
+        return state;
+      }
+
+      const nextIds = new Set(state.dismissedGuideIds);
+      if (dismissed) {
+        if (nextIds.size >= MAX_DISMISSED_GUIDES && !nextIds.has(trimmed)) {
+          return state;
+        }
+        nextIds.add(trimmed);
+      } else {
+        nextIds.delete(trimmed);
+      }
+
+      const normalized = Array.from(nextIds).sort();
+      if (
+        normalized.length === state.dismissedGuideIds.length &&
+        normalized.every((id, index) => state.dismissedGuideIds[index] === id)
+      ) {
+        return state;
+      }
+
+      return { dismissedGuideIds: normalized };
+    })
 }));
 
 function registerStorageListener() {
