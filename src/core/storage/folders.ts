@@ -7,6 +7,7 @@ export interface CreateFolderInput {
   name: string;
   kind: FolderKind;
   parentId?: string;
+  favorite?: boolean;
 }
 
 export interface FolderTreeNode extends FolderRecord {
@@ -24,6 +25,7 @@ export async function createFolder(input: CreateFolderInput) {
     name: input.name.trim(),
     kind: input.kind,
     parentId: input.parentId,
+    favorite: input.favorite ?? false,
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -67,7 +69,13 @@ function buildTree(folders: FolderRecord[]): FolderTreeNode[] {
   });
 
   const sortNodes = (list: FolderTreeNode[]) => {
-    list.sort((a, b) => a.name.localeCompare(b.name));
+    list.sort((a, b) => {
+      const favoriteDelta = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite));
+      if (favoriteDelta !== 0) {
+        return favoriteDelta;
+      }
+      return a.name.localeCompare(b.name);
+    });
     list.forEach((child) => sortNodes(child.children));
   };
 
@@ -125,6 +133,26 @@ export async function deleteFolder(folderId: string) {
   });
 }
 
+export async function toggleFavoriteFolder(folderId: string, next?: boolean) {
+  const folder = await db.folders.get(folderId);
+  if (!folder) {
+    throw new Error('Folder ' + folderId + ' not found');
+  }
+
+  const nextFavorite = typeof next === 'boolean' ? next : !Boolean(folder.favorite);
+  await db.folders.update(folderId, {
+    favorite: nextFavorite,
+    updatedAt: nowIso()
+  });
+
+  return nextFavorite;
+}
+
+export async function listFavoriteFolders(kind: FolderKind) {
+  const folders = await db.folders.where('kind').equals(kind).toArray();
+  return folders.filter((folder) => Boolean(folder.favorite));
+}
+
 export async function listFolders(kind: FolderKind) {
   return db.folders.where('kind').equals(kind).toArray();
 }
@@ -132,3 +160,8 @@ export async function listFolders(kind: FolderKind) {
 export function buildFolderTree(folders: FolderRecord[]): FolderTreeNode[] {
   return buildTree(folders);
 }
+
+
+
+
+

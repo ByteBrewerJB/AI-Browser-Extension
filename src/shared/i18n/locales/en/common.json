@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "AI Companion",
     "tagline": "Boost your ChatGPT productivity."
@@ -47,7 +47,11 @@
     "activityJobCompleted": "Completed {{time}}",
     "activityJobRunning": "Running since {{time}}",
     "activityJobScheduled": "Scheduled for {{time}}",
-    "activityJobAttempts": "{{attempts}} / {{max}} attempts"
+    "activityJobAttempts": "{{attempts}} / {{max}} attempts",
+    "loadingSettings": "Loading settings…",
+    "sidebarToggleLabel": "Chat sidebar",
+    "sidebarToggleOn": "Enabled",
+    "sidebarToggleOff": "Disabled"
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -79,12 +83,15 @@
       "completed": "Completed",
       "failed": "Failed"
     },
+    "favoriteFolder": "Mark as favorite",
+    "unfavoriteFolder": "Remove favorite",
+    "favoriteBadge": "Fav",
     "conversationHeading": "Conversation overview",
     "conversationDescription": "Latest chats captured from ChatGPT (stored locally).",
     "conversationEmpty": "No conversations captured yet.",
     "conversationFilteredEmpty": "No conversations match the current filters.",
     "conversationFiltersHeading": "Filters & sorting",
-    "conversationFiltersDescription": "Adjust folders, pin state, archive status, and sort order.",
+    "conversationFiltersDescription": "Toggle filters with the bubbles to adjust folders, pin state, archive status, and sort order.",
     "filterFolderLabel": "Folder filter",
     "filterFolderAll": "All folders",
     "filterPinnedLabel": "Pinned",
@@ -129,8 +136,18 @@
     "columnUpdated": "Updated",
     "columnActions": "Actions",
     "untitledConversation": "Untitled conversation",
+    "bulkSelectionHeading": "Bulk actions",
+    "bulkSelectedCount": "{{count}} conversation selected",
+    "bulkSelectedCount_plural": "{{count}} conversations selected",
+    "bulkNoSelection": "No conversations selected",
+    "bulkArchive": "Archive selected",
+    "bulkRestore": "Restore selected",
+    "bulkDelete": "Delete selected",
+    "bulkClear": "Clear selection",
+    "bulkSelectAll": "Select all conversations",
+    "bulkSelectConversation": "Select {{title}}",
     "gptFolderHeading": "GPT folders",
-    "gptFolderDescription": "Group custom GPTs by workflow or domain.",
+    "gptFolderDescription": "Pick, remove, or add GPT folders with the bubbles. The active choice applies to new entries.",
     "gptHeading": "Custom GPT library",
     "gptDescription": "Catalog reusable GPT configurations with descriptions and folders.",
     "gptNameLabel": "Name",
@@ -143,7 +160,7 @@
     "gptTablePrompts": "Prompts",
     "gptEmpty": "No custom GPTs yet.",
     "promptFolderHeading": "Prompt folders",
-    "promptFolderDescription": "Organize reusable templates by team or project.",
+    "promptFolderDescription": "Use the bubbles to choose where prompts live and to create or remove folders.",
     "promptHeading": "Prompt templates",
     "promptDescription": "Draft and store reusable prompt snippets. Link them to GPTs for quick sequencing.",
     "promptNameLabel": "Title",
@@ -182,9 +199,58 @@
     "promptChainMoveDown": "Down",
     "promptChainRemoveButton": "Remove",
     "promptChainUpdateButton": "Update chain",
-    "promptChainCreateButton": "Save chain"
+    "promptChainCreateButton": "Save chain",
+    "sidebarHeading": "Chat sidebar",
+    "sidebarDescription": "Control the ChatGPT sidebar overlay from any surface.",
+    "sidebarToggleLabel": "Sidebar visibility",
+    "sidebarToggleHelp": "Toggle the floating sidebar in the ChatGPT interface.",
+    "sidebarToggleOn": "Enabled",
+    "sidebarToggleOff": "Disabled",
+    "gptFolderActiveLabel": "Active folder: {{name}}",
+    "promptFolderActiveLabel": "Active folder: {{name}}",
+    "promptGptActiveLabel": "Linked GPT: {{name}}",
+    "promptFormHeading": "Create prompt template",
+    "promptFormDescription": "Your folder, GPT link, and chains follow the bubble selections above.",
+    "promptChainBubbleHelper": "Select an existing chain to edit or tap + to start a new sequence."
   },
   "content": {
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Toggle prompts bubble ({{count}} available)",
+      "bookmarks": "Bookmarks",
+      "bookmarksAria": "Open bookmark bubble",
+      "pinned": "Pinned",
+      "pinnedAria": "Open pinned bubble",
+      "actions": "Actions",
+      "actionsAria": "Open actions bubble",
+      "settings": "Settings",
+      "settingsAria": "Open settings bubble",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Open dashboard",
+      "closePanelAria": "Close bubble panel"
+    },
+    "bubblePanels": {
+      "bookmarks": {
+        "title": "Conversation bookmarks",
+        "placeholderTitle": "Bookmark tools are almost here",
+        "placeholderSubtitle": "Soon you'll capture messages, add notes, and sync them across popup and dashboard from this bubble."
+      },
+      "pinned": {
+        "title": "Pinned conversations",
+        "placeholderTitle": "Quick pin controls on the way",
+        "placeholderSubtitle": "Manage pins and favorite folders without leaving ChatGPT once this bubble unlocks."
+      },
+      "actions": {
+        "title": "Actions & shortcuts",
+        "placeholderTitle": "Contextual actions arriving shortly",
+        "placeholderSubtitle": "This bubble will soon bundle quick operations like bookmarking, exporting, and sharing."
+      },
+      "settings": {
+        "title": "Settings",
+        "placeholderTitle": "Adjust the Companion without leaving the chat",
+        "placeholderSubtitle": "Dock visibility, direction, and audio toggles will land in this bubble soon."
+      }
+    },
     "sidebar": {
       "title": "AI Companion",
       "patternButton": "Patterns",
@@ -214,7 +280,61 @@
         ],
         "close": "Close",
         "closeAria": "Close modal"
+      },
+      "history": {
+        "pinnedHeading": "Pinned conversations",
+        "recentHeading": "Recent updates",
+        "bookmarksHeading": "Latest bookmarks",
+        "emptyPinned": "Pin chats from ChatGPT to keep them handy.",
+        "emptyRecent": "Start chatting to populate your history.",
+        "emptyRecentTitle": "No recent updates yet.",
+        "emptyBookmarks": "Bookmark messages to keep quick references here.",
+        "openDashboard": "Open dashboard",
+        "folderShortcuts": "Folder shortcuts",
+        "folderShortcutsEmpty": "Create folders in the dashboard to access them quickly here.",
+        "archive": "Archive",
+        "restore": "Restore",
+        "moveAction": "Move",
+        "moveDialogTitle": "Move \"{{title}}\"",
+        "moveDialogTitleDefault": "Move conversation",
+        "moveDialogDescription": "Choose where to store \"{{title}}\".",
+        "moveDialogDescriptionDefault": "Select a destination folder for this conversation.",
+        "moveRoot": "No folder (top level)",
+        "moveConfirm": "Move",
+        "moveCancel": "Cancel",
+        "favoriteBadge": "Fav"
+      },
+      "prompts": {
+        "heading": "Prompt templates",
+        "empty": "Save prompts in the dashboard or popup to reuse them here.",
+        "emptyTitle": "No prompts yet.",
+        "openLibrary": "Open prompt library"
+      },
+      "media": {
+        "heading": "Voice & sync",
+        "description": "Manage audio downloads, voice playback, and sync preferences from the dashboard.",
+        "openOptions": "Open dashboard"
       }
+    },
+    "promptLauncher": {
+      "toggleLabel": "Prompts",
+      "toggleAria": "Toggle prompt menu",
+      "title": "Saved prompts",
+      "searchPlaceholder": "Search prompts...",
+      "emptyTitle": "No prompts yet",
+      "emptySubtitle": "Save prompts in the dashboard or popup to reuse them here.",
+      "emptyFilteredTitle": "No prompts match your search",
+      "emptyFilteredSubtitle": "Adjust the search or create a new template.",
+      "insertButton": "Insert",
+      "updatedAt": "Updated {{time}}",
+      "folderLabel": "Folder: {{name}}",
+      "closeAria": "Close prompt launcher"
+    },
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Toggle prompts dock ({{count}} available)",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Open dashboard"
     }
   }
 }

@@ -2,6 +2,7 @@ import { db } from './db';
 import { removeConversationMetadata, syncConversationMetadata } from './syncBridge';
 import type { BookmarkRecord, ConversationRecord, MessageRecord } from '@/core/models';
 import { computeTextMetrics, sumTextMetrics } from '@/core/utils/textMetrics';
+import { createBookmarkPreview } from '@/core/utils/bookmarkPreview';
 
 export interface ConversationUpsertInput {
   id: string;
@@ -159,7 +160,7 @@ export async function getPinnedConversations(limit = 10): Promise<ConversationOv
 }
 
 export async function toggleBookmark(conversationId: string, messageId?: string, note?: string) {
-    const existing = await db.bookmarks
+  const existing = await db.bookmarks
     .where('conversationId')
     .equals(conversationId)
     .and((bookmark) => (bookmark.messageId ?? null) === (messageId ?? null))
@@ -170,12 +171,21 @@ export async function toggleBookmark(conversationId: string, messageId?: string,
     return { removed: true, bookmarkId: existing.id };
   }
 
+  let messagePreview: string | undefined;
+  if (messageId) {
+    const message = await db.messages.get(messageId);
+    if (message?.content) {
+      messagePreview = createBookmarkPreview(message.content);
+    }
+  }
+
   const bookmark: BookmarkRecord = {
     id: crypto.randomUUID(),
     conversationId,
     messageId: messageId ?? null,
     createdAt: nowIso(),
-    note
+    note,
+    messagePreview
   };
 
   await db.bookmarks.put(bookmark);
@@ -227,15 +237,16 @@ export async function archiveConversations(ids: string[], archived: boolean) {
   if (!ids.length) {
     return;
   }
-  await db.conversations.bulkUpdate(
-    ids.map((id) => ({
-      key: id,
-      changes: {
-        archived,
-        updatedAt: nowIso()
-      }
-    }))
-  );
+  await db.transaction('rw', db.conversations, async () => {
+    await Promise.all(
+      ids.map((id) =>
+        db.conversations.update(id, {
+          archived,
+          updatedAt: nowIso()
+        })
+      )
+    );
+  });
 
   const conversations = await db.conversations.where('id').anyOf(ids).toArray();
   await Promise.all(conversations.map((conversation) => syncConversationMetadata(conversation)));

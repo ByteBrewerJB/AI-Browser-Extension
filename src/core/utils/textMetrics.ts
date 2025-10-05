@@ -3,22 +3,77 @@ export interface TextMetrics {
   charCount: number;
 }
 
-const UNICODE_WORD_PATTERN = "\\p{L}+[\\p{L}\\p{Mn}\\p{Pd}\\']*";
+type WordCounter = (text: string) => number;
+type SegmentLike = { isWordLike?: boolean };
+type SegmenterCtor = new (
+  locales?: string | string[],
+  options?: { granularity?: 'grapheme' | 'word' | 'sentence' }
+) => { segment(input: string): Iterable<SegmentLike> };
 
-function createWordRegex(): RegExp {
+const FALLBACK_WORD_REGEX = /[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g;
+
+let cachedWordCounter: WordCounter | null = null;
+
+function createSegmenterWordCounter(): WordCounter | null {
+  if (typeof Intl === 'undefined') {
+    return null;
+  }
+
   try {
-    return new RegExp(UNICODE_WORD_PATTERN, 'gu');
+    const Segmenter = (Intl as typeof Intl & { Segmenter?: SegmenterCtor }).Segmenter;
+    if (typeof Segmenter !== 'function') {
+      return null;
+    }
+
+    const segmenter = new Segmenter(undefined, { granularity: 'word' });
+    return (text: string) => {
+      let count = 0;
+      for (const segment of segmenter.segment(text) as Iterable<SegmentLike>) {
+        if (segment.isWordLike) {
+          count += 1;
+        }
+      }
+      return count;
+    };
   } catch {
-    // Fallback for environments without Unicode property escape support.
-    return /[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g;
+    return null;
   }
 }
 
-const WORD_REGEX = createWordRegex();
+function createUnicodeRegexWordCounter(): WordCounter | null {
+  try {
+    const unicodeRegex = new RegExp("\\p{L}+[\\p{L}\\p{Mn}\\p{Pd}\\']*", 'gu');
+    return (text: string) => {
+      const matches = text.match(unicodeRegex);
+      return matches ? matches.length : 0;
+    };
+  } catch {
+    return null;
+  }
+}
+
+function createFallbackWordCounter(): WordCounter {
+  return (text: string) => {
+    const matches = text.match(FALLBACK_WORD_REGEX);
+    return matches ? matches.length : 0;
+  };
+}
+
+function getWordCounter(): WordCounter {
+  if (cachedWordCounter) {
+    return cachedWordCounter;
+  }
+
+  cachedWordCounter =
+    createSegmenterWordCounter() ??
+    createUnicodeRegexWordCounter() ??
+    createFallbackWordCounter();
+
+  return cachedWordCounter;
+}
 
 function countWords(text: string) {
-  const matches = text.match(WORD_REGEX);
-  return matches ? matches.length : 0;
+  return getWordCounter()(text);
 }
 
 export function computeTextMetrics(text: string): TextMetrics {

@@ -1,5 +1,5 @@
-import { FormEvent, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
   ConversationArchivedFilter,
@@ -14,12 +14,7 @@ import { useConversationPresets } from '@/shared/hooks/useConversationPresets';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 
-import {
-  FolderTreeList,
-  flattenFolderOptions,
-  formatDate,
-  formatNumber
-} from '../shared';
+import { OptionBubble, flattenFolderOptions, formatDate, formatNumber } from '../shared';
 import { useHistoryStore } from './historyStore';
 
 export function HistorySection() {
@@ -40,13 +35,22 @@ export function HistorySection() {
     applyPreset,
     createConversationFolder,
     deleteConversationFolder,
-    togglePin
+    toggleConversationFolderFavorite,
+    togglePin,
+    selectedConversationIds,
+    toggleSelection,
+    setSelectedConversationIds,
+    clearSelection,
+    archiveSelected,
+    deleteSelected
   } = useHistoryStore();
 
   const conversationFolderOptions = useMemo(
     () => flattenFolderOptions(conversationFolders),
     [conversationFolders]
   );
+
+  const [showConversationFolderForm, setShowConversationFolderForm] = useState(false);
 
   const filteredConversations = useMemo(() => {
     const filtered = conversations.filter((conversation) => {
@@ -123,6 +127,32 @@ export function HistorySection() {
     return sorted;
   }, [conversations, conversationConfig]);
 
+  const filteredConversationIds = useMemo(
+    () => filteredConversations.map((conversation) => conversation.id),
+    [filteredConversations]
+  );
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const selectionSet = useMemo(() => new Set(selectedConversationIds), [selectedConversationIds]);
+  const allFilteredSelected = filteredConversationIds.length > 0 && filteredConversationIds.every((id) => selectionSet.has(id));
+  const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
+  const selectionCount = selectedConversationIds.length;
+
+  useEffect(() => {
+    if (!selectAllRef.current) {
+      return;
+    }
+    selectAllRef.current.indeterminate = !allFilteredSelected && someFilteredSelected;
+  }, [allFilteredSelected, someFilteredSelected]);
+
+  const selectionLabel = selectionCount
+    ? t('options.bulkSelectedCount', {
+        count: selectionCount,
+        defaultValue: selectionCount === 1 ? '1 conversation selected' : '{{count}} conversations selected'
+      })
+    : t('options.bulkNoSelection', { defaultValue: 'No conversations selected' });
+
   const handleSavePreset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await savePreset();
@@ -131,10 +161,17 @@ export function HistorySection() {
   const handleCreateConversationFolder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await createConversationFolder();
+    setShowConversationFolderForm(false);
   };
 
   const handleDeleteConversationPreset = async (presetId: string) => {
     await deletePreset(presetId);
+  };
+
+  const handleToggleFolderFavorite = async (event: MouseEvent<HTMLButtonElement>, folderId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await toggleConversationFolderFavorite(folderId);
   };
 
   const handleApplyConversationPreset = (preset: ConversationTablePreset) => {
@@ -149,215 +186,417 @@ export function HistorySection() {
     await togglePin(conversationId);
   };
 
+  const handleToggleAll = () => {
+    if (filteredConversationIds.length === 0) {
+      return;
+    }
+    if (allFilteredSelected) {
+      const remaining = selectedConversationIds.filter((id) => !filteredConversationIds.includes(id));
+      setSelectedConversationIds(remaining);
+      return;
+    }
+    const merged = new Set(selectedConversationIds);
+    filteredConversationIds.forEach((id) => merged.add(id));
+    setSelectedConversationIds(Array.from(merged));
+  };
+
+  const handleSelectionToggle = (conversationId: string) => {
+    toggleSelection(conversationId);
+  };
+
+  const handleArchiveSelection = async (archived: boolean) => {
+    await archiveSelected(archived);
+  };
+
+  const handleDeleteSelection = async () => {
+    await deleteSelected();
+  };
+
   return (
-    <section className="grid gap-6 lg:grid-cols-[280px_1fr]" aria-labelledby="history-heading">
-      <aside>
-        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-          <header className="space-y-1">
-            <h2 id="history-heading" className="text-base font-semibold text-emerald-300">
-              {t('options.conversationFolderHeading')}
-            </h2>
-            <p className="text-xs text-slate-400">{t('options.conversationFolderDescription')}</p>
-          </header>
-          <form className="flex flex-col gap-2" onSubmit={handleCreateConversationFolder}>
-            <label className="text-xs font-medium uppercase tracking-wide text-slate-400" htmlFor="conversation-folder-name">
-              {t('options.addFolder')}
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                id="conversation-folder-name"
-                placeholder={t('options.folderNamePlaceholder') ?? ''}
-                value={conversationFolderName}
-                onChange={(event) => setConversationFolderName(event.target.value)}
-              />
-              <button
-                className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm"
-                type="submit"
-              >
-                {t('options.addFolderButton')}
-              </button>
-            </div>
-          </form>
-          <div className="space-y-2" role="tree" aria-label={t('options.conversationFolderHeading')}>
-            <FolderTreeList
-              nodes={conversationFolders}
-              deleteLabel={t('options.deleteButton') ?? ''}
-              onDelete={deleteConversationFolder}
-            />
-          </div>
-        </div>
-      </aside>
+    <section className="space-y-6" aria-labelledby="history-heading">
+      <header className="space-y-2">
+        <h2 id="history-heading" className="text-lg font-semibold text-emerald-300">
+          {t('options.conversationHeading')}
+        </h2>
+        <p className="text-sm text-slate-300">{t('options.conversationDescription')}</p>
+      </header>
 
       <div className="space-y-6">
-        <header>
-          <h2 className="text-lg font-semibold text-emerald-300">{t('options.conversationHeading')}</h2>
-          <p className="text-sm text-slate-300">{t('options.conversationDescription')}</p>
-        </header>
+        <div className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+          <header className="space-y-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+              {t('options.conversationFiltersHeading')}
+            </h3>
+            <p className="text-xs text-slate-400">{t('options.conversationFiltersDescription')}</p>
+          </header>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-950/40 p-4">
-            <h3 className="text-sm font-semibold text-emerald-200">{t('options.filterHeading')}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-filter-folder">
-                  {t('options.filterFolderLabel')}
-                </label>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-filter-folder"
-                  value={conversationConfig.folderId}
-                  onChange={(event) =>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.filterFolderLabel')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <OptionBubble
+                  selected={conversationConfig.folderId === 'all'}
+                  onClick={() =>
                     handleConversationConfigChange({
-                      folderId: event.target.value as ConversationTableConfig['folderId']
+                      folderId: 'all'
                     })
                   }
                 >
-                  <option value="all">{t('options.filterFolderAll')}</option>
-                  {conversationFolderOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {`${'— '.repeat(option.depth)}${option.name}`}
-                    </option>
-                  ))}
-                </select>
+                  {t('options.filterFolderAll')}
+                </OptionBubble>
+                {conversationFolderOptions.map((option) => {
+                  const favoriteToggleLabel = option.favorite
+                    ? t('options.unfavoriteFolder', { defaultValue: 'Remove favorite' })
+                    : t('options.favoriteFolder', { defaultValue: 'Mark as favorite' });
+                  return (
+                    <div key={option.id} className="flex items-center gap-2">
+                      <OptionBubble
+                        selected={conversationConfig.folderId === option.id}
+                        onClick={() =>
+                          handleConversationConfigChange({
+                            folderId: option.id as ConversationTableConfig['folderId']
+                          })
+                        }
+                        onRemove={() => void deleteConversationFolder(option.id)}
+                        removeLabel={t('options.deleteFolder') ?? undefined}
+                      >
+                        <span
+                          className="flex items-center gap-2"
+                          style={{ paddingLeft: `${option.depth * 12}px` }}
+                        >
+                          <span className="truncate">{option.name}</span>
+                          {option.favorite ? (
+                            <span className="rounded border border-amber-400 px-1 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                              {t('options.favoriteBadge', { defaultValue: 'Fav' })}
+                            </span>
+                          ) : null}
+                        </span>
+                      </OptionBubble>
+                      <button
+                        type="button"
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border px-0 text-xs font-semibold transition ${
+                          option.favorite
+                            ? 'border-amber-400 text-amber-200'
+                            : 'border-slate-700 text-slate-300 hover:border-emerald-400 hover:text-emerald-100'
+                        }`}
+                        aria-pressed={option.favorite}
+                        aria-label={favoriteToggleLabel}
+                        onClick={(event) => void handleToggleFolderFavorite(event, option.id)}
+                      >
+                        {option.favorite ? '*' : '+'}
+                      </button>
+                    </div>
+                  );
+                })}
+                <OptionBubble
+                  selected={showConversationFolderForm}
+                  aria-label={t('options.addFolder') ?? 'Add folder'}
+                  aria-expanded={showConversationFolderForm}
+                  onClick={() => setShowConversationFolderForm((previous) => !previous)}
+                >
+                  +
+                </OptionBubble>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-filter-pinned">
-                  {t('options.filterPinnedLabel')}
-                </label>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-filter-pinned"
-                  value={conversationConfig.pinned}
-                  onChange={(event) =>
+              {showConversationFolderForm ? (
+                <form className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3" onSubmit={handleCreateConversationFolder}>
+                  <label className="text-xs font-medium uppercase tracking-wide text-slate-400" htmlFor="conversation-folder-name">
+                    {t('options.addFolder')}
+                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                      id="conversation-folder-name"
+                      placeholder={t('options.folderNamePlaceholder') ?? ''}
+                      value={conversationFolderName}
+                      onChange={(event) => setConversationFolderName(event.target.value)}
+                    />
+                    <div className="flex gap-2 sm:w-auto">
+                      <button
+                        className="flex-1 rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200 sm:flex-none"
+                        onClick={() => setShowConversationFolderForm(false)}
+                        type="button"
+                      >
+                        {t('options.cancelButton')}
+                      </button>
+                      <button
+                        className="flex-1 rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm sm:flex-none"
+                        type="submit"
+                      >
+                        {t('options.addFolderButton')}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.filterPinnedLabel')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <OptionBubble
+                  selected={conversationConfig.pinned === 'all'}
+                  onClick={() =>
                     handleConversationConfigChange({
-                      pinned: event.target.value as ConversationPinnedFilter
+                      pinned: 'all' as ConversationPinnedFilter
                     })
                   }
                 >
-                  <option value="all">{t('options.filterPinnedAll')}</option>
-                  <option value="pinned">{t('options.filterPinnedOnly')}</option>
-                  <option value="unpinned">{t('options.filterPinnedExclude')}</option>
-                </select>
+                  {t('options.filterPinnedAll')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.pinned === 'pinned'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      pinned: 'pinned' as ConversationPinnedFilter
+                    })
+                  }
+                >
+                  {t('options.filterPinnedOnly')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.pinned === 'unpinned'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      pinned: 'unpinned' as ConversationPinnedFilter
+                    })
+                  }
+                >
+                  {t('options.filterPinnedExclude')}
+                </OptionBubble>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-filter-archived">
-                  {t('options.filterArchivedLabel')}
-                </label>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-filter-archived"
-                  value={conversationConfig.archived}
-                  onChange={(event) =>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.filterArchivedLabel')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <OptionBubble
+                  selected={conversationConfig.archived === 'all'}
+                  onClick={() =>
                     handleConversationConfigChange({
-                      archived: event.target.value as ConversationArchivedFilter
+                      archived: 'all' as ConversationArchivedFilter
                     })
                   }
                 >
-                  <option value="all">{t('options.filterArchivedAll')}</option>
-                  <option value="active">{t('options.filterArchivedActive')}</option>
-                  <option value="archived">{t('options.filterArchivedOnly')}</option>
-                </select>
+                  {t('options.filterArchivedAll')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.archived === 'active'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      archived: 'active' as ConversationArchivedFilter
+                    })
+                  }
+                >
+                  {t('options.filterArchivedActive')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.archived === 'archived'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      archived: 'archived' as ConversationArchivedFilter
+                    })
+                  }
+                >
+                  {t('options.filterArchivedOnly')}
+                </OptionBubble>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-sort-field">
-                  {t('options.sortFieldLabel')}
-                </label>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-sort-field"
-                  value={conversationConfig.sortField}
-                  onChange={(event) =>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.sortFieldLabel')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <OptionBubble
+                  selected={conversationConfig.sortField === 'updatedAt'}
+                  onClick={() =>
                     handleConversationConfigChange({
-                      sortField: event.target.value as ConversationSortField
+                      sortField: 'updatedAt' as ConversationSortField
                     })
                   }
                 >
-                  <option value="updatedAt">{t('options.sortUpdated')}</option>
-                  <option value="title">{t('options.sortTitle')}</option>
-                  <option value="messageCount">{t('options.sortMessages')}</option>
-                  <option value="wordCount">{t('options.sortWords')}</option>
-                  <option value="charCount">{t('options.sortCharacters')}</option>
-                </select>
+                  {t('options.sortUpdated')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.sortField === 'title'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      sortField: 'title' as ConversationSortField
+                    })
+                  }
+                >
+                  {t('options.sortTitle')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.sortField === 'messageCount'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      sortField: 'messageCount' as ConversationSortField
+                    })
+                  }
+                >
+                  {t('options.sortMessages')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.sortField === 'wordCount'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      sortField: 'wordCount' as ConversationSortField
+                    })
+                  }
+                >
+                  {t('options.sortWords')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.sortField === 'charCount'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      sortField: 'charCount' as ConversationSortField
+                    })
+                  }
+                >
+                  {t('options.sortCharacters')}
+                </OptionBubble>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-sort-direction">
-                  {t('options.sortDirectionLabel')}
-                </label>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-sort-direction"
-                  value={conversationConfig.sortDirection}
-                  onChange={(event) =>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.sortDirectionLabel')}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <OptionBubble
+                  selected={conversationConfig.sortDirection === 'desc'}
+                  onClick={() =>
                     handleConversationConfigChange({
-                      sortDirection: event.target.value as ConversationSortDirection
+                      sortDirection: 'desc' as ConversationSortDirection
                     })
                   }
                 >
-                  <option value="desc">{t('options.sortDirectionDesc')}</option>
-                  <option value="asc">{t('options.sortDirectionAsc')}</option>
-                </select>
+                  {t('options.sortDirectionDesc')}
+                </OptionBubble>
+                <OptionBubble
+                  selected={conversationConfig.sortDirection === 'asc'}
+                  onClick={() =>
+                    handleConversationConfigChange({
+                      sortDirection: 'asc' as ConversationSortDirection
+                    })
+                  }
+                >
+                  {t('options.sortDirectionAsc')}
+                </OptionBubble>
               </div>
             </div>
           </div>
-          <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-            <header className="space-y-1">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('options.presetHeading')}</h4>
-              <p className="text-xs text-slate-500">{t('options.presetDescription')}</p>
-            </header>
-            <form className="flex flex-col gap-2 md:flex-row md:items-end md:gap-3" onSubmit={handleSavePreset}>
-              <div className="flex-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-preset-name">
-                  {t('options.presetNameLabel')}
-                </label>
-                <input
-                  className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
-                  id="conversation-preset-name"
-                  placeholder={t('options.presetNamePlaceholder') ?? ''}
-                  value={presetName}
-                  onChange={(event) => setPresetName(event.target.value)}
-                />
-              </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <header className="space-y-1">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t('options.presetHeading')}</h4>
+            <p className="text-xs text-slate-500">{t('options.presetDescription')}</p>
+          </header>
+          <form className="flex flex-col gap-2 md:flex-row md:items-end md:gap-3" onSubmit={handleSavePreset}>
+            <div className="flex-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="conversation-preset-name">
+                {t('options.presetNameLabel')}
+              </label>
+              <input
+                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                id="conversation-preset-name"
+                placeholder={t('options.presetNamePlaceholder') ?? ''}
+                value={presetName}
+                onChange={(event) => setPresetName(event.target.value)}
+              />
+            </div>
+            <button
+              className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm md:self-start"
+              type="submit"
+            >
+              {t('options.presetSaveButton')}
+            </button>
+          </form>
+          {conversationPresets.length === 0 ? (
+            <EmptyState title={t('options.presetEmpty')} align="start" className="py-4 text-xs" />
+          ) : (
+            <ul className="space-y-2">
+              {conversationPresets.map((preset) => (
+                <li
+                  key={preset.id}
+                  className="flex flex-col gap-3 rounded-md border border-slate-800 bg-slate-900/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-slate-100">{preset.name}</p>
+                    <p className="text-xs text-slate-500">{formatDate(preset.updatedAt)}</p>
+                  </div>
+                  <div className="flex gap-2 sm:justify-end">
+                    <button
+                      className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+                      onClick={() => handleApplyConversationPreset(preset)}
+                      type="button"
+                    >
+                      {t('options.presetApplyButton')}
+                    </button>
+                    <button
+                      className="rounded-md border border-rose-600 px-3 py-1 text-xs uppercase tracking-wide text-rose-300 hover:bg-rose-600/20"
+                      onClick={() => void handleDeleteConversationPreset(preset.id)}
+                      type="button"
+                    >
+                      {t('options.presetDeleteButton')}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.bulkSelectionHeading')}
+              </p>
+              <p className="text-xs text-slate-500">{selectionLabel}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm md:self-start"
-                type="submit"
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleArchiveSelection(true)}
+                type="button"
               >
-                {t('options.presetSaveButton')}
+                {t('options.bulkArchive')}
               </button>
-            </form>
-            {conversationPresets.length === 0 ? (
-              <EmptyState title={t('options.presetEmpty')} align="start" className="py-4 text-xs" />
-            ) : (
-              <ul className="space-y-2">
-                {conversationPresets.map((preset) => (
-                  <li
-                    key={preset.id}
-                    className="flex flex-col gap-3 rounded-md border border-slate-800 bg-slate-900/60 p-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-100">{preset.name}</p>
-                      <p className="text-xs text-slate-500">{formatDate(preset.updatedAt)}</p>
-                    </div>
-                    <div className="flex gap-2 sm:justify-end">
-                      <button
-                        className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
-                        onClick={() => handleApplyConversationPreset(preset)}
-                        type="button"
-                      >
-                        {t('options.presetApplyButton')}
-                      </button>
-                      <button
-                        className="rounded-md border border-rose-600 px-3 py-1 text-xs uppercase tracking-wide text-rose-300 hover:bg-rose-600/20"
-                        onClick={() => void handleDeleteConversationPreset(preset.id)}
-                        type="button"
-                      >
-                        {t('options.presetDeleteButton')}
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleArchiveSelection(false)}
+                type="button"
+              >
+                {t('options.bulkRestore')}
+              </button>
+              <button
+                className="rounded-md border border-rose-600 px-3 py-1 text-xs uppercase tracking-wide text-rose-200 transition hover:bg-rose-600/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleDeleteSelection()}
+                type="button"
+              >
+                {t('options.bulkDelete')}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => clearSelection()}
+                type="button"
+              >
+                {t('options.bulkClear')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -365,6 +604,16 @@ export function HistorySection() {
           <table className="min-w-full divide-y divide-slate-800 text-sm">
             <thead className="bg-slate-900/70 text-left text-xs uppercase tracking-wide text-slate-400">
               <tr>
+                <th className="w-12 px-4 py-3">
+                  <input
+                    ref={selectAllRef}
+                    aria-label={t('options.bulkSelectAll') ?? 'Select all conversations'}
+                    checked={allFilteredSelected && filteredConversationIds.length > 0}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                    onChange={handleToggleAll}
+                    type="checkbox"
+                  />
+                </th>
                 <th className="px-4 py-3">{t('options.columnTitle')}</th>
                 <th className="px-4 py-3">{t('popup.messages')}</th>
                 <th className="px-4 py-3">{t('popup.words')}</th>
@@ -376,7 +625,7 @@ export function HistorySection() {
             <tbody className="divide-y divide-slate-900/60">
               {filteredConversations.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6" colSpan={6}>
+                  <td className="px-4 py-6" colSpan={7}>
                     <EmptyState
                       title={
                         conversations.length === 0
@@ -388,33 +637,49 @@ export function HistorySection() {
                   </td>
                 </tr>
               ) : (
-                filteredConversations.map((conversation) => (
-                  <tr key={conversation.id} className="bg-slate-900/30">
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-100">
-                          {conversation.title || t('options.untitledConversation')}
-                        </span>
-                        <span className="text-xs text-slate-400">
+                filteredConversations.map((conversation) => {
+                  const title = conversation.title || t('options.untitledConversation');
+                  const isSelected = selectionSet.has(conversation.id);
+                  return (
+                    <tr key={conversation.id} className="bg-slate-900/30">
+                      <td className="px-4 py-3">
+                        <input
+                          aria-label={
+                            t('options.bulkSelectConversation', {
+                              title,
+                              defaultValue: `Select ${title}`
+                            }) ?? `Select ${title}`
+                          }
+                          checked={isSelected}
+                          className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                          onChange={() => handleSelectionToggle(conversation.id)}
+                          type="checkbox"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-100">{title}</span>
+                          <span className="text-xs text-slate-400">
+                            {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{formatNumber(conversation.messageCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.wordCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+                          onClick={() => void handlePinToggle(conversation.id)}
+                          type="button"
+                        >
                           {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{formatNumber(conversation.messageCount)}</td>
-                    <td className="px-4 py-3">{formatNumber(conversation.wordCount)}</td>
-                    <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
-                    <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
-                        onClick={() => void handlePinToggle(conversation.id)}
-                        type="button"
-                      >
-                        {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -422,4 +687,8 @@ export function HistorySection() {
       </div>
     </section>
   );
+
 }
+
+
+

@@ -10,6 +10,7 @@ import type {
   PromptRecord,
   SettingsRecord
 } from '@/core/models';
+import { createBookmarkPreview } from '@/core/utils/bookmarkPreview';
 
 export interface MetadataRecord<T = unknown> {
   key: string;
@@ -126,6 +127,65 @@ export class CompanionDatabase extends Dexie {
       jobs: 'id, status, runAt, updatedAt',
       metadata: 'key'
     });
+    this.version(6)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind, favorite',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id',
+        jobs: 'id, status, runAt, updatedAt',
+        metadata: 'key'
+      })
+      .upgrade(async (transaction) => {
+        await transaction.table('folders').toCollection().modify((folder) => {
+          if (typeof folder.favorite !== 'boolean') {
+            folder.favorite = false;
+          }
+        });
+      });
+
+    this.version(7)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind, favorite',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id',
+        jobs: 'id, status, runAt, updatedAt',
+        metadata: 'key'
+      })
+      .upgrade(async (transaction) => {
+        const bookmarksTable = transaction.table<BookmarkRecord>('bookmarks');
+        const messagesTable = transaction.table<MessageRecord>('messages');
+        const conversationsTable = transaction.table<ConversationRecord>('conversations');
+
+        const bookmarks = await bookmarksTable.toArray();
+
+        for (const bookmark of bookmarks) {
+          let preview = createBookmarkPreview(bookmark.messagePreview);
+
+          if (!preview && bookmark.messageId) {
+            const message = await messagesTable.get(bookmark.messageId);
+            if (message?.content) {
+              preview = createBookmarkPreview(message.content);
+            } else {
+              const conversation = await conversationsTable.get(bookmark.conversationId);
+              preview = createBookmarkPreview(conversation?.title);
+            }
+          }
+
+          if (preview || typeof bookmark.messagePreview === 'string') {
+            await bookmarksTable.update(bookmark.id, { messagePreview: preview });
+          }
+        }
+      });
   }
 }
 
@@ -135,3 +195,5 @@ export async function resetDatabase() {
   await db.delete();
   await db.open();
 }
+
+

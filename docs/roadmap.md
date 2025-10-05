@@ -4,10 +4,19 @@ _Last updated: 2024-07-08_
 
 This living document combines the architectural snapshot, delivery status, and premium launch planning for the AI Browser Extension. Update it whenever shipped functionality or priorities change so contributors have a single source of truth.
 
+> Houd `retrofit.md` naast dit document open tijdens planning-sessies: het retrofitplan vat de concrete implementatiestappen per featuregroep samen, terwijl deze roadmap de lange-termijnfasering en afhankelijkheden bewaakt.
+
+
+## Koppeling met retrofitplan
+
+- **Statusbron** – Gebruik de tabel in `retrofit.md` om snel te zien welke featuregroepen "gereed", "in ontwikkeling" of "in ontwerp" staan. Werk bij het afronden van een feature zowel daar als in de faserings-tabellen hieronder.
+- **Scopecontrole** – Wanneer een item in dit roadmapdocument een concrete deelstap krijgt, voeg de technische acties toe aan `retrofit.md` zodat de checklist actueel blijft.
+- **Logboek** – Noteer afgeronde deliverables met datum/commit in het logboek in `retrofit.md` en verwijs vanuit release notes naar dezelfde entries voor traceerbaarheid.
+
 ## Current implementation snapshot
 
 ### Surfaces
-- **Content script** – Captures conversations from ChatGPT, keeps a live draft counter, and persists structured messages via Dexie when DOM mutations are observed.【F:src/content/index.ts†L1-L129】
+- **Content script** – Captures conversations from ChatGPT, keeps a live draft counter, drives the rechter-bubbledock, and persists structured messages via Dexie wanneer DOM-mutaties worden waargenomen.【F:src/content/index.ts†L1-L129】【F:src/content/ui-root.tsx†L525-L720】
 - **Popup** – Shows the five most recent conversations with pin/bookmark toggles, language/RTL controls, and quick links to open chats in new tabs. Placeholder cards reserve space for future bookmarks, pinned, and activity dashboards.【F:src/popup/Popup.tsx†L1-L143】【F:src/popup/Popup.tsx†L145-L199】
 - **Options / dashboard** – Composes history, prompts, and media management sections while wiring scheduled exports and direction-aware layout.【F:src/options/Options.tsx†L1-L122】【F:src/options/features/history/HistorySection.tsx†L1-L110】
 - **Background service worker** – Hosts authentication state, the in-browser job queue, and messaging routes consumed by popup/options surfaces.【F:src/background/auth.ts†L1-L107】【F:src/background/jobs/queue.ts†L1-L96】
@@ -33,6 +42,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 8 | Quality & growth | 💤 Planned | Telemetry, observability, and localization scorecards remain future work. |
 
 ### Near-term backlog (Phase 3 focus)
+_De onderstaande punten horen ook terug in de werkdocumenten van `retrofit.md`; markeer in beide bestanden wanneer scopes verschuiven._
 - ✅ Move MiniSearch indexing into a worker-driven pipeline so large datasets do not block the UI on rebuild.
 - ✅ Promote the TXT/JSON export flow beyond manual scheduling by integrating the background handler and download APIs; downloads now trigger automatically from scheduled jobs with export status surfaced in the dashboard.
 - ✅ Flesh out job retry/backoff handling and surface status in the dashboard with exponential backoff and a jobs overview widget in the options surface.
@@ -52,6 +62,6 @@ The extension currently operates entirely client-side. Premium readiness require
 Document progress in this section instead of maintaining a separate premium roadmap. When backend services ship, link to their repos or ADRs here.
 
 ## Maintenance checklist
-- Update this file after every release train or scope change.
+- Update this file after every release train or scope change en synchroniseer de status met `retrofit.md` (inclusief logboek).
 - Mirror any structural database or surface changes here and in the ADRs under `docs/decisions/`.
 - Remove placeholder copy from UI surfaces as features graduate to production, and ensure the regression guide is updated accordingly.

@@ -1,4 +1,4 @@
-﻿{
+{
   "app": {
     "title": "AI Companion",
     "tagline": "Verbeter je ChatGPT-productiviteit."
@@ -47,7 +47,11 @@
     "activityJobCompleted": "Voltooid {{time}}",
     "activityJobRunning": "Actief sinds {{time}}",
     "activityJobScheduled": "Gepland voor {{time}}",
-    "activityJobAttempts": "{{attempts}} / {{max}} pogingen"
+    "activityJobAttempts": "{{attempts}} / {{max}} pogingen",
+    "loadingSettings": "Instellingen laden…",
+    "sidebarToggleLabel": "Chat-zijbalk",
+    "sidebarToggleOn": "Ingeschakeld",
+    "sidebarToggleOff": "Uitgeschakeld"
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -79,12 +83,15 @@
       "completed": "Voltooid",
       "failed": "Mislukt"
     },
+    "favoriteFolder": "Markeren als favoriet",
+    "unfavoriteFolder": "Favoriet verwijderen",
+    "favoriteBadge": "Fav",
     "conversationHeading": "Overzicht van gesprekken",
     "conversationDescription": "Laatste chats vastgelegd vanuit ChatGPT (lokaal opgeslagen).",
     "conversationEmpty": "Nog geen gesprekken vastgelegd.",
     "conversationFilteredEmpty": "Geen gesprekken komen overeen met de huidige filters.",
     "conversationFiltersHeading": "Filters & sortering",
-    "conversationFiltersDescription": "Stel map-, pin- en archiefstatus en sorteervolgorde in.",
+    "conversationFiltersDescription": "Gebruik de bubbels om map-, pin- en archiefstatus en sorteervolgorde aan te passen.",
     "filterFolderLabel": "Mapfilter",
     "filterFolderAll": "Alle mappen",
     "filterPinnedLabel": "Vastgezet",
@@ -129,8 +136,18 @@
     "columnUpdated": "Bijgewerkt",
     "columnActions": "Acties",
     "untitledConversation": "Naamloos gesprek",
+    "bulkSelectionHeading": "Bulkacties",
+    "bulkSelectedCount": "{{count}} gesprek geselecteerd",
+    "bulkSelectedCount_plural": "{{count}} gesprekken geselecteerd",
+    "bulkNoSelection": "Geen gesprekken geselecteerd",
+    "bulkArchive": "Selectie archiveren",
+    "bulkRestore": "Selectie herstellen",
+    "bulkDelete": "Selectie verwijderen",
+    "bulkClear": "Selectie wissen",
+    "bulkSelectAll": "Alle gesprekken selecteren",
+    "bulkSelectConversation": "Selecteer {{title}}",
     "gptFolderHeading": "GPT-mappen",
-    "gptFolderDescription": "Groepeer aangepaste GPT's per workflow of domein.",
+    "gptFolderDescription": "Gebruik de bubbels om GPT-mappen te kiezen, te verwijderen of toe te voegen. De actieve map wordt toegepast op nieuwe items.",
     "gptHeading": "Bibliotheek met aangepaste GPT's",
     "gptDescription": "Leg herbruikbare GPT-configuraties vast met beschrijving en map.",
     "gptNameLabel": "Naam",
@@ -143,7 +160,7 @@
     "gptTablePrompts": "Prompts",
     "gptEmpty": "Nog geen aangepaste GPT's.",
     "promptFolderHeading": "Promptmappen",
-    "promptFolderDescription": "Organiseer sjablonen per team of project.",
+    "promptFolderDescription": "Kies via de bubbels waar prompts terechtkomen en beheer hier nieuwe of verwijderde mappen.",
     "promptHeading": "Promptsjablonen",
     "promptDescription": "Schrijf en bewaar herbruikbare promptsnippers. Koppel ze aan GPT's voor snelle workflows.",
     "promptNameLabel": "Titel",
@@ -182,9 +199,58 @@
     "promptChainMoveDown": "Omlaag",
     "promptChainRemoveButton": "Verwijderen",
     "promptChainUpdateButton": "Keten bijwerken",
-    "promptChainCreateButton": "Keten opslaan"
+    "promptChainCreateButton": "Keten opslaan",
+    "sidebarHeading": "Chat-zijbalk",
+    "sidebarDescription": "Beheer de zijbalkoverlay voor ChatGPT vanuit elke surface.",
+    "sidebarToggleLabel": "Zijbalkweergave",
+    "sidebarToggleHelp": "Schakel de zwevende zijbalk in de ChatGPT-interface in of uit.",
+    "sidebarToggleOn": "Ingeschakeld",
+    "sidebarToggleOff": "Uitgeschakeld",
+    "gptFolderActiveLabel": "Actieve map: {{name}}",
+    "promptFolderActiveLabel": "Actieve map: {{name}}",
+    "promptGptActiveLabel": "Gekoppelde GPT: {{name}}",
+    "promptFormHeading": "Promptsjabloon maken",
+    "promptFormDescription": "Je map, GPT-koppeling en ketens volgen de bubbelselecties hierboven.",
+    "promptChainBubbleHelper": "Selecteer een bestaande keten om te bewerken of tik op + om een nieuwe reeks te starten."
   },
   "content": {
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Prompt-bubbel openen ({{count}} beschikbaar)",
+      "bookmarks": "Bladwijzers",
+      "bookmarksAria": "Bladwijzerbubbel openen",
+      "pinned": "Vastgezet",
+      "pinnedAria": "Vastgezette bubbel openen",
+      "actions": "Acties",
+      "actionsAria": "Actiebubbel openen",
+      "settings": "Instellingen",
+      "settingsAria": "Instellingenbubbel openen",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Dashboard openen",
+      "closePanelAria": "Bubbelpaneel sluiten"
+    },
+    "bubblePanels": {
+      "bookmarks": {
+        "title": "Gespreksbladwijzers",
+        "placeholderTitle": "Bladwijzerhulpmiddelen zijn bijna klaar",
+        "placeholderSubtitle": "Binnenkort kun je hier berichten bewaren, notities toevoegen en synchroniseren met popup en dashboard."
+      },
+      "pinned": {
+        "title": "Vastgezette gesprekken",
+        "placeholderTitle": "Snel pinbeheer is onderweg",
+        "placeholderSubtitle": "Beheer straks pins en favoriete mappen rechtstreeks vanuit de chat zodra deze bubbel actief is."
+      },
+      "actions": {
+        "title": "Acties & snelkoppelingen",
+        "placeholderTitle": "Contextuele acties verschijnen snel",
+        "placeholderSubtitle": "Deze bubbel bundelt binnenkort snelle bewerkingen zoals bookmarken, exporteren en delen."
+      },
+      "settings": {
+        "title": "Instellingen",
+        "placeholderTitle": "Pas de Companion aan zonder de chat te verlaten",
+        "placeholderSubtitle": "Dock-weergave, richting en audio-instellingen komen binnenkort in deze bubbel beschikbaar."
+      }
+    },
     "sidebar": {
       "title": "AI Companion",
       "patternButton": "Patronen",
@@ -214,7 +280,61 @@
         ],
         "close": "Sluiten",
         "closeAria": "Modal sluiten"
+      },
+      "history": {
+        "pinnedHeading": "Vastgezette gesprekken",
+        "recentHeading": "Recente updates",
+        "bookmarksHeading": "Laatste bladwijzers",
+        "emptyPinned": "Zet ChatGPT-gesprekken vast om ze hier snel terug te vinden.",
+        "emptyRecent": "Start een gesprek om je geschiedenis te vullen.",
+        "emptyRecentTitle": "Nog geen recente updates.",
+        "emptyBookmarks": "Maak bladwijzers om snel terug te springen naar belangrijke berichten.",
+        "openDashboard": "Dashboard openen",
+        "folderShortcuts": "Map-snelkoppelingen",
+        "folderShortcutsEmpty": "Maak mappen in het dashboard om ze hier snel terug te vinden.",
+        "archive": "Archiveren",
+        "restore": "Herstellen",
+        "moveAction": "Verplaatsen",
+        "moveDialogTitle": "Verplaats \"{{title}}\"",
+        "moveDialogTitleDefault": "Gesprek verplaatsen",
+        "moveDialogDescription": "Kies waar je \"{{title}}\" wilt bewaren.",
+        "moveDialogDescriptionDefault": "Selecteer een doelmap voor dit gesprek.",
+        "moveRoot": "Geen map (hoofdniveau)",
+        "moveConfirm": "Verplaatsen",
+        "moveCancel": "Annuleren",
+        "favoriteBadge": "Fav"
+      },
+      "prompts": {
+        "heading": "Promptsjablonen",
+        "empty": "Bewaar prompts via het dashboard of de pop-up om ze hier te gebruiken.",
+        "emptyTitle": "Nog geen prompts.",
+        "openLibrary": "Promptbibliotheek openen"
+      },
+      "media": {
+        "heading": "Spraak & synchronisatie",
+        "description": "Beheer downloads, spraakweergave en synchronisatievoorkeuren vanuit het dashboard.",
+        "openOptions": "Dashboard openen"
       }
+    },
+    "promptLauncher": {
+      "toggleLabel": "Prompts",
+      "toggleAria": "Promptmenu openen/sluiten",
+      "title": "Opgeslagen prompts",
+      "searchPlaceholder": "Prompts zoeken...",
+      "emptyTitle": "Nog geen prompts",
+      "emptySubtitle": "Bewaar prompts via het dashboard of de popup om ze hier te gebruiken.",
+      "emptyFilteredTitle": "Geen prompts gevonden",
+      "emptyFilteredSubtitle": "Pas je zoekopdracht aan of maak een nieuw sjabloon.",
+      "insertButton": "Invoegen",
+      "updatedAt": "Bijgewerkt {{time}}",
+      "folderLabel": "Map: {{name}}",
+      "closeAria": "Promptmenu sluiten"
+    },
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Promptmenu openen of sluiten ({{count}} beschikbaar)",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Dashboard openen"
     }
   }
 }

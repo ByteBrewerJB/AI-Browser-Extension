@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type { ActivityItem, BookmarkSummary } from '@/core/storage';
 import { toggleBookmark, togglePinned } from '@/core/storage';
@@ -8,8 +8,8 @@ import { useRecentActivity } from '@/shared/hooks/useRecentActivity';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { initI18n, setLanguage } from '@/shared/i18n';
-import { useSettingsStore } from '@/shared/state/settingsStore';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
+import { useSettingsStore } from '@/shared/state/settingsStore';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -47,22 +47,35 @@ function formatBookmarkPreview(bookmark: BookmarkSummary, fallback: string) {
 }
 
 function openDashboard() {
+  const dashboardUrl =
+    chrome.runtime?.getURL?.('src/options/index.html') ??
+    chrome.runtime?.getURL?.('options.html');
+
   if (chrome.runtime?.openOptionsPage) {
     chrome.runtime.openOptionsPage(() => {
       const lastError = chrome.runtime.lastError;
       if (lastError) {
         console.error('[ai-companion] failed to open options page', lastError);
+        if (dashboardUrl) {
+          chrome.tabs
+            .create({ url: dashboardUrl })
+            .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+        } else {
+          console.error('[ai-companion] unable to resolve dashboard URL for fallback navigation');
+        }
       }
     });
     return;
   }
 
-  const url = chrome.runtime?.getURL?.('options.html');
-  if (url) {
-    chrome.tabs.create({ url }).catch((error) => {
-      console.error('[ai-companion] failed to open dashboard tab', error);
-    });
+  if (dashboardUrl) {
+    chrome.tabs
+      .create({ url: dashboardUrl })
+      .catch((error) => console.error('[ai-companion] failed to open dashboard tab', error));
+    return;
   }
+
+  console.error('[ai-companion] dashboard URL could not be resolved');
 }
 
 function getActivityAccent(item: ActivityItem) {
@@ -87,7 +100,11 @@ function getActivityAccent(item: ActivityItem) {
 
 export function Popup() {
   const { t, i18n } = useTranslation();
-  const { language, direction, setLanguage: setStoreLanguage, toggleDirection } = useSettingsStore();
+  const language = useSettingsStore((state) => state.language);
+  const direction = useSettingsStore((state) => state.direction);
+  const setStoreLanguage = useSettingsStore((state) => state.setLanguage);
+  const toggleDirection = useSettingsStore((state) => state.toggleDirection);
+  const hydrated = useSettingsStore((state) => state.hydrated);
   const conversations = useRecentConversations(5);
   const pinnedConversations = usePinnedConversations(4);
   const recentBookmarks = useRecentBookmarks(4);
@@ -148,6 +165,14 @@ export function Popup() {
   const noActivityLabel =
     t('popup.noActivity') ||
     'Recent conversation edits, bookmarks, and exports will show up here.';
+
+  if (!hydrated) {
+    return (
+      <div className="w-96 p-4 text-sm text-slate-300" dir={direction}>
+        {t('popup.loadingSettings') ?? 'Loading settings...'}
+      </div>
+    );
+  }
 
   return (
     <div className="w-96 space-y-4 p-4" dir={direction}>
@@ -526,3 +551,4 @@ export function Popup() {
     </div>
   );
 }
+
