@@ -69,6 +69,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Wireframes dekken pin/hide/collapse flows zodat development van Zustand-state en UI-componenten kan starten; volgende stap is toetsen met accessibility review en integratie met mapnavigatie.
    - **Documentatie** – Nieuwe ontwerpnotitie `docs/design/sidebar-pin-wireframes.md`; tracker (dit bestand) en roadmap-tickets gelinkt voor implementatieplanning.
    - **QA-notes** – Geautomatiseerd: n.v.t. (design deliverable). Handmatig: heuristische UX-review uitgevoerd (consistency, Fitts, keyboard flow) en acties voor A11y-tests genoteerd in ontwerpnotitie.
+4. [x] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen. _(afgerond 2025-02-18)_
+   - **Prioritering** – Launcher wordt primaire toegang tot prompts/chains; keyboard-first specificatie borgt <50 ms inserties en maakt de weg vrij voor DSL-integratie. Volgende stap is chain-parserprototype koppelen aan deze UX en shortcuts configureerbaar maken via settings.
+   - **Documentatie** – Nieuwe UX-notitie `docs/design/prompt-launcher-ux.md`; roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) geüpdatet met nieuwe scope en QA-stappen.
+   - **QA-notes** – Geautomatiseerd: te plannen Vitest-suite voor searchpipeline en keyboardreducer. Handmatig: heuristische toetsing uitgevoerd (keyboard-only flow, inline `//` trigger, RTL layout) en QA-checklist aangevuld met verificatiestappen voor Chrome/Firefox.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -125,5 +129,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-02-15 | _pending_ | Storage | Dexie v8 met `folder_items` pivot geland; folderhelpers + docs/QA-updates toegevoegd; lint/test/build uitgevoerd. |
 | 2025-02-16 | _pending_ | Search | MiniSearch verrijkt met tags en mappaden; nieuwe tests + 10k benchmark (build 1.495 s, query 3.067 ms) gedraaid naast lint/test. |
 | 2025-02-17 | _pending_ | UX | Zijbalk pin/hide/collapse wireframes vastgelegd; QA-aanwijzingen toegevoegd en designnotitie gepubliceerd. |
+| 2025-02-18 | _pending_ | UX | Promptlauncher keyboard-first UX en fuzzy search gedrag gespecificeerd; roadmap + regressiegids gesynchroniseerd; heuristische toetsen uitgevoerd. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
