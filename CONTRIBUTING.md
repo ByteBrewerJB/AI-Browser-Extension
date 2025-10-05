@@ -17,14 +17,14 @@ Thanks for helping improve the AI ChatGPT Companion extension! This guide explai
    - `npm run lint`
    - `npm run build`
    - Add or update Vitest specs when introducing new services or logic.
-6. Document notable architectural decisions in `docs/decisions/` using the provided template when applicable.
+6. Document notable architectural decisions in `docs/handbook/adr-*.md` when applicable, and refresh the roadmap/regression docs if behaviour changes.
 
 ## Review Expectations
 Before requesting a review, confirm that:
 - [ ] Linting (`npm run lint`) passes.
 - [ ] The production build (`npm run build`) succeeds.
 - [ ] Tests are added or updated as needed, and manual steps are documented when automated coverage is missing.
-- [ ] Documentation such as the README, feature plans, or decision records are updated to reflect your changes.
+- [ ] Documentation such as the README, handbook entries, or decision records are updated to reflect your changes.
 - [ ] Localization, RTL considerations, and cross-domain compatibility (chat.openai.com and chatgpt.com) are addressed.
 
-Add TODO comments using the format `TODO(agent-name): description` if follow-up work is required. Surface blockers early by updating the relevant issue or milestone section.
+Add TODO comments using the format `TODO(agent-name): description` if follow-up work is required. Surface blockers early by updating the relevant issue or milestone section, and log manual QA runs in `docs/handbook/retrofit-tracker.md`.
