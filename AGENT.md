@@ -26,6 +26,7 @@ Guidelines for agents contributing to the AI ChatGPT Companion extension.
 - Add unit tests (Vitest) as new services are introduced; document gaps when skipping tests.
 - For DOM integrations, test against both `https://chat.openai.com` and `https://chatgpt.com`.
 - Document manual test steps in PR descriptions when automated coverage is missing.
+- For UI or storage changes, run the full checklist in `docs/testing/manual-regression.md` and log the outcomes (browser, domain, date) per the guide's instructions.
 
 ## 5. Documentation & Commits
 - Update README or relevant docs whenever UX or setup changes.
