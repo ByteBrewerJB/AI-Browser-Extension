@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "guides": [
+    {
+      "id": "bookmark-overlay",
+      "title": "Bookmark overlay snelstart",
+      "description": "Leer hoe je berichten markeert vanuit het bubblemenu en notities bewaart zonder de chat te verlaten.",
+      "url": "https://docs.ai-companion.example/guides/bookmark-overlay",
+      "badgeColor": "emerald",
+      "topics": ["bookmarks", "context-menu"],
+      "estimatedTimeMinutes": 3
+    },
+    {
+      "id": "prompt-chains",
+      "title": "Promptketens bouwen",
+      "description": "Stel herbruikbare ketens samen met variabelen en deel ze via de launcher voor het hele team.",
+      "url": "https://docs.ai-companion.example/guides/prompt-chains",
+      "badgeColor": "violet",
+      "topics": ["prompts", "automation"],
+      "estimatedTimeMinutes": 6
+    },
+    {
+      "id": "history-and-pins",
+      "title": "Conversaties ordenen",
+      "description": "Gebruik favorieten, mappen en bulkacties om actieve gesprekken snel terug te vinden in het dock.",
+      "url": "https://docs.ai-companion.example/guides/history-and-pins",
+      "badgeColor": "sky",
+      "topics": ["history", "pins"],
+      "estimatedTimeMinutes": 4
+    }
+  ]
+}

@@ -19,6 +19,12 @@ export async function resolve(specifier, context, defaultResolve) {
     return tsNodeResolve(url, context, defaultResolve);
   }
 
+  if (specifier === 'zod') {
+    const vendorPath = path.join(srcRoot, 'vendor', 'zod.ts');
+    const url = pathToFileURL(vendorPath).href;
+    return tsNodeResolve(url, context, defaultResolve);
+  }
+
   if (specifier.startsWith('@/')) {
     const withoutAlias = specifier.slice(2);
     const basePath = path.join(srcRoot, withoutAlias);

@@ -41,7 +41,8 @@ export default defineConfig(async () => {
     plugins: [react(), crx({ manifest })],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        zod: fileURLToPath(new URL('./src/vendor/zod.ts', import.meta.url))
       }
     },
     build: {
