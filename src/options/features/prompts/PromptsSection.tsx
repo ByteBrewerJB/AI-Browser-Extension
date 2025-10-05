@@ -1,4 +1,4 @@
-import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Fragment, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type { GPTRecord, PromptChainRecord, PromptRecord } from '@/core/models';
@@ -8,6 +8,7 @@ import { useFolders } from '@/shared/hooks/useFolders';
 import { useGpts } from '@/shared/hooks/useGpts';
 import { usePromptChains } from '@/shared/hooks/usePromptChains';
 import { usePrompts } from '@/shared/hooks/usePrompts';
+import { PROMPT_CHAIN_VARIABLE_LIMIT } from '@/core/validation/promptChains';
 
 import { OptionBubble, flattenFolderOptions, formatDate, formatNumber, truncate } from '../shared';
 import type { FolderOption } from '../shared';
@@ -40,6 +41,9 @@ export function PromptsSection() {
     promptChainName,
     promptChainNodeIds,
     editingPromptChain,
+    promptChainVariables,
+    promptChainVariableInput,
+    promptChainVariablesError,
     setGptName,
     setGptDescription,
     setGptFolderId,
@@ -71,7 +75,10 @@ export function PromptsSection() {
     loadPromptChain,
     resetPromptChainForm,
     savePromptChain,
-    removePromptChain
+    removePromptChain,
+    setPromptChainVariableInput,
+    addPromptChainVariable,
+    removePromptChainVariable
   } = usePromptsStore();
 
   const gptFolderOptions = useMemo(() => flattenFolderOptions(gptFolderTree), [gptFolderTree]);
@@ -197,6 +204,20 @@ export function PromptsSection() {
     event.preventDefault();
     await createGptFolder();
     setShowGptFolderForm(false);
+  };
+
+  const handlePromptChainVariableKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addPromptChainVariable();
+    }
+    if (event.key === 'Backspace' && !promptChainVariableInput && promptChainVariables.length > 0) {
+      event.preventDefault();
+      const [lastVariable] = promptChainVariables.slice(-1);
+      if (lastVariable) {
+        removePromptChainVariable(lastVariable);
+      }
+    }
   };
 
   const handleCreatePromptFolder = async (event: FormEvent<HTMLFormElement>) => {
@@ -627,6 +648,82 @@ export function PromptsSection() {
                             value={promptChainName}
                             onChange={(event) => setPromptChainName(event.target.value)}
                           />
+                        </div>
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-semibold text-slate-100">{t('options.promptChainVariablesHeading')}</h4>
+                            <p className="text-xs text-slate-400">
+                              {t('options.promptChainVariablesDescription', { count: PROMPT_CHAIN_VARIABLE_LIMIT })}
+                            </p>
+                          </div>
+                          {promptChainVariables.length > 0 ? (
+                            <ul className="flex flex-wrap gap-2">
+                              {promptChainVariables.map((variable) => (
+                                <li
+                                  key={variable}
+                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200"
+                                >
+                                  <span>{variable}</span>
+                                  <button
+                                    aria-label={t('options.promptChainVariablesRemoveAria', { name: variable }) ?? 'Remove variable'}
+                                    className="rounded-full border border-emerald-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-400/10"
+                                    onClick={() => removePromptChainVariable(variable)}
+                                    type="button"
+                                  >
+                                    {t('options.promptChainVariablesRemoveButton')}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-slate-500">{t('options.promptChainVariablesEmpty')}</p>
+                          )}
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <input
+                              aria-invalid={promptChainVariablesError ? 'true' : undefined}
+                              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                              placeholder={t('options.promptChainVariablesPlaceholder') ?? ''}
+                              value={promptChainVariableInput}
+                              onChange={(event) => setPromptChainVariableInput(event.target.value)}
+                              onKeyDown={handlePromptChainVariableKeyDown}
+                            />
+                            <button
+                              className="rounded-md border border-emerald-500 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200 hover:bg-emerald-500/10"
+                              onClick={() => addPromptChainVariable()}
+                              type="button"
+                            >
+                              {t('options.promptChainVariablesAddButton')}
+                            </button>
+                          </div>
+                          {promptChainVariablesError ? (
+                            <p className="text-xs text-rose-400">
+                              {promptChainVariablesError.code === 'duplicate'
+                                ? t('options.promptChainVariablesErrorDuplicate', {
+                                    name: promptChainVariablesError.value ?? ''
+                                  })
+                                : promptChainVariablesError.code === 'tooMany'
+                                  ? t('options.promptChainVariablesErrorTooMany', {
+                                      count: PROMPT_CHAIN_VARIABLE_LIMIT
+                                    })
+                                  : promptChainVariablesError.code === 'tooLong'
+                                    ? t('options.promptChainVariablesErrorTooLong')
+                                    : promptChainVariablesError.code === 'empty'
+                                      ? t('options.promptChainVariablesErrorEmpty')
+                                      : t('options.promptChainVariablesErrorPattern')}
+                            </p>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <p className="text-xs text-slate-500">
+                                {t('options.promptChainVariablesHelper', { count: PROMPT_CHAIN_VARIABLE_LIMIT })}
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                {t('options.promptChainVariablesCount', {
+                                  current: promptChainVariables.length,
+                                  max: PROMPT_CHAIN_VARIABLE_LIMIT
+                                })}
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="grid gap-4 lg:grid-cols-2">
                           <div className="space-y-2">
