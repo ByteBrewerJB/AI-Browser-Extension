@@ -15,7 +15,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | Media & audio | Audio capture, mediagalerij, voice presets, audio cues | 💤 Gepland | _nog te plannen_ |
 | Richting & instellingen | Dynamische taal/dir, settings-tab | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
 | Info & betalingen | Release notes, billing CTA, webhook-poller | 📝 Ontwerp | _nog te plannen_ |
-| Composer uitbreidingen | Telleroverlay, placeholderhelper, instructieoverlay, ketentab | 🚧 Ontwikkeling | 2025-10-05 – 4a71f23 (composer counters) |
+| Composer uitbreidingen | Telleroverlay, placeholderhelper, instructieoverlay, ketentab | 🚧 Ontwikkeling | 2025-10-06 – _pending_ (composer placeholder helper) |
 | Onboarding & gidsen | Guides dataset, kaart in options/popup, modal in content | 📝 Ontwerp | _nog te plannen_ |
 | Internationalisatie | Locale-generator, initI18n updates, RTL helpers, tests | 📝 Ontwerp | _nog te plannen_ |
 | Iconen, beelden & audio | Icon-generator, styleguide, media-assets, notificatiesound | 📝 Ontwerp | _nog te plannen_ |
@@ -109,7 +109,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 
 ### 10. Composer uitbreidingen (`scripts/counter`, `scripts/textareaPrompts`)
 - [x] Introduceer `initComposerCounters` in `src/content/textareaPrompts.ts` die, naar analogie met `example/example/1/scripts/counter/injectWordsCounter.js`, via een `MutationObserver` de actieve ChatGPT-composer detecteert. Render een `div[data-ai-companion="composer-counters"]` in dezelfde shadow-root als de promptlauncher en toon woorden-, tekens- en tokenaantallen. Baseer tokenlimits op `settingsStore.maxTokens` (fallback 4096) en kleur de badge rood zodra limieten overschreden worden.
-- [ ] Vervang de placeholderlogica in `textareaPrompts` door een helper `updateComposerPlaceholder(language, promptHint)` die het bestaande `CHATGPT_PROMPT_PLACEHOLDER`-patroon uit de voorbeeldmanifest ("Message ChatGPT Normally, Use // ...") gebruikt. Luister naar `chrome.storage.onChanged` zodat taalwissels of aangepaste hints direct worden toegepast zoals in `scripts/textareaPrompts/changeDefaultPlaceholder.js`.
+- [x] Vervang de placeholderlogica in `textareaPrompts` door een helper `updateComposerPlaceholder(language, promptHint)` die het bestaande `CHATGPT_PROMPT_PLACEHOLDER`-patroon uit de voorbeeldmanifest ("Message ChatGPT Normally, Use // ...") gebruikt. Luister naar `chrome.storage.onChanged` zodat taalwissels of aangepaste hints direct worden toegepast zoals in `scripts/textareaPrompts/changeDefaultPlaceholder.js`.
 - [ ] Voeg een instructieoverlay toe gebaseerd op `example/example/1/scripts/textareaPrompts/promptListInstructions.js`: richt een `Popover`-component in `src/ui/components` in die de combinaties `//` (prompt), `..` (keten) en `@@` (bookmark) uitlegt. Toon deze overlay de eerste drie keer nadat de launcher openklapt en bewaar de teller in `settingsStore.dismissedLauncherTips`.
 - [ ] Breid het launcherpanel uit met een tab "Ketens" waarin `PromptChainRecord`s compact getoond worden (titel, aantal stappen, laatst gebruikt). Hergebruik de instructies uit `scripts/textareaPrompts/chainListUI.js` door een React-versie (`ChainPreviewList`) te bouwen. Center de call-to-action "Start keten" rechtsboven en koppel aan het `content/run-chain` bericht dat in sectie 4 wordt toegevoegd.
 
@@ -163,5 +163,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkbubble toont live Dexie-data + notities; lint/test/build uitgevoerd |
 | 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkmodal voor selectie & notities in content; lint/test/build uitgevoerd |
 | 2025-10-05 | 4a71f23 | Composer uitbreidingen | initComposerCounters + composer telleroverlay; lint/test/build uitgevoerd |
+| 2025-10-06 | _pending_ | Composer uitbreidingen | Placeholder helper + settings promptHint sync; lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
