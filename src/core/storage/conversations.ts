@@ -179,6 +179,13 @@ export async function toggleBookmark(conversationId: string, messageId?: string,
     }
   }
 
+  if (!messagePreview) {
+    const conversation = await db.conversations.get(conversationId);
+    if (conversation?.title) {
+      messagePreview = createBookmarkPreview(conversation.title);
+    }
+  }
+
   const bookmark: BookmarkRecord = {
     id: crypto.randomUUID(),
     conversationId,
