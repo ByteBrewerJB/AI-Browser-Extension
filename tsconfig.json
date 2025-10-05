@@ -17,7 +17,8 @@
     "types": ["chrome", "node"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "zod": ["src/vendor/zod"]
     }
   },
   "include": ["src", "tests"],
