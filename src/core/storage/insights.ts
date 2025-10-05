@@ -5,14 +5,7 @@ import {
 } from './conversations';
 import type { BookmarkRecord, JobStatus } from '@/core/models';
 import type { ConversationOverview } from './conversations';
-
-function sanitizePreview(content: string, maxLength = 140) {
-  const normalized = content.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  return `${normalized.slice(0, Math.max(0, maxLength - 1))}…`;
-}
+import { createBookmarkPreview } from '@/core/utils/bookmarkPreview';
 
 export interface BookmarkSummary {
   id: string;
@@ -50,11 +43,11 @@ async function toBookmarkSummary(bookmark: BookmarkRecord): Promise<BookmarkSumm
     return null;
   }
 
-  let messagePreview: string | undefined;
-  if (bookmark.messageId) {
+  let messagePreview = createBookmarkPreview(bookmark.messagePreview);
+  if (!messagePreview && bookmark.messageId) {
     const message = await db.messages.get(bookmark.messageId);
-    if (message) {
-      messagePreview = sanitizePreview(message.content);
+    if (message?.content) {
+      messagePreview = createBookmarkPreview(message.content);
     }
   }
 

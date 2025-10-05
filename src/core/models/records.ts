@@ -68,6 +68,7 @@ export interface BookmarkRecord {
   messageId?: string | null;
   createdAt: string;
   note?: string;
+  messagePreview?: string;
 }
 
 export type ConversationPinnedFilter = 'all' | 'pinned' | 'unpinned';
