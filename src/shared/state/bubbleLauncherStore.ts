@@ -101,30 +101,45 @@ async function readStoredSnapshot(): Promise<BubbleLauncherSnapshot> {
 
   try {
     if (typeof area.get === 'function') {
-      if (area.get.length === 1) {
-        const result = await (area.get as (key: string) => Promise<Record<string, unknown>>)(
-          BUBBLE_LAUNCHER_STORAGE_KEY
-        );
-        return coerceSnapshot(result?.[BUBBLE_LAUNCHER_STORAGE_KEY]);
-      }
-
-      return await new Promise<BubbleLauncherSnapshot>((resolve, reject) => {
-        try {
-          (area.get as (key: string, callback: (items: Record<string, unknown>) => void) => void)(
-            BUBBLE_LAUNCHER_STORAGE_KEY,
-            (items) => {
-              const lastError = (chrome as unknown as { runtime?: { lastError?: unknown } })?.runtime?.lastError;
-              if (lastError) {
-                reject(lastError);
-                return;
-              }
-              resolve(coerceSnapshot(items?.[BUBBLE_LAUNCHER_STORAGE_KEY]));
-            }
-          );
-        } catch (error) {
+      const items = await new Promise<Record<string, unknown>>((resolve, reject) => {
+        let settled = false;
+        const resolveOnce = (value: Record<string, unknown>) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          resolve(value);
+        };
+        const rejectOnce = (error: unknown) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
           reject(error);
+        };
+
+        try {
+          const maybePromise = (area.get as (
+            key: string,
+            callback: (items: Record<string, unknown>) => void
+          ) => unknown)(BUBBLE_LAUNCHER_STORAGE_KEY, (items) => {
+            const lastError = (chrome as unknown as { runtime?: { lastError?: unknown } })?.runtime?.lastError;
+            if (lastError) {
+              rejectOnce(lastError);
+              return;
+            }
+            resolveOnce(items ?? {});
+          });
+
+          if (maybePromise && typeof (maybePromise as Promise<Record<string, unknown>>).then === 'function') {
+            (maybePromise as Promise<Record<string, unknown>>).then(resolveOnce).catch(rejectOnce);
+          }
+        } catch (error) {
+          rejectOnce(error);
         }
       });
+
+      return coerceSnapshot(items?.[BUBBLE_LAUNCHER_STORAGE_KEY]);
     }
   } catch (error) {
     console.warn('[bubbleLauncherStore] failed to read snapshot from storage', error);
@@ -145,23 +160,41 @@ async function writeStoredSnapshot(snapshot: BubbleLauncherSnapshot): Promise<vo
   try {
     const payload = { [BUBBLE_LAUNCHER_STORAGE_KEY]: snapshot } as Record<string, BubbleLauncherSnapshot>;
     if (typeof area.set === 'function') {
-      if (area.set.length === 1) {
-        await (area.set as (items: Record<string, BubbleLauncherSnapshot>) => Promise<void>)(payload);
-        return;
-      }
-
       await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const resolveOnce = () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          resolve();
+        };
+        const rejectOnce = (error: unknown) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          reject(error);
+        };
+
         try {
-          (area.set as (items: Record<string, BubbleLauncherSnapshot>, callback: () => void) => void)(payload, () => {
+          const maybePromise = (area.set as (
+            items: Record<string, BubbleLauncherSnapshot>,
+            callback: () => void
+          ) => unknown)(payload, () => {
             const lastError = (chrome as unknown as { runtime?: { lastError?: unknown } })?.runtime?.lastError;
             if (lastError) {
-              reject(lastError);
+              rejectOnce(lastError);
               return;
             }
-            resolve();
+            resolveOnce();
           });
+
+          if (maybePromise && typeof (maybePromise as Promise<void>).then === 'function') {
+            (maybePromise as Promise<void>).then(resolveOnce).catch(rejectOnce);
+          }
         } catch (error) {
-          reject(error);
+          rejectOnce(error);
         }
       });
     }
