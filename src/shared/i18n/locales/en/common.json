@@ -51,7 +51,22 @@
     "loadingSettings": "Loading settings…",
     "sidebarToggleLabel": "Chat sidebar",
     "sidebarToggleOn": "Enabled",
-    "sidebarToggleOff": "Disabled"
+    "sidebarToggleOff": "Disabled",
+    "guides": {
+      "heading": "Guides & updates",
+      "description": "Discover quick tips to make the most of the extension.",
+      "loading": "Loading guides…",
+      "empty": "You’re all caught up.",
+      "error": "Guides could not be loaded. Open the dashboard to retry later.",
+      "viewedBadge": "Viewed",
+      "openCta": "View",
+      "openAria": "Open guide {{title}}",
+      "opening": "Opening…",
+      "markViewed": "Mark “{{title}}” as viewed",
+      "markViewedAria": "Mark guide {{title}} as viewed",
+      "markUnviewed": "Restore “{{title}}”",
+      "markUnviewedAria": "Restore guide {{title}}"
+    }
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -93,7 +108,12 @@
       "estimatedTime": "{{minutes}} min read",
       "openCta": "View",
       "openAria": "Open guide {{title}}",
-      "opening": "Opening…"
+      "opening": "Opening…",
+      "markViewed": "Mark “{{title}}” as viewed",
+      "markViewedAria": "Mark guide {{title}} as viewed",
+      "markUnviewed": "Restore “{{title}}”",
+      "markUnviewedAria": "Restore guide {{title}}",
+      "viewedBadge": "Viewed"
     },
     "favoriteFolder": "Mark as favorite",
     "unfavoriteFolder": "Remove favorite",

@@ -51,7 +51,22 @@
     "loadingSettings": "Instellingen laden…",
     "sidebarToggleLabel": "Chat-zijbalk",
     "sidebarToggleOn": "Ingeschakeld",
-    "sidebarToggleOff": "Uitgeschakeld"
+    "sidebarToggleOff": "Uitgeschakeld",
+    "guides": {
+      "heading": "Gidsen & updates",
+      "description": "Ontdek snelle tips om alles uit de extensie te halen.",
+      "loading": "Gidsen laden…",
+      "empty": "Je bent weer helemaal bij.",
+      "error": "Gidsen konden niet worden geladen. Open het dashboard om het later opnieuw te proberen.",
+      "viewedBadge": "Bekeken",
+      "openCta": "Bekijken",
+      "openAria": "Open gids {{title}}",
+      "opening": "Bezig…",
+      "markViewed": "Markeer “{{title}}” als bekeken",
+      "markViewedAria": "Markeer gids {{title}} als bekeken",
+      "markUnviewed": "Herstel “{{title}}”",
+      "markUnviewedAria": "Herstel gids {{title}}"
+    }
   },
   "options": {
     "heading": "AI Companion Dashboard",
@@ -93,7 +108,12 @@
       "estimatedTime": "{{minutes}} min lezen",
       "openCta": "Bekijken",
       "openAria": "Open gids {{title}}",
-      "opening": "Bezig…"
+      "opening": "Bezig…",
+      "markViewed": "Markeer “{{title}}” als bekeken",
+      "markViewedAria": "Markeer gids {{title}} als bekeken",
+      "markUnviewed": "Herstel “{{title}}”",
+      "markUnviewedAria": "Herstel gids {{title}}",
+      "viewedBadge": "Bekeken"
     },
     "favoriteFolder": "Markeren als favoriet",
     "unfavoriteFolder": "Favoriet verwijderen",

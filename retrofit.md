@@ -78,6 +78,11 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - ✅ `useBubbleLauncherStore` hydrateert via `chrome.storage.local` (`initializeBubbleLauncherStore`) en cachet de geflatteerde mapstructuur, zodat favorieten onmiddellijk zichtbaar zijn bij heropenen.
    - ✅ QA: Nieuwe regressiestap voor dock-favorieten toegevoegd aan [`docs/testing/manual-regression.md`](docs/testing/manual-regression.md#bookmark--pin-workflow).
 
+8. **Gidsstatus synchroniseren** –
+   - ✅ `useSettingsStore` bewaart `dismissedGuideIds` en synchroniseert wijzigingen tussen popup, options en content.
+   - ✅ Options- en popup-surfaces tonen een “Markeer als bekeken”-toggle inclusief badge, persistente status en omkeeractie.
+   - ✅ QA: Regressiegids uitgebreid met stappen voor gids-toggles in zowel dashboard als popup.
+
 ## Prioriteiten en stappen per featuregroep
 
 
@@ -205,5 +210,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-16 | _pending_ | Onboarding & gidsen | Guides dataset + Zod-validatie toegevoegd; npm run lint/test uitgevoerd |
 | 2025-10-17 | _pending_ | Onboarding & gidsen | Options-gidsenkaart + telemetry event logging; npm run lint/test/build uitgevoerd |
 | 2025-10-18 | _pending_ | Pin- & bulkbeheer | Dock-favorieten cache hydrateert via chrome.storage; unit test bubbleLauncherStore + lint/test/build uitgevoerd |
+| 2025-10-18 | _pending_ | Onboarding & gidsen | Guides “Markeer als bekeken”-toggles + storage sync; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

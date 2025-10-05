@@ -34,6 +34,7 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
    - Pin and bookmark buttons on each card toggle state and counts without requiring a refresh.
 3. Use “Open conversation” on the pinned chat and confirm a new tab targets the correct conversation id.
 4. Scroll to the placeholder sections at the bottom of the popup and ensure they still show the “arrive soon” copy for bookmarks, pinned chats, and recent activity (regressions here can break expectations for upcoming features).
+5. Controleer in het nieuwe blok “Gidsen & updates” dat de lijst verschijnt, dat “Bekijken” een nieuw tabblad opent en dat het “Markeer als bekeken”-label synchroniseert met de dashboardkaart.
 
 ## Dashboard / options regression
 
@@ -45,6 +46,7 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
    - Controleer dat de gidsen binnen twee seconden laden en dat de kaart geen foutmelding toont.
    - Klik “Bekijken” bij een gids en verifieer dat er een nieuw tabblad opent op de Guideflow-URL.
    - Open `chrome://extensions` → “Service worker” console en bevestig dat er een logregel `telemetry event` verschijnt met `event: "guide-opened"` en het juiste `guideId`.
+   - Zet “Markeer als bekeken” aan voor een gids, herlaad de pagina en bevestig dat de badge “Bekeken” zichtbaar blijft. Zet de toggle daarna weer uit en controleer dat de gids opnieuw als ongelezen verschijnt.
 4. In de conversation section:
    - Verify the folder tree renders and the active conversations appear in the table with correct message/word/character counts.
    - Toggle the pinned filter to “Pinned only” and ensure only the pinned conversation remains. Switch back to “All”.

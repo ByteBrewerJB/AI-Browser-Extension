@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { parseGuidesFile, type GuideResource } from '@/core/models/guides';
+import type { GuideResource } from '@/core/models/guides';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
-
-interface GuidesState {
-  status: 'idle' | 'loading' | 'loaded' | 'error';
-  guides: GuideResource[];
-  error?: string | null;
-}
+import { openGuideResource, useGuideResources } from '@/shared/hooks/useGuideResources';
+import { useSettingsStore } from '@/shared/state/settingsStore';
 
 const BADGE_CLASSES: Record<GuideResource['badgeColor'], string> = {
   amber: 'bg-amber-500/20 text-amber-200 border border-amber-400/40',
@@ -23,81 +19,17 @@ function formatBadgeLabel(color: GuideResource['badgeColor']) {
   return color.charAt(0).toUpperCase() + color.slice(1);
 }
 
-function resolveGuidesUrl(): string {
-  const chromeApi = (globalThis as unknown as { chrome?: typeof chrome }).chrome;
-  if (chromeApi?.runtime?.getURL) {
-    return chromeApi.runtime.getURL('guides.json');
-  }
-  return '/guides.json';
-}
-
-async function openGuideTab(url: string) {
-  const chromeApi = (globalThis as unknown as { chrome?: typeof chrome }).chrome;
-
-  if (chromeApi?.tabs?.create) {
-    await new Promise<void>((resolve, reject) => {
-      chromeApi.tabs.create({ url, active: true }, () => {
-        const error = chromeApi.runtime?.lastError;
-        if (error) {
-          reject(new Error(error.message));
-          return;
-        }
-        resolve();
-      });
-    });
-    return;
-  }
-
-  if (typeof window !== 'undefined') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
-}
-
 export function GuideResourcesCard() {
   const { t } = useTranslation();
-  const [state, setState] = useState<GuidesState>({ status: 'idle', guides: [] });
+  const guidesState = useGuideResources();
   const [pendingGuideId, setPendingGuideId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const dismissedGuideIds = useSettingsStore((state) => state.dismissedGuideIds);
+  const setGuideDismissed = useSettingsStore((state) => state.setGuideDismissed);
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function loadGuides() {
-      setState({ status: 'loading', guides: [] });
-      try {
-        const response = await fetch(resolveGuidesUrl(), { signal: controller.signal, cache: 'no-cache' });
-        if (!response.ok) {
-          throw new Error(`Failed to load guides (${response.status})`);
-        }
-        const data = await response.json();
-        const parsed = parseGuidesFile(data);
-        if (cancelled) {
-          return;
-        }
-        setState({ status: 'loaded', guides: parsed.guides });
-      } catch (error) {
-        if (cancelled || controller.signal.aborted) {
-          return;
-        }
-        setState({
-          status: 'error',
-          guides: [],
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    }
-
-    void loadGuides();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, []);
-
-  const isLoading = state.status === 'loading';
-  const hasGuides = state.status === 'loaded' && state.guides.length > 0;
+  const isLoading = guidesState.status === 'loading';
+  const hasGuides = guidesState.status === 'loaded' && guidesState.guides.length > 0;
+  const guides = guidesState.guides;
 
   const topicLabel = useCallback(
     (topics: string[]) => {
@@ -114,7 +46,7 @@ export function GuideResourcesCard() {
       setActionError(null);
       setPendingGuideId(guide.id);
       try {
-        await openGuideTab(guide.url);
+        await openGuideResource(guide.url);
         await sendRuntimeMessage('jobs/log-event', {
           event: 'guide-opened',
           guideId: guide.id,
@@ -133,6 +65,13 @@ export function GuideResourcesCard() {
     []
   );
 
+  const handleToggleDismissed = useCallback(
+    (guideId: string, dismissed: boolean) => {
+      setGuideDismissed(guideId, dismissed);
+    },
+    [setGuideDismissed]
+  );
+
   const heading = t('options.guideResources.heading', { defaultValue: 'Guides & updates' });
   const description = t('options.guideResources.description', {
     defaultValue: 'Explore quickstart guides to learn new workflows and settings.'
@@ -147,6 +86,43 @@ export function GuideResourcesCard() {
   const topicsLabel = t('options.guideResources.topics', {
     defaultValue: 'Topics'
   });
+  const markViewedLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('options.guideResources.markViewed', {
+          defaultValue: 'Mark “{{title}}” as viewed',
+          title
+        }),
+    [t]
+  );
+  const markViewedAriaLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('options.guideResources.markViewedAria', {
+          defaultValue: 'Mark guide {{title}} as viewed',
+          title
+        }),
+    [t]
+  );
+  const markUnviewedLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('options.guideResources.markUnviewed', {
+          defaultValue: 'Restore “{{title}}”',
+          title
+        }),
+    [t]
+  );
+  const markUnviewedAriaLabel = useMemo(
+    () =>
+      (title: string) =>
+        t('options.guideResources.markUnviewedAria', {
+          defaultValue: 'Restore guide {{title}}',
+          title
+        }),
+    [t]
+  );
+  const viewedBadge = t('options.guideResources.viewedBadge', { defaultValue: 'Viewed' });
   const estimatedTimeLabel = useMemo(
     () =>
       (minutes: number) =>
@@ -186,17 +162,18 @@ export function GuideResourcesCard() {
 
       {isLoading ? (
         <p className="text-xs text-slate-400">{t('options.loading', { defaultValue: 'Loading…' })}</p>
-      ) : state.status === 'error' ? (
+      ) : guidesState.status === 'error' ? (
         <p className="text-xs text-rose-400">{errorLabel}</p>
       ) : hasGuides ? (
         <ul className="flex flex-col gap-4">
-          {state.guides.map((guide) => {
+          {guides.map((guide) => {
             const badgeClasses = BADGE_CLASSES[guide.badgeColor];
             const topics = topicLabel(guide.topics);
             const estimatedTime = guide.estimatedTimeMinutes
               ? estimatedTimeLabel(guide.estimatedTimeMinutes)
               : null;
             const pending = pendingGuideId === guide.id;
+            const dismissed = dismissedGuideIds.includes(guide.id);
 
             return (
               <li
@@ -209,6 +186,11 @@ export function GuideResourcesCard() {
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClasses}`}>
                         {formatBadgeLabel(guide.badgeColor)}
                       </span>
+                      {dismissed ? (
+                        <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                          {viewedBadge}
+                        </span>
+                      ) : null}
                       {estimatedTime ? (
                         <span className="text-[11px] text-slate-400">{estimatedTime}</span>
                       ) : null}
@@ -222,7 +204,7 @@ export function GuideResourcesCard() {
                       </p>
                     ) : null}
                   </div>
-                  <div>
+                  <div className="flex flex-col items-end gap-2">
                     <button
                       type="button"
                       className="rounded-md bg-emerald-500 px-3 py-1 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
@@ -231,6 +213,15 @@ export function GuideResourcesCard() {
                       aria-label={openAriaLabel(guide.title)}
                     >
                       {pending ? t('options.guideResources.opening', { defaultValue: 'Opening…' }) : openLabel(guide.title)}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-emerald-400 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-70"
+                      onClick={() => handleToggleDismissed(guide.id, !dismissed)}
+                      aria-pressed={dismissed}
+                      aria-label={dismissed ? markUnviewedAriaLabel(guide.title) : markViewedAriaLabel(guide.title)}
+                    >
+                      {dismissed ? markUnviewedLabel(guide.title) : markViewedLabel(guide.title)}
                     </button>
                   </div>
                 </div>
