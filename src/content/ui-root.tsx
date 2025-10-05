@@ -27,6 +27,7 @@ import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import {
+  initializeBubbleLauncherStore,
   useBubbleLauncherStore,
   type FolderShortcut
 } from '@/shared/state/bubbleLauncherStore';
@@ -2440,7 +2441,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
 }
 
 async function init() {
-  await initializeSettingsStore();
+  await Promise.all([initializeSettingsStore(), initializeBubbleLauncherStore()]);
   const host = await ensureShadowHost();
   const container = mountReact(host);
   const root = createRoot(container);

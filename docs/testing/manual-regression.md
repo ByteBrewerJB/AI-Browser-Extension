@@ -66,7 +66,7 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 3. Unpin the first conversation in the dashboard table (via row actions) and confirm the popup no longer labels it as pinned after reopening.
 4. Open the bubble dock on an active ChatGPT conversation, switch to the “History” tab, and validate the folder shortcuts:
    - Toggle a folder to favorite via the star button and confirm the “Fav” badge appears next to the name.
-   - Refresh the tab or hide/show the dock to ensure the cached favorites render immediately without flicker.
+   - Refresh the tab or hide/show the dock and ensure the cached favorites render **immediately** before the folder tree reloads; repeat in a new tab to verify the chrome.storage cache.
    - Remove the favorite and note the star button disables while the change is persisted.
 5. With the same conversation in view, open the “Actions” bubble and select a message from the list. Verify that:
    - “Bookmark” opens the inline bookmark modal with the selected message preselected.
