@@ -126,6 +126,26 @@ export class CompanionDatabase extends Dexie {
       jobs: 'id, status, runAt, updatedAt',
       metadata: 'key'
     });
+    this.version(6)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind, favorite',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id',
+        jobs: 'id, status, runAt, updatedAt',
+        metadata: 'key'
+      })
+      .upgrade(async (transaction) => {
+        await transaction.table('folders').toCollection().modify((folder) => {
+          if (typeof folder.favorite !== 'boolean') {
+            folder.favorite = false;
+          }
+        });
+      });
   }
 }
 
@@ -135,3 +155,5 @@ export async function resetDatabase() {
   await db.delete();
   await db.open();
 }
+
+

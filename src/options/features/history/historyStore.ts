@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import type { ConversationTableConfig, ConversationTablePreset } from '@/core/models';
-import { archiveConversations, createFolder, deleteConversations, deleteFolder, togglePinned } from '@/core/storage';
+import { archiveConversations, createFolder, deleteConversations, deleteFolder, toggleFavoriteFolder, togglePinned } from '@/core/storage';
 import { createConversationTablePreset, deleteConversationTablePreset } from '@/core/storage/settings';
 
 interface HistoryState {
@@ -16,6 +16,7 @@ interface HistoryState {
   deletePreset: (id: string) => Promise<void>;
   createConversationFolder: () => Promise<void>;
   deleteConversationFolder: (id: string) => Promise<void>;
+  toggleConversationFolderFavorite: (id: string) => Promise<void>;
   togglePin: (conversationId: string) => Promise<void>;
   selectedConversationIds: string[];
   toggleSelection: (conversationId: string) => void;
@@ -93,6 +94,14 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       throw error;
     }
   },
+  toggleConversationFolderFavorite: async (id: string) => {
+    try {
+      await toggleFavoriteFolder(id);
+    } catch (error) {
+      console.error('[historyStore] failed to toggle folder favorite', error);
+      throw error;
+    }
+  },
   togglePin: async (conversationId: string) => {
     try {
       await togglePinned(conversationId);
@@ -138,3 +147,6 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     }
   }
 }));
+
+
+

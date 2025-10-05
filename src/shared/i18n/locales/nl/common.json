@@ -83,6 +83,9 @@
       "completed": "Voltooid",
       "failed": "Mislukt"
     },
+    "favoriteFolder": "Markeren als favoriet",
+    "unfavoriteFolder": "Favoriet verwijderen",
+    "favoriteBadge": "Fav",
     "conversationHeading": "Overzicht van gesprekken",
     "conversationDescription": "Laatste chats vastgelegd vanuit ChatGPT (lokaal opgeslagen).",
     "conversationEmpty": "Nog geen gesprekken vastgelegd.",
@@ -253,7 +256,16 @@
         "folderShortcuts": "Map-snelkoppelingen",
         "folderShortcutsEmpty": "Maak mappen in het dashboard om ze hier snel terug te vinden.",
         "archive": "Archiveren",
-        "restore": "Herstellen"
+        "restore": "Herstellen",
+        "moveAction": "Verplaatsen",
+        "moveDialogTitle": "Verplaats \"{{title}}\"",
+        "moveDialogTitleDefault": "Gesprek verplaatsen",
+        "moveDialogDescription": "Kies waar je \"{{title}}\" wilt bewaren.",
+        "moveDialogDescriptionDefault": "Selecteer een doelmap voor dit gesprek.",
+        "moveRoot": "Geen map (hoofdniveau)",
+        "moveConfirm": "Verplaatsen",
+        "moveCancel": "Annuleren",
+        "favoriteBadge": "Fav"
       },
       "prompts": {
         "heading": "Promptsjablonen",

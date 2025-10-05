@@ -6,11 +6,12 @@ export interface FolderOption {
   id: string;
   name: string;
   depth: number;
+  favorite: boolean;
 }
 
 export function flattenFolderOptions(nodes: FolderTreeNode[], depth = 0): FolderOption[] {
   return nodes.flatMap((node) => [
-    { id: node.id, name: node.name, depth },
+    { id: node.id, name: node.name, depth, favorite: Boolean(node.favorite) },
     ...flattenFolderOptions(node.children, depth + 1)
   ]);
 }
@@ -97,3 +98,4 @@ export function truncate(text: string, limit = 120) {
   }
   return `${text.slice(0, limit)}…`;
 }
+

@@ -83,6 +83,9 @@
       "completed": "Completed",
       "failed": "Failed"
     },
+    "favoriteFolder": "Mark as favorite",
+    "unfavoriteFolder": "Remove favorite",
+    "favoriteBadge": "Fav",
     "conversationHeading": "Conversation overview",
     "conversationDescription": "Latest chats captured from ChatGPT (stored locally).",
     "conversationEmpty": "No conversations captured yet.",
@@ -253,7 +256,16 @@
         "folderShortcuts": "Folder shortcuts",
         "folderShortcutsEmpty": "Create folders in the dashboard to access them quickly here.",
         "archive": "Archive",
-        "restore": "Restore"
+        "restore": "Restore",
+        "moveAction": "Move",
+        "moveDialogTitle": "Move \"{{title}}\"",
+        "moveDialogTitleDefault": "Move conversation",
+        "moveDialogDescription": "Choose where to store \"{{title}}\".",
+        "moveDialogDescriptionDefault": "Select a destination folder for this conversation.",
+        "moveRoot": "No folder (top level)",
+        "moveConfirm": "Move",
+        "moveCancel": "Cancel",
+        "favoriteBadge": "Fav"
       },
       "prompts": {
         "heading": "Prompt templates",

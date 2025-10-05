@@ -5,10 +5,11 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
-import { archiveConversations, togglePinned } from '@/core/storage';
+import { archiveConversations, togglePinned, upsertConversation } from '@/core/storage';
 import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/core/storage';
 import type { PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
+import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
 import { EmptyState } from '@/shared/components';
 import { useFolders } from '@/shared/hooks/useFolders';
@@ -106,11 +107,12 @@ interface FolderOption {
   id: string;
   name: string;
   depth: number;
+  favorite: boolean;
 }
 
 function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderOption[] {
   return nodes.flatMap((node) => [
-    { id: node.id, name: node.name, depth },
+    { id: node.id, name: node.name, depth, favorite: Boolean(node.favorite) },
     ...flattenFolderTree(node.children, depth + 1)
   ]);
 }
@@ -221,10 +223,11 @@ interface ConversationListProps {
   emptyTitle: string;
   emptyDescription: string;
   onTogglePin: (id: string) => void;
+  onMove: (conversation: ConversationOverview) => void;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function ConversationList({ title, conversations, emptyTitle, emptyDescription, onTogglePin, t }: ConversationListProps) {
+function ConversationList({ title, conversations, emptyTitle, emptyDescription, onTogglePin, onMove, t }: ConversationListProps) {
   return (
     <SidebarSection
       action={
@@ -279,6 +282,13 @@ function ConversationList({ title, conversations, emptyTitle, emptyDescription, 
                       type="button"
                     >
                       {t('popup.openConversation') ?? 'Open'}
+                    </button>
+                    <button
+                      className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                      onClick={() => onMove(conversation)}
+                      type="button"
+                    >
+                      {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
                     </button>
                     <button
                       className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
@@ -469,6 +479,74 @@ function HistoryTab(): ReactElement {
 
   const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
 
+  const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
+  const [movePending, setMovePending] = useState(false);
+
+  const moveDialogOptions = useMemo<MoveDialogOption[]>(
+    () =>
+      folderOptions.map((folder) => ({
+        id: folder.id,
+        label: folder.name,
+        depth: folder.depth,
+        favorite: folder.favorite
+      })),
+    [folderOptions]
+  );
+
+  const openMoveDialog = useCallback((conversation: ConversationOverview) => {
+    setMoveTarget(conversation);
+  }, []);
+
+  const handleMoveDialogClose = useCallback(() => {
+    if (!movePending) {
+      setMoveTarget(null);
+    }
+  }, [movePending]);
+
+  const handleMoveSubmit = useCallback(
+    async (folderId?: string) => {
+      if (!moveTarget) {
+        return;
+      }
+      setMovePending(true);
+      try {
+        await upsertConversation({
+          id: moveTarget.id,
+          title: moveTarget.title,
+          folderId,
+          pinned: moveTarget.pinned,
+          archived: moveTarget.archived ?? false,
+          createdAt: moveTarget.createdAt,
+          wordCount: moveTarget.wordCount,
+          charCount: moveTarget.charCount
+        });
+        setMoveTarget(null);
+      } catch (error) {
+        console.error('[ai-companion] failed to move conversation', error);
+      } finally {
+        setMovePending(false);
+      }
+    },
+    [moveTarget]
+  );
+
+
+
+  const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
+  const moveDialogTitle = moveTarget
+    ? t('content.sidebar.history.moveDialogTitle', {
+        title: normalizeTitle(moveTarget.title, fallbackTitle)
+      })
+    : t('content.sidebar.history.moveDialogTitleDefault', { defaultValue: 'Move conversation' });
+  const moveDialogDescription = moveTarget
+    ? t('content.sidebar.history.moveDialogDescription', {
+        title: normalizeTitle(moveTarget.title, fallbackTitle)
+      })
+    : t('content.sidebar.history.moveDialogDescriptionDefault', {
+        defaultValue: 'Select a destination folder for this conversation.'
+      });
+
+
   const handleNavigateToFolder = useCallback((folderId: string | undefined) => {
     const searchParams: Record<string, string | undefined> = {
       view: 'history',
@@ -545,6 +623,14 @@ function HistoryTab(): ReactElement {
                           </button>
                           <button
                             className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                            onClick={() => openMoveDialog(conversation)}
+                            type="button"
+                          >
+                            {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
+                          </button>
+
+                          <button
+                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
                             onClick={() => handleTogglePin(conversation.id)}
                             type="button"
                           >
@@ -593,13 +679,16 @@ function HistoryTab(): ReactElement {
                       onClick={() => handleNavigateToFolder(folder.id)}
                       type="button"
                     >
-                      <span className="flex items-center gap-2">
-                        {folder.depth > 0 ? (
-                          <span className="text-[10px] text-slate-500" aria-hidden>
-                            {'•'.repeat(folder.depth)}
+                      <span
+                        className="flex items-center gap-2"
+                        style={{ paddingLeft: `${folder.depth * 12}px` }}
+                      >
+                        <span className="truncate">{folder.name}</span>
+                        {folder.favorite ? (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                            {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
                           </span>
                         ) : null}
-                        <span className="truncate">{folder.name}</span>
                       </span>
                     </button>
                   </li>
@@ -616,12 +705,26 @@ function HistoryTab(): ReactElement {
           defaultValue: 'Start chatting to populate your history.'
         })}
         emptyTitle={t('content.sidebar.history.recentHeading', { defaultValue: 'Recent updates' })}
+        onMove={openMoveDialog}
         onTogglePin={handleTogglePin}
         t={t}
         title={t('content.sidebar.history.recentHeading', { defaultValue: 'Recent updates' })}
       />
 
       <BookmarkList bookmarks={bookmarks} t={t} />
+      <MoveDialog
+        open={Boolean(moveTarget)}
+        title={moveDialogTitle}
+        description={moveDialogDescription}
+        currentFolderId={moveTarget?.folderId}
+        rootOptionLabel={t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' })}
+        confirmLabel={t('content.sidebar.history.moveConfirm', { defaultValue: 'Move' })}
+        cancelLabel={t('content.sidebar.history.moveCancel', { defaultValue: 'Cancel' })}
+        folders={moveDialogOptions}
+        pending={movePending}
+        onMove={handleMoveSubmit}
+        onClose={handleMoveDialogClose}
+      />
     </div>
   );
 }

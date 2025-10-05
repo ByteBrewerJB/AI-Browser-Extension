@@ -40,6 +40,18 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 3. **Log voortgang** – Noteer onderaan in het logboek welke stappen afgerond zijn, inclusief datum, commit, tests en openstaande acties.
 4. **Bewaar pariteit met voorbeeldfunctionaliteit** – Controleer per onderdeel welke UX-elementen in de voorbeeldmap beschreven zijn en documenteer expliciet wanneer je ervan afwijkt.
 
+## Sessieresultaten 2025-10-05
+
+- **Folders & favorieten** – Dexie-schema versie 6 met `favorite` vlag staat live; `toggleFavoriteFolder` + ster-iconen zijn beschikbaar in options (`HistorySection`) en het rechterdock (`HistoryTab`).
+- **Verplaatsdialogen** – Gedeelde `MoveDialog` component staat in `src/ui/components/MoveDialog.tsx` en is verbonden met zowel de dock-kaarten als de conversation-tabel in options. Conversations krijgen nu een "Verplaats"-knop die via `upsertConversation` de map bijwerkt.
+- **Pinned workflow** – Pinned-lijst toont favorieten en gebruikt dezelfde dialoog; folder-snelkoppelingen tonen nieuwe `Fav`-badges.
+
+## Volgende stappen
+
+1. **Bladwijzer-overlay afronden** – Koppel `collectMessageElements` in `src/content/ui-root.tsx` aan een bubbelpaneel i.p.v. inline acties. Bouw een shadow-root modal (hergebruik `Modal`) die note-opslag afhandelt via `toggleBookmark` en breid `BookmarkSummary` uit met `messagePreview` (`db.bookmarks` migreren met een fallback voor bestaande records).
+2. **Contextmenu herintroduceren** – Voeg een custom contextmenu toe in `src/content/sidebar-host.ts` dat de bestaande stores (`usePinnedConversations`, `usePrompts`) aanspreekt. Gebruik `chrome.runtime.sendMessage` routes die nu al voor MoveDialog aanwezig zijn als template.
+3. **Promptketens en variabelen** – Werk `src/core/models/records.ts` bij met `variables: string[]` voor prompts, schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` en verbind de nieuwe chain-runner (`textareaPrompts`) zodat `MoveDialog`-achtige state wordt hergebruikt voor promptketens.
+
 ## Prioriteiten en stappen per featuregroep
 
 
@@ -147,5 +159,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 
 | Datum | Commit | Featuregroep(en) | Opmerkingen |
 | --- | --- | --- | --- |
+| 2025-10-05 | _pending_ | Conversatiedock; pin/verplaats | Dexie v6 favoriete mappen + MoveDialog toegevoegd; lint uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

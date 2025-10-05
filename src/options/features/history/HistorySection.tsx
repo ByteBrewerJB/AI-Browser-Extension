@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
@@ -35,6 +35,7 @@ export function HistorySection() {
     applyPreset,
     createConversationFolder,
     deleteConversationFolder,
+    toggleConversationFolderFavorite,
     togglePin,
     selectedConversationIds,
     toggleSelection,
@@ -167,6 +168,12 @@ export function HistorySection() {
     await deletePreset(presetId);
   };
 
+  const handleToggleFolderFavorite = async (event: MouseEvent<HTMLButtonElement>, folderId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await toggleConversationFolderFavorite(folderId);
+  };
+
   const handleApplyConversationPreset = (preset: ConversationTablePreset) => {
     applyPreset(preset);
   };
@@ -239,26 +246,50 @@ export function HistorySection() {
                 >
                   {t('options.filterFolderAll')}
                 </OptionBubble>
-                {conversationFolderOptions.map((option) => (
-                  <OptionBubble
-                    key={option.id}
-                    selected={conversationConfig.folderId === option.id}
-                    onClick={() =>
-                      handleConversationConfigChange({
-                        folderId: option.id as ConversationTableConfig['folderId']
-                      })
-                    }
-                    onRemove={() => void deleteConversationFolder(option.id)}
-                    removeLabel={t('options.deleteFolder') ?? undefined}
-                  >
-                    <span className="flex items-center gap-2">
-                      {option.depth > 0 ? (
-                        <span className="text-xs text-slate-500">{'•'.repeat(option.depth)}</span>
-                      ) : null}
-                      <span>{option.name}</span>
-                    </span>
-                  </OptionBubble>
-                ))}
+                {conversationFolderOptions.map((option) => {
+                  const favoriteToggleLabel = option.favorite
+                    ? t('options.unfavoriteFolder', { defaultValue: 'Remove favorite' })
+                    : t('options.favoriteFolder', { defaultValue: 'Mark as favorite' });
+                  return (
+                    <div key={option.id} className="flex items-center gap-2">
+                      <OptionBubble
+                        selected={conversationConfig.folderId === option.id}
+                        onClick={() =>
+                          handleConversationConfigChange({
+                            folderId: option.id as ConversationTableConfig['folderId']
+                          })
+                        }
+                        onRemove={() => void deleteConversationFolder(option.id)}
+                        removeLabel={t('options.deleteFolder') ?? undefined}
+                      >
+                        <span
+                          className="flex items-center gap-2"
+                          style={{ paddingLeft: `${option.depth * 12}px` }}
+                        >
+                          <span className="truncate">{option.name}</span>
+                          {option.favorite ? (
+                            <span className="rounded border border-amber-400 px-1 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                              {t('options.favoriteBadge', { defaultValue: 'Fav' })}
+                            </span>
+                          ) : null}
+                        </span>
+                      </OptionBubble>
+                      <button
+                        type="button"
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border px-0 text-xs font-semibold transition ${
+                          option.favorite
+                            ? 'border-amber-400 text-amber-200'
+                            : 'border-slate-700 text-slate-300 hover:border-emerald-400 hover:text-emerald-100'
+                        }`}
+                        aria-pressed={option.favorite}
+                        aria-label={favoriteToggleLabel}
+                        onClick={(event) => void handleToggleFolderFavorite(event, option.id)}
+                      >
+                        {option.favorite ? '*' : '+'}
+                      </button>
+                    </div>
+                  );
+                })}
                 <OptionBubble
                   selected={showConversationFolderForm}
                   aria-label={t('options.addFolder') ?? 'Add folder'}
@@ -658,3 +689,6 @@ export function HistorySection() {
   );
 
 }
+
+
+

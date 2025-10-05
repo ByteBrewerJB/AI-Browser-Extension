@@ -1,4 +1,4 @@
-﻿export type Role = 'user' | 'assistant' | 'system' | 'tool';
+export type Role = 'user' | 'assistant' | 'system' | 'tool';
 
 export interface ConversationRecord {
   id: string;
@@ -59,6 +59,7 @@ export interface FolderRecord {
   createdAt: string;
   updatedAt: string;
   kind: 'conversation' | 'prompt' | 'gpt';
+  favorite?: boolean;
 }
 
 export interface BookmarkRecord {
@@ -121,5 +122,6 @@ export interface JobRecord {
 }
 
 export type JobSnapshot = Omit<JobRecord, 'payload'>;
+
 
 
