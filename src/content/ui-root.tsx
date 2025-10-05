@@ -11,6 +11,7 @@ import {
   getBookmarks,
   getConversationOverviewById,
   toggleBookmark,
+  toggleFavoriteFolder,
   togglePinned,
   upsertConversation
 } from '@/core/storage';
@@ -25,7 +26,10 @@ import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
-import { useBubbleLauncherStore } from '@/shared/state/bubbleLauncherStore';
+import {
+  useBubbleLauncherStore,
+  type FolderShortcut
+} from '@/shared/state/bubbleLauncherStore';
 import type { Bubble } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
@@ -609,14 +613,7 @@ function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps
   );
 }
 
-interface FolderOption {
-  id: string;
-  name: string;
-  depth: number;
-  favorite: boolean;
-}
-
-function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderOption[] {
+function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderShortcut[] {
   return nodes.flatMap((node) => [
     { id: node.id, name: node.name, depth, favorite: Boolean(node.favorite) },
     ...flattenFolderTree(node.children, depth + 1)
@@ -988,6 +985,10 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
   const conversationFolders = useFolderTree('conversation');
   const recentConversations = useRecentConversations(6);
   const bookmarks = useRecentBookmarks(4);
+  const cachedFolderShortcuts = useBubbleLauncherStore((state) => state.conversationFolderShortcuts);
+  const setConversationFolderShortcuts = useBubbleLauncherStore(
+    (state) => state.setConversationFolderShortcuts
+  );
 
   const handleTogglePin = useCallback((conversationId: string) => {
     void togglePinned(conversationId);
@@ -997,7 +998,44 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
     void archiveConversations([conversationId], !archived);
   }, []);
 
-  const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
+  const flattenedFolderTree = useMemo(
+    () => flattenFolderTree(conversationFolders),
+    [conversationFolders]
+  );
+
+  useEffect(() => {
+    if (flattenedFolderTree.length === 0) {
+      return;
+    }
+    setConversationFolderShortcuts(flattenedFolderTree);
+  }, [flattenedFolderTree, setConversationFolderShortcuts]);
+
+  const folderOptions = flattenedFolderTree.length > 0 ? flattenedFolderTree : cachedFolderShortcuts;
+
+  const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(() => new Set());
+
+  const handleToggleFavorite = useCallback(
+    async (folderId: string, next: boolean) => {
+      setFavoritePendingIds((current) => {
+        const nextSet = new Set(current);
+        nextSet.add(folderId);
+        return nextSet;
+      });
+
+      try {
+        await toggleFavoriteFolder(folderId, next);
+      } catch (error) {
+        console.error('[ai-companion] failed to toggle favorite folder from dock', error);
+      } finally {
+        setFavoritePendingIds((current) => {
+          const nextSet = new Set(current);
+          nextSet.delete(folderId);
+          return nextSet;
+        });
+      }
+    },
+    [toggleFavoriteFolder]
+  );
 
   const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
   const [movePending, setMovePending] = useState(false);
@@ -1192,27 +1230,51 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
                     {t('options.filterFolderAll', { defaultValue: 'All folders' })}
                   </button>
                 </li>
-                {folderOptions.map((folder) => (
-                  <li key={folder.id}>
-                    <button
-                      className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                      onClick={() => handleNavigateToFolder(folder.id)}
-                      type="button"
-                    >
-                      <span
-                        className="flex items-center gap-2"
-                        style={{ paddingLeft: `${folder.depth * 12}px` }}
-                      >
-                        <span className="truncate">{folder.name}</span>
-                        {folder.favorite ? (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
-                            {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
+                {folderOptions.map((folder) => {
+                  const favoriteToggleLabel = folder.favorite
+                    ? t('content.sidebar.history.unfavoriteFolder', {
+                        defaultValue: 'Remove favorite'
+                      })
+                    : t('content.sidebar.history.favoriteFolder', {
+                        defaultValue: 'Mark as favorite'
+                      });
+                  const pendingFavorite = favoritePendingIds.has(folder.id);
+
+                  return (
+                    <li key={folder.id}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="flex-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                          onClick={() => handleNavigateToFolder(folder.id)}
+                          type="button"
+                        >
+                          <span
+                            className="flex items-center gap-2"
+                            style={{ paddingLeft: `${folder.depth * 12}px` }}
+                          >
+                            <span className="truncate">{folder.name}</span>
+                            {folder.favorite ? (
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                                {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
+                              </span>
+                            ) : null}
                           </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                        </button>
+                        <button
+                          className="rounded-md border border-amber-400/70 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => void handleToggleFavorite(folder.id, !folder.favorite)}
+                          type="button"
+                          aria-label={favoriteToggleLabel}
+                          aria-pressed={folder.favorite}
+                          disabled={pendingFavorite}
+                          title={favoriteToggleLabel ?? undefined}
+                        >
+                          {folder.favorite ? '★' : '☆'}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

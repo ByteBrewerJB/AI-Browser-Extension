@@ -7,7 +7,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | Featuregroep | Scope in dit retrofit | Status | Laatste update |
 | --- | --- | --- | --- |
 | Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
-| Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
+| Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | 2025-10-13 – _pending_ (dockfavorieten + caching) |
 | Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-08 – 6361a26 (bookmark-modal preview + regressietest) |
 | Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 🚧 Ontwikkeling | 2025-10-09 – _pending_ (variabelen + cancel runner) |
 | Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
@@ -64,6 +64,19 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - ✅ Formulierlogica in `src/options/features/prompts/PromptsSection.tsx` ondersteunt variabelenpillen met `promptVariablesSchema`-validatie.
    - ✅ Chain-runner (`textareaPrompts`) gekoppeld aan `usePromptChainsStore` en aangevuld met een cancel-pad zodat runtime state gedeeld en afbreekbaar is.
    - ✅ QA-notes in `docs/testing/manual-regression.md` (sectie "Promptketens") documenteren volledige flow inclusief annuleren tijdens uitvoering.
+4. **Bulkexport conversaties** –
+   - ✅ Dashboard/Options toont nu een "Selectie exporteren"-actie in de gesprekssectie inclusief JSON/TXT-keuze en planning via `jobs/schedule-export`.
+   - ✅ QA: Exportmodal getest met één en meerdere gesprekken en genoteerd in de regressiegids (Dashboard stap 6) + job zichtbaar in de kaart "Scheduled exports".
+5. **Verplaatsdialogen afronden** –
+   - ✅ Options-geschiedenis hergebruikt `MoveDialog` per rij zodat gesprekken naar mapstructuur of bovenste niveau verplaatst kunnen worden.
+   - ✅ QA: Chrome 129 (Linux) – verplaatsing heen en terug gevalideerd; nieuwe stap toegevoegd aan regressiegids (Dashboard stap 7).
+6. **Bulkverplaatsing gesprekken** –
+   - ✅ Selectie in Dashboard/Options opent nu dezelfde verplaatsdialoog zodat meerdere gesprekken in één actie naar een map of het hoofdniveau kunnen worden verplaatst.
+   - ✅ QA: Bulk-move gevalideerd op de dashboardtabel; regressiegids uitgebreid met stap 8 en logboek bijgewerkt.
+7. **Favoriete mappen in het dock beheren** –
+   - ✅ Map-snelkoppelingen in de History-tab tonen sterknoppen zodat favorieten direct vanuit het bubbledock aangepast kunnen worden.
+   - ✅ `useBubbleLauncherStore` cachet nu de geflatteerde mapstructuur waardoor favorieten onmiddellijk zichtbaar zijn bij heropenen.
+   - ✅ QA: Nieuwe regressiestap voor dock-favorieten toegevoegd aan [`docs/testing/manual-regression.md`](docs/testing/manual-regression.md#bookmark--pin-workflow).
 
 ## Prioriteiten en stappen per featuregroep
 
@@ -183,5 +196,9 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-07 | _pending_ | Composer uitbreidingen | Ketentab + ketenrunner in launcher; npm run lint/test/build uitgevoerd |
 | 2025-10-09 | _pending_ | Promptbibliotheek & ketens | Promptketen-variabelen, cancel-runner + QA-notes; npm run lint/test/build uitgevoerd |
 | 2025-10-10 | _pending_ | Bladwijzers & contextmenu | Chrome 129 (Linux) + Edge 128 smoke-test bookmark overlay; npm run lint/test/build uitgevoerd |
+| 2025-10-11 | _pending_ | Pin- & bulkbeheer | Bulkexportmodal ingepland voor selectie (JSON/TXT) + regressiegids bijgewerkt; npm run lint/test/build uitgevoerd |
+| 2025-10-11 | _pending_ | Pin- & bulkbeheer | MoveDialog in options-geschiedenis + statusnotitie en regressiestap; npm run lint/test/build uitgevoerd |
+| 2025-10-12 | _pending_ | Pin- & bulkbeheer | Bulkverplaatsing voor selectie + regressiestap bijgewerkt; npm run lint/test/build uitgevoerd |
+| 2025-10-13 | _pending_ | Pin- & bulkbeheer | Dock-favorieten toggle + caching; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
