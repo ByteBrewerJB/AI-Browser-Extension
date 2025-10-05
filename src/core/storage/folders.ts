@@ -1,5 +1,6 @@
 import { db } from './db';
-import type { FolderRecord } from '@/core/models';
+import { removeFoldersFromItems } from './folderItems';
+import type { ConversationRecord, FolderRecord, GPTRecord, PromptRecord } from '@/core/models';
 
 export type FolderKind = FolderRecord['kind'];
 
@@ -89,7 +90,7 @@ export async function getFolderTree(kind: FolderKind): Promise<FolderTreeNode[]>
 }
 
 export async function deleteFolder(folderId: string) {
-  await db.transaction('rw', db.folders, db.conversations, db.gpts, db.prompts, async () => {
+  await db.transaction('rw', [db.folders, db.conversations, db.gpts, db.prompts, db.folderItems], async () => {
     const allFolders = await db.folders.toArray();
     const byParent = new Map<string | undefined, FolderRecord[]>();
     for (const folder of allFolders) {
@@ -117,19 +118,42 @@ export async function deleteFolder(folderId: string) {
 
     const ids = Array.from(toDelete);
     const timestamp = nowIso();
+    const [conversations, gpts, prompts] = await Promise.all([
+      db.conversations.where('folderId').anyOf(ids).toArray(),
+      db.gpts.where('folderId').anyOf(ids).toArray(),
+      db.prompts.where('folderId').anyOf(ids).toArray()
+    ]);
+
     await db.folders.bulkDelete(ids);
-    await db.conversations
-      .where('folderId')
-      .anyOf(ids)
-      .modify({ folderId: undefined, updatedAt: timestamp });
-    await db.gpts
-      .where('folderId')
-      .anyOf(ids)
-      .modify({ folderId: undefined, updatedAt: timestamp });
-    await db.prompts
-      .where('folderId')
-      .anyOf(ids)
-      .modify({ folderId: undefined, updatedAt: timestamp });
+
+    if (conversations.length) {
+      const updatedConversations = conversations.map<ConversationRecord>((conversation) => ({
+        ...conversation,
+        folderId: undefined,
+        updatedAt: timestamp
+      }));
+      await db.conversations.bulkPut(updatedConversations);
+    }
+
+    if (gpts.length) {
+      const updatedGpts = gpts.map<GPTRecord>((gpt) => ({
+        ...gpt,
+        folderId: undefined,
+        updatedAt: timestamp
+      }));
+      await db.gpts.bulkPut(updatedGpts);
+    }
+
+    if (prompts.length) {
+      const updatedPrompts = prompts.map<PromptRecord>((prompt) => ({
+        ...prompt,
+        folderId: undefined,
+        updatedAt: timestamp
+      }));
+      await db.prompts.bulkPut(updatedPrompts);
+    }
+
+    await removeFoldersFromItems({ folderIds: ids, table: db.folderItems });
   });
 }
 

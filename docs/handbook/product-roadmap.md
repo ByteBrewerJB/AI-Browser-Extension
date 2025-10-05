@@ -1,6 +1,6 @@
 # AI Browser Extension — Architecture & Delivery Roadmap
 
-_Last updated: 2024-10-20_
+_Last updated: 2025-02-15_
 
 This living document combines the architectural snapshot, delivery status, and premium launch planning for the AI Browser Extension. Update it whenever shipped functionality or priorities change so contributors have a single source of truth.
 
@@ -20,7 +20,7 @@ This living document combines the architectural snapshot, delivery status, and p
 - **Background service worker** – Beheert auth-status, jobqueue met backoff, downloadexports en eventlogging. Messaging routes verbinden popup, options en content.
 
 ### State & shared services
-- **Dexie data model** – IndexedDB bevat gesprekken, berichten, prompts, GPT’s, folders, bookmarks, instellingen, jobs en metadata. Het schema laat ruimte voor toekomstige sync/back-up tabellen.
+- **Dexie data model** – IndexedDB bevat gesprekken, berichten, prompts, GPT’s, folders, folder-items, bookmarks, instellingen, jobs en metadata. De nieuwe `folder_items` pivot houdt folderlidmaatschappen van gesprekken/prompts/GPT’s bij zodat bulkacties en hiërarchische zoekindexen de juiste relatie hebben. Het schema laat ruimte voor toekomstige sync/back-up tabellen.
 - **Zoekservice** – MiniSearch-index wordt naar IndexedDB weggeschreven en bij opstart hersteld. Verwijderingen houden conversatie- en berichtdocumenten in sync.
 - **Export pipeline** – TXT/JSON exports gebruiken client-side helpers; de background handler maakt bestanden aan en start automatisch een `chrome.downloads.download` zodra de job slaagt.
 - **Authenticatie** – `AuthManager` decodeert JWT’s lokaal, deriveert premiumstatus en ondersteunt optionele JWKS caching. Signatuurvalidatie en refreshflows zijn nog niet geïmplementeerd.
@@ -41,6 +41,7 @@ This living document combines the architectural snapshot, delivery status, and p
 
 ### Near-term backlog (Phase 3 focus)
 _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden wanneer scopes verschuiven._
+- **Search & sidebar** – _Status: in uitvoering._ Dexie-schema uitgebreid met `folder_items` pivot; volgstap is Minisearch-indexering op maphiërarchie en pins.
 - Automatische jobs dashboard vervolledigen: retry hand-offs zichtbaar maken in de UI (filterpaneel live per 2025-10-05).
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.

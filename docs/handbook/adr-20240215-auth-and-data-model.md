@@ -1,6 +1,6 @@
 # ADR 2024-02-15 — Auth & data model richting premiumuitrol
 
-_Last reviewed: 2024-10-20_
+_Last reviewed: 2025-02-15_
 
 ## Context
 Premiumfeatures vragen om een betrouwbare identiteit, entitlementvalidatie en zorgvuldig databeheer. De huidige extensie draait volledig client-side maar moet voorbereid zijn op:
@@ -17,7 +17,7 @@ We hanteren een client-first aanpak met een lichte authlaag en een uitbreidbaar 
 - Tokens leven uitsluitend in geheugen (service worker scope). Er is geen refresh flow of opslag op schijf; dit voorkomt dat verouderde tokens lekken maar vereist backendondersteuning zodra echte sessies worden opgezet.
 
 ### Data model
-- Dexie (`src/core/storage/db.ts`) bevat tabellen voor gesprekken, berichten, prompts, GPT’s, folders, bookmarks, instellingen en de jobqueue. De structuur is ontworpen zodat toekomstige sync/backups extra tabellen kunnen toevoegen zonder brekende migraties.
+- Dexie (`src/core/storage/db.ts`) bevat tabellen voor gesprekken, berichten, prompts, GPT’s, folders, folder-items, bookmarks, instellingen en de jobqueue. `folder_items` fungeert als pivot tussen mappen en inhoud zodat bulkacties en hiërarchische zoekindexen meerdere itemtypes kunnen ondersteunen zonder duplicatie. De structuur blijft ontworpen zodat toekomstige sync/backups extra tabellen kunnen toevoegen zonder brekende migraties.
 - Encryptiehelpers bestaan (`core/storage/service.ts`) maar zijn niet geactiveerd. Zolang we lokaal blijven draaien, volstaat dit; zodra server syncs live gaan moeten we payloads versleutelen voordat ze het apparaat verlaten.
 - Entitlements worden momenteel niet opgeslagen. Premium UI gebruikt runtime auth-status; wanneer backendkoppeling komt, voegen we een `accounts`-tabel toe zodat entitlementwijzigingen offline kunnen worden afgedwongen.
 

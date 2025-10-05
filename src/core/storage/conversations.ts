@@ -1,4 +1,5 @@
 import { db } from './db';
+import { removeItemsFromFolders, setItemFolder } from './folderItems';
 import { removeConversationMetadata, syncConversationMetadata } from './syncBridge';
 import type { BookmarkRecord, ConversationRecord, MessageRecord } from '@/core/models';
 import { computeTextMetrics, sumTextMetrics } from '@/core/utils/textMetrics';
@@ -73,19 +74,34 @@ export async function getConversationOverviewById(
 
 export async function upsertConversation(input: ConversationUpsertInput) {
   const timestamp = input.updatedAt ?? nowIso();
-  const result = await db.conversations.put({
-    id: input.id,
-    title: input.title,
-    folderId: input.folderId,
-    pinned: input.pinned ?? false,
-    archived: input.archived ?? false,
-    createdAt: input.createdAt ?? timestamp,
-    updatedAt: timestamp,
-    wordCount: input.wordCount ?? 0,
-    charCount: input.charCount ?? 0
+  let result: string | number | undefined;
+  let stored: ConversationRecord | undefined;
+
+  await db.transaction('rw', db.conversations, db.folderItems, async () => {
+    result = await db.conversations.put({
+      id: input.id,
+      title: input.title,
+      folderId: input.folderId,
+      pinned: input.pinned ?? false,
+      archived: input.archived ?? false,
+      createdAt: input.createdAt ?? timestamp,
+      updatedAt: timestamp,
+      wordCount: input.wordCount ?? 0,
+      charCount: input.charCount ?? 0
+    });
+
+    stored = await db.conversations.get(input.id);
+    if (stored) {
+      await setItemFolder({
+        itemId: stored.id,
+        itemType: 'conversation',
+        folderId: stored.folderId,
+        timestamp,
+        table: db.folderItems
+      });
+    }
   });
 
-  const stored = await db.conversations.get(input.id);
   if (stored) {
     await syncConversationMetadata(stored);
   }
@@ -231,10 +247,11 @@ export async function deleteConversations(ids: string[]) {
   if (!ids.length) {
     return;
   }
-  await db.transaction('rw', db.messages, db.bookmarks, db.conversations, async () => {
+  await db.transaction('rw', db.messages, db.bookmarks, db.conversations, db.folderItems, async () => {
     await db.messages.where('conversationId').anyOf(ids).delete();
     await db.bookmarks.where('conversationId').anyOf(ids).delete();
     await db.conversations.bulkDelete(ids);
+    await removeItemsFromFolders({ itemType: 'conversation', itemIds: ids, table: db.folderItems });
   });
 
   await Promise.all(ids.map((id) => removeConversationMetadata(id)));
