@@ -328,7 +328,22 @@
         "bookmarkModalError": "Failed to save bookmark. Please try again.",
         "bookmarkModalRemoveError": "Failed to remove bookmark. Please try again.",
         "bookmarkModalLoadError": "We could not load existing bookmarks. Try again later.",
-        "bookmarkModalNoConversation": "Open a ChatGPT conversation to add bookmarks."
+        "bookmarkModalNoConversation": "Open a ChatGPT conversation to add bookmarks.",
+        "contextMenuTitle": "Quick actions",
+        "contextMenuBookmarkMessage": "Bookmark message",
+        "contextMenuBookmarkConversation": "Bookmark conversation",
+        "contextMenuSavePrompt": "Save as prompt",
+        "contextMenuCopy": "Copy message text",
+        "contextMenuPin": "Pin conversation",
+        "contextMenuUnpin": "Unpin conversation",
+        "contextMenuOpenDashboard": "Open dashboard",
+        "contextMenuNoText": "Message has no text to reuse.",
+        "contextMenuPromptFallback": "Prompt from {{title}}",
+        "contextMenuPromptSaved": "Prompt \"{{name}}\" saved to your library.",
+        "contextMenuCopied": "Message copied to clipboard.",
+        "contextMenuPinSuccess": "Conversation pinned.",
+        "contextMenuUnpinSuccess": "Conversation unpinned.",
+        "contextMenuError": "We could not complete that action. Try again."
       },
       "prompts": {
         "heading": "Prompt templates",

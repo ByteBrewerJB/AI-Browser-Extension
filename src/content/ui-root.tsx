@@ -1,12 +1,20 @@
-﻿import React, { StrictMode, useCallback, useEffect, useId, useMemo, useState } from 'react';
+﻿import React, { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
-import { collectMessageElements, getConversationId } from './chatDom';
-import { archiveConversations, getBookmarks, toggleBookmark, togglePinned, upsertConversation } from '@/core/storage';
+import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
+import {
+  archiveConversations,
+  createPrompt,
+  getBookmarks,
+  getConversationOverviewById,
+  toggleBookmark,
+  togglePinned,
+  upsertConversation
+} from '@/core/storage';
 import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/core/storage';
 import type { BookmarkRecord, PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
@@ -139,13 +147,40 @@ function formatBookmarkRole(
   }
 }
 
+interface BookmarkTarget {
+  messageId: string | null;
+}
+
+type ContextMenuAction = 'pin' | 'prompt' | 'copy';
+
+type ActionTone = 'neutral' | 'success' | 'error';
+
+interface ActionToast {
+  id: number;
+  message: string;
+  tone: ActionTone;
+}
+
+interface ContextMenuState {
+  position: { x: number; y: number };
+  conversationId: string;
+  conversationTitle: string;
+  messageId: string | null;
+  messageRole: string | null;
+  messagePreview: string;
+  messageText: string;
+  pinned: boolean;
+  hasText: boolean;
+}
+
 interface BookmarkDialogProps {
   open: boolean;
   onClose: () => void;
+  initialTarget?: BookmarkTarget | null;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function BookmarkDialog({ open, onClose, t }: BookmarkDialogProps): ReactElement | null {
+function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps): ReactElement | null {
   const headingId = useId();
   const descriptionId = `${headingId}-description`;
   const noteFieldId = `${headingId}-note`;
@@ -157,6 +192,13 @@ function BookmarkDialog({ open, onClose, t }: BookmarkDialogProps): ReactElement
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const initialKey = useMemo(() => {
+    if (!initialTarget) {
+      return undefined;
+    }
+    return toBookmarkKey(initialTarget.messageId ?? null);
+  }, [initialTarget]);
 
   useEffect(() => {
     if (!open) {
@@ -261,10 +303,13 @@ function BookmarkDialog({ open, onClose, t }: BookmarkDialogProps): ReactElement
       setCandidates(nextCandidates);
       setExistingMap(bookmarkMap);
 
+      const candidateKeys = new Set(nextCandidates.map((candidate) => candidate.key));
       const defaultKey =
-        bookmarkMap.size > 0
-          ? bookmarkMap.keys().next().value ?? nextCandidates[0]?.key ?? ''
-          : nextCandidates[0]?.key ?? '';
+        initialKey && candidateKeys.has(initialKey)
+          ? initialKey
+          : bookmarkMap.size > 0
+            ? bookmarkMap.keys().next().value ?? nextCandidates[0]?.key ?? ''
+            : nextCandidates[0]?.key ?? '';
 
       setSelectedKey(defaultKey);
       const defaultBookmark = defaultKey ? bookmarkMap.get(defaultKey) : undefined;
@@ -277,7 +322,7 @@ function BookmarkDialog({ open, onClose, t }: BookmarkDialogProps): ReactElement
     return () => {
       cancelled = true;
     };
-  }, [open, t]);
+  }, [initialKey, open, t]);
 
   const selectedCandidate = useMemo(
     () => candidates.find((candidate) => candidate.key === selectedKey) ?? null,
@@ -742,7 +787,7 @@ function ConversationList({ title, conversations, emptyTitle, emptyDescription, 
 
 interface BookmarkListProps {
   bookmarks: BookmarkSummary[];
-  onAddBookmark: () => void;
+  onAddBookmark: (target?: BookmarkTarget) => void;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
@@ -753,7 +798,7 @@ function BookmarkList({ bookmarks, onAddBookmark, t }: BookmarkListProps) {
         <div className="flex flex-wrap items-center gap-2">
           <button
             className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-            onClick={onAddBookmark}
+            onClick={() => onAddBookmark()}
             type="button"
           >
             {t('content.sidebar.history.addBookmark', { defaultValue: 'Bookmark message' })}
@@ -904,14 +949,16 @@ function PromptList({ prompts, folderNames, t }: PromptListProps) {
   );
 }
 
-function HistoryTab(): ReactElement {
+interface HistoryTabProps {
+  onAddBookmark: (target?: BookmarkTarget) => void;
+}
+
+function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
   const { t } = useTranslation();
   const pinnedConversations = usePinnedConversations(6);
   const conversationFolders = useFolderTree('conversation');
   const recentConversations = useRecentConversations(6);
   const bookmarks = useRecentBookmarks(4);
-
-  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
 
   const handleTogglePin = useCallback((conversationId: string) => {
     void togglePinned(conversationId);
@@ -919,14 +966,6 @@ function HistoryTab(): ReactElement {
 
   const handleArchiveToggle = useCallback((conversationId: string, archived: boolean | undefined) => {
     void archiveConversations([conversationId], !archived);
-  }, []);
-
-  const openBookmarkDialog = useCallback(() => {
-    setBookmarkDialogOpen(true);
-  }, []);
-
-  const closeBookmarkDialog = useCallback(() => {
-    setBookmarkDialogOpen(false);
   }, []);
 
   const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
@@ -1163,8 +1202,7 @@ function HistoryTab(): ReactElement {
         title={t('content.sidebar.history.recentHeading', { defaultValue: 'Recent updates' })}
       />
 
-      <BookmarkList bookmarks={bookmarks} onAddBookmark={openBookmarkDialog} t={t} />
-      <BookmarkDialog open={bookmarkDialogOpen} onClose={closeBookmarkDialog} t={t} />
+      <BookmarkList bookmarks={bookmarks} onAddBookmark={onAddBookmark} t={t} />
       <MoveDialog
         open={Boolean(moveTarget)}
         title={moveDialogTitle}
@@ -1223,6 +1261,147 @@ function MediaTab(): ReactElement {
   );
 }
 
+interface ContextMenuOverlayProps {
+  state: ContextMenuState | null;
+  pendingAction: ContextMenuAction | null;
+  onClose: () => void;
+  onBookmark: () => void;
+  onSavePrompt: () => void;
+  onCopy: () => void;
+  onTogglePin: () => void;
+  onOpenDashboard: () => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
+function ContextMenuOverlay({
+  state,
+  pendingAction,
+  onClose,
+  onBookmark,
+  onSavePrompt,
+  onCopy,
+  onTogglePin,
+  onOpenDashboard,
+  t
+}: ContextMenuOverlayProps): ReactElement | null {
+  if (!state) {
+    return null;
+  }
+
+  const roleLabel = formatBookmarkRole(state.messageRole, t);
+  const bookmarkLabel = state.messageId
+    ? t('content.sidebar.history.contextMenuBookmarkMessage', { defaultValue: 'Bookmark message' })
+    : t('content.sidebar.history.contextMenuBookmarkConversation', { defaultValue: 'Bookmark conversation' });
+  const promptLabel = t('content.sidebar.history.contextMenuSavePrompt', { defaultValue: 'Save as prompt' });
+  const copyLabel = t('content.sidebar.history.contextMenuCopy', { defaultValue: 'Copy message text' });
+  const pinLabel = state.pinned
+    ? t('content.sidebar.history.contextMenuUnpin', { defaultValue: 'Unpin conversation' })
+    : t('content.sidebar.history.contextMenuPin', { defaultValue: 'Pin conversation' });
+  const dashboardLabel = t('content.sidebar.history.contextMenuOpenDashboard', { defaultValue: 'Open dashboard' });
+  const disabledTextLabel = t('content.sidebar.history.contextMenuNoText', {
+    defaultValue: 'Message has no text to reuse.'
+  });
+
+  const isPromptDisabled = !state.hasText || pendingAction === 'prompt';
+  const isCopyDisabled = !state.hasText || pendingAction === 'copy';
+  const isPinDisabled = pendingAction === 'pin';
+
+  return (
+    <div
+      className="fixed inset-0 z-[2147483646]"
+      onClick={onClose}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        className="absolute w-64 rounded-lg border border-white/10 bg-slate-950/90 px-1 py-1 text-sm text-slate-100 shadow-2xl backdrop-blur"
+        style={{ left: `${state.position.x}px`, top: `${state.position.y}px` }}
+        onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => event.preventDefault()}
+      >
+        <div className="border-b border-white/10 px-3 py-2 text-xs text-slate-300">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {t('content.sidebar.history.contextMenuTitle', { defaultValue: 'Quick actions' })}
+          </p>
+          <p className="mt-1 text-xs font-medium text-slate-200">{roleLabel}</p>
+          <p className="mt-1 max-h-12 overflow-hidden text-ellipsis text-xs text-slate-400" style={{ wordBreak: 'break-word' }}>
+            {state.messagePreview}
+          </p>
+        </div>
+        <div className="space-y-1 px-1 py-1">
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={onBookmark}
+            type="button"
+          >
+            <span>{bookmarkLabel}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:text-slate-500"
+            onClick={onSavePrompt}
+            type="button"
+            disabled={isPromptDisabled}
+            title={state.hasText ? undefined : disabledTextLabel}
+          >
+            <span>{promptLabel}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:text-slate-500"
+            onClick={onCopy}
+            type="button"
+            disabled={isCopyDisabled}
+            title={state.hasText ? undefined : disabledTextLabel}
+          >
+            <span>{copyLabel}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:text-slate-500"
+            onClick={onTogglePin}
+            type="button"
+            disabled={isPinDisabled}
+          >
+            <span>{pinLabel}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={onOpenDashboard}
+            type="button"
+          >
+            <span>{dashboardLabel}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ActionToastViewProps {
+  toast: ActionToast | null;
+}
+
+function ActionToastView({ toast }: ActionToastViewProps): ReactElement | null {
+  if (!toast) {
+    return null;
+  }
+
+  const toneClass =
+    toast.tone === 'success'
+      ? 'bg-emerald-400 text-emerald-950'
+      : toast.tone === 'error'
+        ? 'bg-rose-500 text-rose-50'
+        : 'bg-slate-800 text-slate-100';
+
+  return (
+    <div className="pointer-events-none fixed bottom-6 right-6 z-[2147483647]">
+      <div className={`rounded-md px-4 py-2 text-sm font-medium shadow-lg ${toneClass}`}>
+        {toast.message}
+      </div>
+    </div>
+  );
+}
+
 interface CompanionSidebarRootProps {
   host: HTMLElement;
 }
@@ -1230,6 +1409,14 @@ interface CompanionSidebarRootProps {
 function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement | null {
   const hydrated = useSettingsStore((state) => state.hydrated);
   const showSidebar = useSettingsStore((state) => state.showSidebar);
+  const { t } = useTranslation();
+
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+  const [bookmarkDialogTarget, setBookmarkDialogTarget] = useState<BookmarkTarget | null>(null);
+  const [contextMenuState, setContextMenuState] = useState<ContextMenuState | null>(null);
+  const [contextMenuPending, setContextMenuPending] = useState<ContextMenuAction | null>(null);
+  const [toast, setToast] = useState<ActionToast | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const shouldShow = hydrated && showSidebar;
@@ -1239,15 +1426,305 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     };
   }, [host, hydrated, showSidebar]);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showToast = useCallback((message: string, tone: ActionTone = 'neutral') => {
+    if (toastTimeoutRef.current !== null) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+    setToast({ id: Date.now(), message, tone });
+    toastTimeoutRef.current = window.setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState(null);
+    setContextMenuPending(null);
+  }, []);
+
+  const handleOpenBookmarkDialog = useCallback(
+    (target?: BookmarkTarget) => {
+      setBookmarkDialogTarget(target ?? null);
+      setBookmarkDialogOpen(true);
+      closeContextMenu();
+    },
+    [closeContextMenu]
+  );
+
+  const handleCloseBookmarkDialog = useCallback(() => {
+    setBookmarkDialogOpen(false);
+    setBookmarkDialogTarget(null);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || !showSidebar) {
+      return;
+    }
+
+    const handleContextMenu = (event: MouseEvent) => {
+      const target = (event.target as HTMLElement | null)?.closest('[data-message-author-role]');
+      if (!target) {
+        return;
+      }
+
+      const conversationId = getConversationId();
+      if (!conversationId) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const role = target.getAttribute('data-message-author-role');
+      const messageId = target.getAttribute('data-message-id');
+      const rawText = normalizeMessageContent(target.textContent ?? '');
+      const conversationTitle = getConversationTitle();
+      const previewSource = rawText || conversationTitle;
+      const messagePreview = createSnippet(previewSource, 160);
+      const hasText = rawText.length > 0;
+
+      const adjustedX = Math.min(event.clientX, window.innerWidth - 272);
+      const adjustedY = Math.min(event.clientY, window.innerHeight - 216);
+
+      setContextMenuState({
+        position: { x: adjustedX, y: adjustedY },
+        conversationId,
+        conversationTitle,
+        messageId: messageId ?? null,
+        messageRole: role,
+        messagePreview,
+        messageText: rawText,
+        pinned: false,
+        hasText
+      });
+      setContextMenuPending(null);
+
+      void getConversationOverviewById(conversationId)
+        .then((overview) => {
+          setContextMenuState((current) => {
+            if (!current || current.conversationId !== conversationId) {
+              return current;
+            }
+            return { ...current, pinned: overview?.pinned ?? false };
+          });
+        })
+        .catch((error) => {
+          console.error('[ai-companion] failed to resolve conversation for context menu', error);
+        });
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu, true);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+    };
+  }, [hydrated, showSidebar]);
+
+  useEffect(() => {
+    if (!contextMenuState) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeContextMenu();
+      }
+    };
+
+    const handleScroll = () => {
+      closeContextMenu();
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [contextMenuState, closeContextMenu]);
+
+  useEffect(() => {
+    if (!showSidebar) {
+      setContextMenuState(null);
+    }
+  }, [showSidebar]);
+
+  const handleBookmarkFromContext = useCallback(() => {
+    if (!contextMenuState) {
+      return;
+    }
+    handleOpenBookmarkDialog({ messageId: contextMenuState.messageId });
+  }, [contextMenuState, handleOpenBookmarkDialog]);
+
+  const handleSavePromptFromContext = useCallback(async () => {
+    if (!contextMenuState) {
+      return;
+    }
+    const content = contextMenuState.messageText.trim();
+    if (!content) {
+      showToast(
+        t('content.sidebar.history.contextMenuNoText', { defaultValue: 'Message has no text to reuse.' }),
+        'error'
+      );
+      closeContextMenu();
+      return;
+    }
+
+    setContextMenuPending('prompt');
+    try {
+      const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
+      const titleLabel = normalizeTitle(contextMenuState.conversationTitle, fallbackTitle);
+      const snippet = createSnippet(content, 64);
+      const fallbackName = t('content.sidebar.history.contextMenuPromptFallback', {
+        title: titleLabel,
+        defaultValue: 'Prompt from {{title}}'
+      });
+      const name = snippet.length >= 3 ? snippet : fallbackName;
+      await createPrompt({ name, content });
+      showToast(
+        t('content.sidebar.history.contextMenuPromptSaved', {
+          name,
+          defaultValue: 'Prompt "{{name}}" saved to your library.'
+        }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to save prompt from context menu', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setContextMenuPending(null);
+      closeContextMenu();
+    }
+  }, [contextMenuState, closeContextMenu, showToast, t]);
+
+  const handleCopyMessageFromContext = useCallback(async () => {
+    if (!contextMenuState) {
+      return;
+    }
+    const content = contextMenuState.messageText.trim();
+    if (!content) {
+      showToast(
+        t('content.sidebar.history.contextMenuNoText', { defaultValue: 'Message has no text to reuse.' }),
+        'error'
+      );
+      closeContextMenu();
+      return;
+    }
+
+    setContextMenuPending('copy');
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(content);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = content;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      showToast(
+        t('content.sidebar.history.contextMenuCopied', { defaultValue: 'Message copied to clipboard.' }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to copy message from context menu', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setContextMenuPending(null);
+      closeContextMenu();
+    }
+  }, [contextMenuState, closeContextMenu, showToast, t]);
+
+  const handleTogglePinFromContext = useCallback(async () => {
+    if (!contextMenuState) {
+      return;
+    }
+
+    setContextMenuPending('pin');
+    try {
+      const result = await togglePinned(contextMenuState.conversationId);
+      const pinned = Boolean(result?.pinned);
+      setContextMenuState((current) => (current ? { ...current, pinned } : current));
+      showToast(
+        pinned
+          ? t('content.sidebar.history.contextMenuPinSuccess', { defaultValue: 'Conversation pinned.' })
+          : t('content.sidebar.history.contextMenuUnpinSuccess', { defaultValue: 'Conversation unpinned.' }),
+        'success'
+      );
+    } catch (error) {
+      console.error('[ai-companion] failed to toggle pin from context menu', error);
+      showToast(
+        t('content.sidebar.history.contextMenuError', {
+          defaultValue: 'We could not complete that action. Try again.'
+        }),
+        'error'
+      );
+    } finally {
+      setContextMenuPending(null);
+      closeContextMenu();
+    }
+  }, [contextMenuState, closeContextMenu, showToast, t]);
+
+  const handleOpenDashboardFromContext = useCallback(() => {
+    openDashboard({ searchParams: { view: 'history' } });
+    closeContextMenu();
+  }, [closeContextMenu]);
+
   if (!hydrated || !showSidebar) {
     return null;
   }
 
-  return <CompanionSidebar />;
+  return (
+    <>
+      <CompanionSidebar onAddBookmark={handleOpenBookmarkDialog} />
+      <BookmarkDialog
+        open={bookmarkDialogOpen}
+        onClose={handleCloseBookmarkDialog}
+        initialTarget={bookmarkDialogTarget ?? undefined}
+        t={t}
+      />
+      <ContextMenuOverlay
+        state={contextMenuState}
+        pendingAction={contextMenuPending}
+        onClose={closeContextMenu}
+        onBookmark={handleBookmarkFromContext}
+        onSavePrompt={handleSavePromptFromContext}
+        onCopy={handleCopyMessageFromContext}
+        onTogglePin={handleTogglePinFromContext}
+        onOpenDashboard={handleOpenDashboardFromContext}
+        t={t}
+      />
+      <ActionToastView toast={toast} />
+    </>
+  );
 }
 
 
-function CompanionSidebar(): ReactElement {
+interface CompanionSidebarProps {
+  onAddBookmark: (target?: BookmarkTarget) => void;
+}
+
+function CompanionSidebar({ onAddBookmark }: CompanionSidebarProps): ReactElement {
   const { t } = useTranslation();
   const modalHeadingId = useId();
   const [activeToolbar, setActiveToolbar] = useState<ToolbarKey>('history');
@@ -1307,9 +1784,9 @@ function CompanionSidebar(): ReactElement {
             {t('content.sidebar.tabs.media')}
           </Tab>
         </TabList>
-        <TabPanels className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200">
+          <TabPanels className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200">
           <TabPanel value="history">
-            <HistoryTab />
+            <HistoryTab onAddBookmark={onAddBookmark} />
           </TabPanel>
           <TabPanel value="prompts">
             <PromptsTab />
