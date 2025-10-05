@@ -4,6 +4,7 @@ import type { BookmarkSummary } from '@/core/storage/insights';
 import { db } from '@/core/storage/db';
 import { getRecentBookmarks } from '@/core/storage/insights';
 import { initI18n } from '@/shared/i18n';
+import { useSettingsStore } from '@/shared/state/settingsStore';
 import type { i18n as I18nInstance } from 'i18next';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
@@ -78,6 +79,27 @@ let i18nInstance: I18nInstance | null = null;
 let promptsSubscription: { unsubscribe(): void } | null = null;
 let bookmarksSubscription: { unsubscribe(): void } | null = null;
 let mounted = false;
+
+const DEFAULT_TOKEN_LIMIT = 4096;
+const counterNumberFormatter = new Intl.NumberFormat();
+
+let composerCountersContainer: HTMLDivElement | null = null;
+let composerWordsLabel: HTMLSpanElement | null = null;
+let composerCharactersLabel: HTMLSpanElement | null = null;
+let composerTokensLabel: HTMLSpanElement | null = null;
+let composerWordsValue: HTMLSpanElement | null = null;
+let composerCharactersValue: HTMLSpanElement | null = null;
+let composerTokensValue: HTMLSpanElement | null = null;
+let composerTokensBadge: HTMLDivElement | null = null;
+let activeComposer: HTMLTextAreaElement | HTMLElement | null = null;
+let composerInputListener: ((event: Event) => void) | null = null;
+let composerObserver: MutationObserver | null = null;
+let composerFocusListener: ((event: FocusEvent) => void) | null = null;
+let composerEvaluationTimeout: number | null = null;
+let composerCountersInitialized = false;
+let unsubscribeTokenLimit: (() => void) | null = null;
+let tokenLimit = DEFAULT_TOKEN_LIMIT;
+let lastComposerMetrics = { words: 0, characters: 0, tokens: 0 };
 
 function attachEvent<K extends keyof HTMLElementEventMap>(
   target: HTMLElement,
@@ -325,6 +347,48 @@ button {
   font-size: 11px;
   color: rgba(148, 163, 184, 0.78);
   line-height: 1.5;
+}
+.composer-counters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+.composer-counters[hidden] {
+  display: none;
+}
+.composer-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: inherit;
+}
+.composer-counter-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.88);
+}
+.composer-counter-value {
+  font-variant-numeric: tabular-nums;
+}
+.composer-counter-badge[data-over-limit="true"] {
+  background: rgba(185, 28, 28, 0.25);
+  border-color: rgba(248, 113, 113, 0.85);
+  color: #fecaca;
 }
 @media (max-width: 768px) {
   .launcher {
@@ -587,6 +651,54 @@ function ensureContainer() {
   promptList.className = 'list';
   panel.appendChild(promptList);
 
+  composerCountersContainer = document.createElement('div');
+  composerCountersContainer.className = 'composer-counters';
+  composerCountersContainer.setAttribute('data-ai-companion', 'composer-counters');
+  composerCountersContainer.hidden = true;
+  wrapper.appendChild(composerCountersContainer);
+
+  const wordsBadge = document.createElement('div');
+  wordsBadge.className = 'composer-counter-badge';
+  composerCountersContainer.appendChild(wordsBadge);
+
+  composerWordsLabel = document.createElement('span');
+  composerWordsLabel.className = 'composer-counter-label';
+  wordsBadge.appendChild(composerWordsLabel);
+
+  composerWordsValue = document.createElement('span');
+  composerWordsValue.className = 'composer-counter-value';
+  composerWordsValue.textContent = '0';
+  wordsBadge.appendChild(composerWordsValue);
+
+  const charactersBadge = document.createElement('div');
+  charactersBadge.className = 'composer-counter-badge';
+  composerCountersContainer.appendChild(charactersBadge);
+
+  composerCharactersLabel = document.createElement('span');
+  composerCharactersLabel.className = 'composer-counter-label';
+  charactersBadge.appendChild(composerCharactersLabel);
+
+  composerCharactersValue = document.createElement('span');
+  composerCharactersValue.className = 'composer-counter-value';
+  composerCharactersValue.textContent = '0';
+  charactersBadge.appendChild(composerCharactersValue);
+
+  composerTokensBadge = document.createElement('div');
+  composerTokensBadge.className = 'composer-counter-badge';
+  composerCountersContainer.appendChild(composerTokensBadge);
+
+  composerTokensLabel = document.createElement('span');
+  composerTokensLabel.className = 'composer-counter-label';
+  composerTokensBadge.appendChild(composerTokensLabel);
+
+  composerTokensValue = document.createElement('span');
+  composerTokensValue.className = 'composer-counter-value';
+  composerTokensValue.textContent = '0';
+  composerTokensBadge.appendChild(composerTokensValue);
+
+  lastComposerMetrics = { words: 0, characters: 0, tokens: 0 };
+  setComposerCountersValues(0, 0, 0);
+
   applyTranslations();
   renderActivePanel();
 }
@@ -597,6 +709,7 @@ function applyTranslations() {
   }
 
   refreshBubbleLabels();
+  applyCounterTranslations();
 
   const closeLabel = translate('content.dock.closePanelAria', 'Close bubble panel');
   closeButton.setAttribute('aria-label', closeLabel);
@@ -616,6 +729,238 @@ function applyTranslations() {
   }
 
   renderActivePanel();
+}
+
+function sanitizeTokenLimit(value: number | undefined): number {
+  if (!Number.isFinite(value) || !value || value <= 0) {
+    return DEFAULT_TOKEN_LIMIT;
+  }
+  return Math.round(value);
+}
+
+function setComposerCountersVisibility(visible: boolean) {
+  if (!composerCountersContainer) {
+    return;
+  }
+  composerCountersContainer.hidden = !visible;
+}
+
+function isHtmlElement(value: unknown): value is HTMLElement {
+  return typeof HTMLElement !== 'undefined' && value instanceof HTMLElement;
+}
+
+function isHtmlTextAreaElement(value: unknown): value is HTMLTextAreaElement {
+  return typeof HTMLTextAreaElement !== 'undefined' && value instanceof HTMLTextAreaElement;
+}
+
+function isHtmlContentEditable(value: unknown): value is HTMLElement {
+  return isHtmlElement(value) && value.isContentEditable;
+}
+
+function formatTokensValue(count: number, limit: number) {
+  return translate('content.composerCounters.tokensValue', '{{count}} / {{limit}}', {
+    count: counterNumberFormatter.format(Math.max(0, count)),
+    limit: counterNumberFormatter.format(Math.max(0, limit))
+  });
+}
+
+function setComposerCountersValues(words: number, characters: number, tokens: number) {
+  lastComposerMetrics = {
+    words: Math.max(0, words),
+    characters: Math.max(0, characters),
+    tokens: Math.max(0, tokens)
+  };
+
+  if (!composerCountersContainer) {
+    return;
+  }
+
+  if (composerWordsValue) {
+    composerWordsValue.textContent = counterNumberFormatter.format(lastComposerMetrics.words);
+  }
+
+  if (composerCharactersValue) {
+    composerCharactersValue.textContent = counterNumberFormatter.format(lastComposerMetrics.characters);
+  }
+
+  const limit = sanitizeTokenLimit(tokenLimit);
+  if (composerTokensValue) {
+    composerTokensValue.textContent = formatTokensValue(lastComposerMetrics.tokens, limit);
+  }
+
+  if (composerTokensBadge) {
+    composerTokensBadge.setAttribute('data-over-limit', lastComposerMetrics.tokens > limit ? 'true' : 'false');
+  }
+}
+
+function applyCounterTranslations() {
+  if (!composerCountersContainer) {
+    return;
+  }
+
+  if (composerWordsLabel) {
+    composerWordsLabel.textContent = translate('content.composerCounters.wordsLabel', 'Words');
+  }
+
+  if (composerCharactersLabel) {
+    composerCharactersLabel.textContent = translate('content.composerCounters.charactersLabel', 'Characters');
+  }
+
+  if (composerTokensLabel) {
+    composerTokensLabel.textContent = translate('content.composerCounters.tokensLabel', 'Tokens');
+  }
+
+  setComposerCountersValues(lastComposerMetrics.words, lastComposerMetrics.characters, lastComposerMetrics.tokens);
+}
+
+function readComposerText(target: HTMLTextAreaElement | HTMLElement | null): string {
+  if (!target) {
+    return '';
+  }
+
+  if (isHtmlTextAreaElement(target)) {
+    return target.value ?? '';
+  }
+
+  if (isHtmlContentEditable(target)) {
+    return target.textContent ?? '';
+  }
+
+  return '';
+}
+
+function computeComposerMetrics(text: string) {
+  const trimmed = text.trim();
+  const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+  const characters = text.length;
+  const tokens = trimmed ? Math.max(words, Math.ceil(trimmed.length / 4)) : 0;
+  return { words, characters, tokens };
+}
+
+function updateComposerCounterValues() {
+  const text = readComposerText(activeComposer);
+  const metrics = computeComposerMetrics(text);
+  setComposerCountersValues(metrics.words, metrics.characters, metrics.tokens);
+}
+
+function attachToComposer(element: HTMLTextAreaElement | HTMLElement) {
+  if (activeComposer === element) {
+    setComposerCountersVisibility(true);
+    updateComposerCounterValues();
+    return;
+  }
+
+  detachComposer();
+  activeComposer = element;
+
+  const listener = () => {
+    updateComposerCounterValues();
+  };
+  composerInputListener = listener;
+
+  element.addEventListener('input', listener);
+  if (!isHtmlTextAreaElement(element)) {
+    element.addEventListener('keyup', listener);
+  }
+
+  setComposerCountersVisibility(true);
+  updateComposerCounterValues();
+}
+
+function detachComposer() {
+  if (activeComposer && composerInputListener) {
+    activeComposer.removeEventListener('input', composerInputListener);
+    activeComposer.removeEventListener('keyup', composerInputListener);
+  }
+
+  activeComposer = null;
+  composerInputListener = null;
+
+  setComposerCountersVisibility(false);
+  setComposerCountersValues(0, 0, 0);
+}
+
+function scheduleComposerEvaluation() {
+  if (composerEvaluationTimeout !== null) {
+    return;
+  }
+
+  composerEvaluationTimeout = window.setTimeout(() => {
+    composerEvaluationTimeout = null;
+    evaluateComposer();
+  }, 50);
+}
+
+function evaluateComposer() {
+  const candidate = getComposerElement();
+  if (candidate) {
+    attachToComposer(candidate);
+  } else {
+    detachComposer();
+  }
+}
+
+function initComposerCounters() {
+  if (composerCountersInitialized) {
+    updateComposerCounterValues();
+    return;
+  }
+
+  composerCountersInitialized = true;
+  tokenLimit = sanitizeTokenLimit(useSettingsStore.getState().maxTokens);
+
+  unsubscribeTokenLimit = useSettingsStore.subscribe((state) => {
+    const nextLimit = sanitizeTokenLimit(state.maxTokens);
+    if (nextLimit === tokenLimit) {
+      return;
+    }
+    tokenLimit = nextLimit;
+    setComposerCountersValues(lastComposerMetrics.words, lastComposerMetrics.characters, lastComposerMetrics.tokens);
+  });
+
+  if (typeof document !== 'undefined') {
+    composerObserver = new MutationObserver(() => {
+      scheduleComposerEvaluation();
+    });
+
+    const target = document.body ?? document.documentElement;
+    if (target) {
+      composerObserver.observe(target, { childList: true, subtree: true });
+    }
+
+    composerFocusListener = () => {
+      scheduleComposerEvaluation();
+    };
+    document.addEventListener('focusin', composerFocusListener, true);
+  }
+
+  evaluateComposer();
+}
+
+function teardownComposerCounters() {
+  if (composerObserver) {
+    composerObserver.disconnect();
+    composerObserver = null;
+  }
+
+  if (composerFocusListener) {
+    document.removeEventListener('focusin', composerFocusListener, true);
+    composerFocusListener = null;
+  }
+
+  if (composerEvaluationTimeout !== null) {
+    window.clearTimeout(composerEvaluationTimeout);
+    composerEvaluationTimeout = null;
+  }
+
+  if (unsubscribeTokenLimit) {
+    unsubscribeTokenLimit();
+    unsubscribeTokenLimit = null;
+  }
+
+  detachComposer();
+  composerCountersInitialized = false;
+  tokenLimit = DEFAULT_TOKEN_LIMIT;
 }
 
 function refreshBubbleLabels() {
@@ -1093,7 +1438,7 @@ export function insertTextIntoComposer(text: string): boolean {
     return false;
   }
 
-  if (target instanceof HTMLTextAreaElement) {
+  if (isHtmlTextAreaElement(target)) {
     const start = target.selectionStart ?? target.value.length;
     const end = target.selectionEnd ?? target.value.length;
     target.setRangeText(text, start, end, 'end');
@@ -1102,7 +1447,7 @@ export function insertTextIntoComposer(text: string): boolean {
     return true;
   }
 
-  if (target instanceof HTMLElement && target.isContentEditable) {
+  if (isHtmlContentEditable(target)) {
     insertIntoContentEditable(target, text);
     return true;
   }
@@ -1154,11 +1499,15 @@ function insertIntoContentEditable(element: HTMLElement, text: string) {
 }
 
 function getComposerElement(): HTMLTextAreaElement | HTMLElement | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
   const active = document.activeElement;
-  if (active instanceof HTMLTextAreaElement) {
+  if (isHtmlTextAreaElement(active)) {
     return active;
   }
-  if (active instanceof HTMLElement && active.isContentEditable) {
+  if (isHtmlContentEditable(active)) {
     return active;
   }
 
@@ -1172,10 +1521,10 @@ function getComposerElement(): HTMLTextAreaElement | HTMLElement | null {
 
   for (const selector of selectors) {
     const candidate = document.querySelector(selector);
-    if (candidate instanceof HTMLTextAreaElement) {
+    if (isHtmlTextAreaElement(candidate)) {
       return candidate;
     }
-    if (candidate instanceof HTMLElement && candidate.isContentEditable) {
+    if (isHtmlContentEditable(candidate)) {
       return candidate;
     }
   }
@@ -1230,6 +1579,15 @@ function cleanup() {
   document.removeEventListener('click', handleDocumentClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('pagehide', handlePageHide);
+  teardownComposerCounters();
+  composerCountersContainer = null;
+  composerWordsLabel = null;
+  composerCharactersLabel = null;
+  composerTokensLabel = null;
+  composerWordsValue = null;
+  composerCharactersValue = null;
+  composerTokensValue = null;
+  composerTokensBadge = null;
   mounted = false;
 }
 
@@ -1244,6 +1602,7 @@ export async function mountPromptLauncher(): Promise<void> {
   applyTranslations();
   subscribeToPrompts();
   subscribeToBookmarks();
+  initComposerCounters();
 
   document.addEventListener('click', handleDocumentClick, true);
   document.addEventListener('keydown', handleKeyDown, true);

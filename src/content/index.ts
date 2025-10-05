@@ -1,4 +1,4 @@
-import { addMessages, db, upsertConversation } from '@/core/storage';
+import { addMessages, upsertConversation } from '@/core/storage';
 import type { MessageRecord } from '@/core/models';
 import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
 import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messaging/router';
@@ -8,40 +8,11 @@ import { mountPromptLauncher } from './textareaPrompts';
 
 void initializeSettingsStore();
 
-const COUNTER_ID = 'ai-companion-word-counter';
 const processedMessageIds = new Set<string>();
 let scanTimeout: number | null = null;
 let currentConversationId: string | null = null;
 
 const messageRouter = createRuntimeMessageRouter<RuntimeMessageMap>();
-
-function ensureCounter(): HTMLElement {
-  let counter = document.getElementById(COUNTER_ID);
-  if (!counter) {
-    counter = document.createElement('div');
-    counter.id = COUNTER_ID;
-    counter.style.position = 'fixed';
-    counter.style.bottom = '16px';
-    counter.style.right = '16px';
-    counter.style.padding = '8px 12px';
-    counter.style.borderRadius = '999px';
-    counter.style.background = 'rgba(15, 23, 42, 0.9)';
-    counter.style.color = '#f8fafc';
-    counter.style.fontSize = '12px';
-    counter.style.fontFamily = 'Inter, system-ui';
-    counter.style.boxShadow = '0 10px 30px rgba(15, 23, 42, 0.35)';
-    counter.style.zIndex = '2147483647';
-    counter.style.pointerEvents = 'none';
-    counter.textContent = 'Words: 0 | Characters: 0';
-    document.body.appendChild(counter);
-  }
-  return counter;
-}
-
-function setCounter(words: number, chars: number, label = 'Words') {
-  const counter = ensureCounter();
-  counter.textContent = `${label}: ${words} | Characters: ${chars}`;
-}
 
 function extractMessage(element: Element): MessageRecord | null {
   const role = element.getAttribute('data-message-author-role') as MessageRecord['role'] | null;
@@ -90,7 +61,6 @@ async function scanConversation() {
     .filter((message): message is MessageRecord => Boolean(message));
 
   if (messages.length === 0) {
-    await refreshConversationMetrics();
     return;
   }
 
@@ -105,16 +75,7 @@ async function scanConversation() {
     }))
   );
 
-  await refreshConversationMetrics();
-}
-
-async function refreshConversationMetrics() {
-  if (!currentConversationId) return;
-  const conversation = await db.conversations.get(currentConversationId);
-  if (conversation) {
-    setCounter(conversation.wordCount, conversation.charCount, 'Conversation');
   }
-}
 
 function scheduleScan() {
   if (scanTimeout !== null) {
@@ -141,9 +102,6 @@ function resetStateForConversation(newConversationId: string | null) {
   }
   currentConversationId = newConversationId;
   processedMessageIds.clear();
-  if (!newConversationId) {
-    setCounter(0, 0);
-  }
 }
 
 function observeLocationChanges() {
@@ -157,26 +115,6 @@ function observeLocationChanges() {
     }
   };
   setInterval(check, 500);
-}
-
-function startInputListeners() {
-  document.addEventListener('input', (event) => {
-    const target = event.target as HTMLElement | null;
-    if (!target) return;
-
-    if (target.tagName === 'TEXTAREA') {
-      const value = (target as HTMLTextAreaElement).value;
-      setCounter(value.trim().split(/\s+/).filter(Boolean).length, value.trim().length, 'Draft');
-      return;
-    }
-
-    if (target.getAttribute('contenteditable') === 'true') {
-      const text = target.textContent ?? '';
-      const trimmed = text.trim();
-      const words = trimmed ? trimmed.split(/\s+/).length : 0;
-      setCounter(words, trimmed.length, 'Draft');
-    }
-  });
 }
 
 function registerMessageHandlers() {
@@ -194,8 +132,6 @@ function registerMessageHandlers() {
 }
 
 async function init() {
-  ensureCounter();
-  startInputListeners();
   registerMessageHandlers();
   void mountPromptLauncher();
   setupObserver();

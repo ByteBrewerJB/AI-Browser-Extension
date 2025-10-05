@@ -356,6 +356,12 @@
       "folderLabel": "Folder: {{name}}",
       "closeAria": "Close prompt launcher"
     },
+    "composerCounters": {
+      "wordsLabel": "Words",
+      "charactersLabel": "Characters",
+      "tokensLabel": "Tokens",
+      "tokensValue": "{{count}} / {{limit}}"
+    },
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Toggle prompts dock ({{count}} available)",
