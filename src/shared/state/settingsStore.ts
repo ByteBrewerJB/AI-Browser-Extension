@@ -9,6 +9,7 @@ interface SettingsSnapshot {
   showSidebar: boolean;
   maxTokens: number;
   promptHint: string;
+  dismissedLauncherTips: number;
 }
 
 interface SettingsState extends SettingsSnapshot {
@@ -18,6 +19,7 @@ interface SettingsState extends SettingsSnapshot {
   setShowSidebar: (value: boolean) => void;
   setMaxTokens: (value: number) => void;
   setPromptHint: (value: string) => void;
+  incrementDismissedLauncherTips: () => void;
 }
 
 const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
@@ -29,7 +31,8 @@ const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   direction: 'ltr',
   showSidebar: true,
   maxTokens: 4096,
-  promptHint: DEFAULT_PROMPT_HINT
+  promptHint: DEFAULT_PROMPT_HINT,
+  dismissedLauncherTips: 0
 };
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
@@ -48,8 +51,11 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
   const promptHint = typeof record.promptHint === 'string' && record.promptHint.trim().length > 0
     ? record.promptHint.trim()
     : DEFAULT_SNAPSHOT.promptHint;
+  const dismissedLauncherTips = Number.isFinite(record.dismissedLauncherTips)
+    ? Math.max(0, Math.min(99, Math.floor(Number(record.dismissedLauncherTips))))
+    : DEFAULT_SNAPSHOT.dismissedLauncherTips;
 
-  return { language, direction, showSidebar, maxTokens, promptHint };
+  return { language, direction, showSidebar, maxTokens, promptHint, dismissedLauncherTips };
 }
 
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
@@ -141,7 +147,8 @@ function toSnapshot(state: SettingsState): SettingsSnapshot {
     direction: state.direction,
     showSidebar: state.showSidebar,
     maxTokens: state.maxTokens,
-    promptHint: state.promptHint
+    promptHint: state.promptHint,
+    dismissedLauncherTips: state.dismissedLauncherTips
   };
 }
 
@@ -151,7 +158,8 @@ function areSnapshotsEqual(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
     a.direction === b.direction &&
     a.showSidebar === b.showSidebar &&
     a.maxTokens === b.maxTokens &&
-    a.promptHint === b.promptHint
+    a.promptHint === b.promptHint &&
+    a.dismissedLauncherTips === b.dismissedLauncherTips
   );
 }
 
@@ -172,7 +180,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setMaxTokens: (value) =>
     set(() => ({ maxTokens: Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_SNAPSHOT.maxTokens })),
   setPromptHint: (value) =>
-    set(() => ({ promptHint: value.trim().length > 0 ? value.trim() : DEFAULT_SNAPSHOT.promptHint }))
+    set(() => ({ promptHint: value.trim().length > 0 ? value.trim() : DEFAULT_SNAPSHOT.promptHint })),
+  incrementDismissedLauncherTips: () =>
+    set((state) => ({ dismissedLauncherTips: Math.min(99, state.dismissedLauncherTips + 1) }))
 }));
 
 function registerStorageListener() {
