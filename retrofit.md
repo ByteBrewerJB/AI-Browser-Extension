@@ -8,7 +8,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | --- | --- | --- | --- |
 | Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
 | Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
-| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-07 – pending (bookmark-modal overlay + metadata sync) |
+| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-08 – 6361a26 (bookmark-modal preview + regressietest) |
 | Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 📝 Ontwerp | _nog te plannen_ |
 | Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
 | Conversatieanalyse & export | Full-text search, analytics, export-UI | 📝 Ontwerp | _nog te plannen_ |
@@ -46,13 +46,16 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 - **Verplaatsdialogen** – Gedeelde `MoveDialog` component staat in `src/ui/components/MoveDialog.tsx` en is verbonden met zowel de dock-kaarten als de conversation-tabel in options. Conversations krijgen nu een "Verplaats"-knop die via `upsertConversation` de map bijwerkt.
 - **Pinned workflow** – Pinned-lijst toont favorieten en gebruikt dezelfde dialoog; folder-snelkoppelingen tonen nieuwe `Fav`-badges.
 
+## Sessieresultaten 2025-10-08
+
+- **Bookmark-modal preview** – Bubble-overlay toont nu messagePreview + opgeslagen-badge binnen `BookmarkDialog`; popup toont dezelfde metadata. Regressietest `tests/content/bookmarks.test.ts` waarborgt opslagpad voor `toggleBookmark`.
+
 ## Volgende stappen
 
 1. **Bladwijzer-overlay afronden** –
-   - Verplaats de huidige `collectMessageElements`-flow in `src/content/ui-root.tsx` naar een bubbelgestuurd paneel zodat selectie en acties op één plaats samenkomen.
-   - Bouw een modal binnen de shadow-root (hergebruik `Modal`) die notities opslaat via `toggleBookmark` en een inline preview toont. Gebruik `BookmarkSummary` als basiscomponent en breid deze uit met `messagePreview` en `createdAt` badges.
-   - Migreer `db.bookmarks` met een Dexie `version(7)` stap die ontbrekende `messagePreview`-velden invult via een fallback (`conversation.latestMessage?.slice(0, 200) ?? ''`). Val terug op oude records indien de migratie faalt en log een QA-item.
-   - Synchroniseer de nieuwe velden naar popup/options door `useRecentBookmarks` uit te breiden en een regressietest toe te voegen in `tests/content/bookmarks.test.ts` die het modalpad en Dexie-opslag controleert.
+   - ✅ Modal binnen de shadow-root toont nu een inline preview, bestaande notitie en "saved"-badge met `createdAt`-tijdstempel (`BookmarkDialog`).
+   - ✅ `useRecentBookmarks` en popup/options surface tonen `messagePreview` en notities; regressietest `tests/content/bookmarks.test.ts` bewaakt toggle-pad en Dexie-opslag.
+   - 🔁 QA: bij volgende iteratie smoke-test uitvoeren op Chrome/Edge om regressie op echte ChatGPT-DOM te verifiëren.
 2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`). Laatste updates:
    - ✅ Guard toegevoegd die het menu sluit bij unmount van `CompanionSidebarRoot` en bij het verbergen van de sidebar.
    - ✅ Toetscombinaties en toegankelijkheidslabels vastgelegd in `docs/accessibility/context-menu.md` + Playwright-scenarioplan vastgelegd in `tests/e2e/context-menu.spec.ts`.

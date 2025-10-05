@@ -503,6 +503,37 @@ function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps
                   </ul>
                 )}
               </div>
+              {selectedCandidate ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      {t('content.sidebar.history.bookmarkModalPreviewLabel', { defaultValue: 'Preview' })}
+                    </span>
+                    {selectedBookmark?.createdAt ? (
+                      <span className="rounded-full border border-white/10 bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
+                        {t('content.sidebar.history.bookmarkModalSavedAt', {
+                          defaultValue: 'Saved {{time}}',
+                          time: formatDateTime(selectedBookmark.createdAt)
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="rounded-md border border-white/5 bg-slate-900/70 px-3 py-2 text-sm text-slate-200">
+                    {selectedBookmark?.messagePreview ?? selectedCandidate.subtitle ??
+                      t('content.sidebar.history.bookmarkModalPreviewFallback', {
+                        defaultValue: 'No preview available yet.'
+                      })}
+                  </p>
+                  {selectedBookmark?.note ? (
+                    <p className="text-xs text-slate-400">
+                      {t('content.sidebar.history.bookmarkModalExistingNote', {
+                        defaultValue: 'Existing note: {{note}}',
+                        note: selectedBookmark.note
+                      })}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label
                   className="text-xs font-semibold uppercase tracking-wide text-slate-400"
