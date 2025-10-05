@@ -168,6 +168,47 @@ const tests: AsyncTest[] = [
       assert.equal(response.jobs[0].id, seeded.id);
       assert.equal('payload' in (response.jobs[0] as Record<string, unknown>), false);
     }
+  ],
+  [
+    'schedules telemetry events through the scheduler dependency',
+    async () => {
+      const auth = {
+        getStatus: () => ({ authenticated: true, premium: false })
+      } as unknown as import('../src/background/auth').AuthManager;
+
+      const scheduledPayloads: unknown[] = [];
+
+      const scheduler = {
+        async schedule(input: { type: string; runAt: Date | string; payload?: Record<string, unknown>; maxAttempts?: number }) {
+          scheduledPayloads.push(input);
+          return {
+            id: 'job-telemetry',
+            type: input.type,
+            payload: input.payload ?? {},
+            status: 'pending',
+            runAt: typeof input.runAt === 'string' ? input.runAt : input.runAt.toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            attempts: 0,
+            maxAttempts: input.maxAttempts ?? 3
+          } satisfies JobRecord;
+        }
+      } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
+
+      const { router } = initializeMessaging({ auth, scheduler });
+
+      const response = await router.handle({
+        type: 'jobs/log-event',
+        payload: { event: 'guide-opened', guideId: 'bookmark-overlay', surface: 'options' }
+      });
+
+      assert.equal(response.jobId, 'job-telemetry');
+      assert.equal(scheduledPayloads.length, 1);
+      const [input] = scheduledPayloads as [{ payload?: Record<string, unknown>; type: string; runAt: string }];
+      assert.equal(input.type, 'event');
+      assert.equal(input.payload?.event, 'guide-opened');
+      assert.equal(input.payload?.guideId, 'bookmark-overlay');
+    }
   ]
 ];
 

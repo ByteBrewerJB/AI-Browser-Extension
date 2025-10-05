@@ -42,6 +42,25 @@ export function initializeMessaging(deps: MessagingDependencies) {
     };
   });
 
+  router.register('jobs/log-event', async ({ event, guideId, metadata, runAt, surface }) => {
+    const job = await deps.scheduler.schedule({
+      type: 'event',
+      payload: {
+        event,
+        guideId,
+        metadata: metadata ?? {},
+        surface: surface ?? 'options',
+        openedAt: new Date().toISOString()
+      },
+      runAt: runAt ?? new Date().toISOString(),
+      maxAttempts: 1
+    });
+
+    return {
+      jobId: job.id
+    };
+  });
+
   router.register('jobs/list', async ({ limit, statuses }) => {
     const jobs = await listJobs();
     const allowedStatuses: JobStatus[] | undefined =
