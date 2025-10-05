@@ -8,6 +8,7 @@ const STEP_DELAY_MS = 250;
 
 export type PromptChainRunResult =
   | { status: 'completed'; chainId: string; executedAt: string; steps: number }
+  | { status: 'cancelled'; chainId: string; steps: number }
   | { status: 'busy' }
   | { status: 'not_found' }
   | { status: 'empty' }
@@ -49,6 +50,11 @@ export async function runPromptChainById(chainId: string): Promise<PromptChainRu
 
   try {
     for (let index = 0; index < prompts.length; index += 1) {
+      const beforeStep = usePromptChainsStore.getState();
+      if (beforeStep.status === 'cancelled' && beforeStep.activeChainId === chainId) {
+        return { status: 'cancelled', chainId, steps: beforeStep.completedSteps };
+      }
+
       const prompt = prompts[index];
       const text = index === 0 ? prompt.content : `\n\n${prompt.content}`;
       const inserted = insertTextIntoComposer(text);
@@ -58,9 +64,20 @@ export async function runPromptChainById(chainId: string): Promise<PromptChainRu
       }
 
       usePromptChainsStore.getState().advanceRun(index + 1);
+
+      const afterStep = usePromptChainsStore.getState();
+      if (afterStep.status === 'cancelled' && afterStep.activeChainId === chainId) {
+        return { status: 'cancelled', chainId, steps: afterStep.completedSteps };
+      }
+
       if (index < prompts.length - 1) {
         await delay(STEP_DELAY_MS);
       }
+    }
+
+    const afterLoop = usePromptChainsStore.getState();
+    if (afterLoop.status === 'cancelled' && afterLoop.activeChainId === chainId) {
+      return { status: 'cancelled', chainId, steps: afterLoop.completedSteps };
     }
 
     const executedAt = new Date().toISOString();

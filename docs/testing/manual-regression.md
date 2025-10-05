@@ -54,6 +54,13 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 2. Reapply the bookmark in the popup and ensure reopening the popup shows the button as “Unbookmark” again.
 3. Unpin the first conversation in the dashboard table (via row actions) and confirm the popup no longer labels it as pinned after reopening.
 
+## Promptketens
+
+1. Open de dashboardpagina en navigeer naar het tabblad “Prompts”. Maak een keten met minimaal twee stappen en voeg één variabele toe via het pillenveld. Controleer dat dubbele variabelen geweigerd worden en dat de teller niet boven de limiet uitkomt.
+2. Ga in een actieve ChatGPT-conversatie naar de promptlauncher en open de tab “Ketens”. Start de zojuist aangemaakte keten en bevestig dat de stappen sequentieel in de composer worden ingevoegd.
+3. Start dezelfde keten opnieuw en klik op “Cancel run” terwijl de keten bezig is. Verifieer dat de lopende run stopt, de teller in het runtime-paneel bevriest en de status “Cancelled” verschijnt.
+4. Controleer na een volledige run dat het label “Last used” wordt bijgewerkt met de actuele tijd, maar dat een geannuleerde run de laatste executietijd niet overschrijft.
+
 ## Live counter regression
 
 1. On `chat.openai.com`, start a new conversation and type `Draft a release note for a minor documentation update.` into the composer.

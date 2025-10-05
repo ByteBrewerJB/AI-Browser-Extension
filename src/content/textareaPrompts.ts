@@ -375,6 +375,24 @@ button {
   border-color: rgba(16, 185, 129, 0.9);
   outline: none;
 }
+.cancel-button {
+  border-radius: 999px;
+  border: 1px solid rgba(248, 113, 113, 0.65);
+  background: rgba(248, 113, 113, 0.16);
+  color: #fca5a5;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  white-space: nowrap;
+}
+.cancel-button:hover,
+.cancel-button:focus-visible {
+  background: rgba(248, 113, 113, 0.22);
+  border-color: rgba(248, 113, 113, 0.85);
+  outline: none;
+}
 .empty {
   padding: 28px 20px 32px;
   text-align: center;
@@ -1913,15 +1931,23 @@ function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRunt
   const isRunning = runtime.status === 'running' && runtime.activeChainId === chain.id;
   const isBusy = runtime.status === 'running' && runtime.activeChainId !== chain.id;
 
-  startButton.textContent = isRunning
-    ? translate('content.bubblePanels.chains.runningButton', 'Running…')
-    : translate('content.bubblePanels.chains.startButton', 'Start chain');
-
-  startButton.disabled = isRunning || isBusy;
-  const ariaLabel = translate('content.bubblePanels.chains.startAria', 'Start chain {{name}}', {
-    name: chain.name
-  });
-  startButton.setAttribute('aria-label', ariaLabel);
+  if (isRunning) {
+    startButton.textContent = translate('content.bubblePanels.chains.runningButton', 'Running…');
+    startButton.disabled = true;
+    startButton.setAttribute(
+      'aria-label',
+      translate('content.bubblePanels.chains.runningAria', 'Prompt chain {{name}} is running', {
+        name: chain.name
+      })
+    );
+  } else {
+    startButton.textContent = translate('content.bubblePanels.chains.startButton', 'Start chain');
+    startButton.disabled = isBusy;
+    const ariaLabel = isBusy
+      ? translate('content.bubblePanels.chains.busyAria', 'Another chain is running')
+      : translate('content.bubblePanels.chains.startAria', 'Start chain {{name}}', { name: chain.name });
+    startButton.setAttribute('aria-label', ariaLabel);
+  }
 
   attachClickHandler(startButton, (event) => {
     event.preventDefault();
@@ -1933,6 +1959,23 @@ function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRunt
   });
 
   actions.appendChild(startButton);
+
+  if (isRunning) {
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'cancel-button';
+    cancelButton.textContent = translate('content.bubblePanels.chains.cancelButton', 'Cancel run');
+    cancelButton.setAttribute(
+      'aria-label',
+      translate('content.bubblePanels.chains.cancelAria', 'Cancel chain {{name}}', { name: chain.name })
+    );
+    attachClickHandler(cancelButton, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      handleCancelChain(chain.id);
+    });
+    actions.appendChild(cancelButton);
+  }
 
   return item;
 }
@@ -2044,6 +2087,20 @@ function formatChainStatus(chain: PromptChainRecord, runtime: PromptChainsRuntim
     });
   }
 
+  if (status === 'cancelled' && activeChainId === chain.id) {
+    const timestamp = completedAt ?? new Date().toISOString();
+    const current = Math.min(Math.max(completedSteps, 0), normalizedTotal);
+    return translate(
+      'content.bubblePanels.chains.cancelledStatus',
+      'Cancelled ({{current}} / {{total}}) · {{time}}',
+      {
+        current,
+        total: normalizedTotal,
+        time: formatDateTime(timestamp)
+      }
+    );
+  }
+
   if (chain.lastExecutedAt) {
     return translate('content.bubblePanels.chains.lastUsed', 'Last used {{time}}', {
       time: formatDateTime(chain.lastExecutedAt)
@@ -2064,10 +2121,21 @@ async function handleRunChain(chain: PromptChainRecord) {
       console.warn('[ai-companion] prompt chain not found for execution');
     } else if (response.status === 'error') {
       console.error('[ai-companion] prompt chain run failed', response.message);
+    } else if (response.status === 'cancelled') {
+      console.info('[ai-companion] prompt chain run cancelled');
     }
   } catch (error) {
     console.error('[ai-companion] failed to start prompt chain run', error);
   }
+}
+
+function handleCancelChain(chainId: string) {
+  const runtime = usePromptChainsStore.getState();
+  if (runtime.status !== 'running' || runtime.activeChainId !== chainId) {
+    return;
+  }
+
+  runtime.cancelRun();
 }
 
 export function insertTextIntoComposer(text: string): boolean {

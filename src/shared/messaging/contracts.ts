@@ -38,6 +38,7 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
     request: { chainId: string };
     response:
       | { status: 'completed'; chainId: string; executedAt: string; steps: number }
+      | { status: 'cancelled'; chainId: string; steps: number }
       | { status: 'busy' }
       | { status: 'not_found' }
       | { status: 'empty' }
