@@ -21,7 +21,7 @@ const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   language: 'en',
   direction: 'ltr',
-  showSidebar: false
+  showSidebar: true
 };
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {

@@ -237,15 +237,16 @@ export async function archiveConversations(ids: string[], archived: boolean) {
   if (!ids.length) {
     return;
   }
-  await db.conversations.bulkUpdate(
-    ids.map((id) => ({
-      key: id,
-      changes: {
-        archived,
-        updatedAt: nowIso()
-      }
-    }))
-  );
+  await db.transaction('rw', db.conversations, async () => {
+    await Promise.all(
+      ids.map((id) =>
+        db.conversations.update(id, {
+          archived,
+          updatedAt: nowIso()
+        })
+      )
+    );
+  });
 
   const conversations = await db.conversations.where('id').anyOf(ids).toArray();
   await Promise.all(conversations.map((conversation) => syncConversationMetadata(conversation)));
