@@ -1,11 +1,14 @@
 import { liveQuery } from 'dexie';
 import type { FolderRecord, PromptRecord } from '@/core/models';
+import type { BookmarkSummary } from '@/core/storage/insights';
 import { db } from '@/core/storage/db';
+import { getRecentBookmarks } from '@/core/storage/insights';
 import { initI18n } from '@/shared/i18n';
 import type { i18n as I18nInstance } from 'i18next';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
 const MAX_PROMPTS = 100;
+const MAX_BOOKMARKS = 40;
 
 type PanelBubbleId = 'prompts' | 'bookmarks' | 'pinned' | 'actions' | 'settings';
 type LinkBubbleId = 'dashboard';
@@ -14,6 +17,7 @@ type BubbleId = PanelBubbleId | LinkBubbleId;
 interface LauncherState {
   prompts: PromptRecord[];
   folderNames: Map<string, string>;
+  bookmarks: BookmarkSummary[];
   filter: string;
   open: boolean;
   activeBubble: PanelBubbleId | null;
@@ -51,6 +55,7 @@ type BubbleConfig = PanelBubbleConfig | LinkBubbleConfig;
 const state: LauncherState = {
   prompts: [],
   folderNames: new Map(),
+  bookmarks: [],
   filter: '',
   open: false,
   activeBubble: null
@@ -71,6 +76,7 @@ let emptySubtitleEl: HTMLParagraphElement | null = null;
 let titleEl: HTMLHeadingElement | null = null;
 let i18nInstance: I18nInstance | null = null;
 let promptsSubscription: { unsubscribe(): void } | null = null;
+let bookmarksSubscription: { unsubscribe(): void } | null = null;
 let mounted = false;
 
 function attachEvent<K extends keyof HTMLElementEventMap>(
@@ -354,17 +360,17 @@ const BUBBLE_CONFIGS: BubbleConfig[] = [
     kind: 'panel',
     variant: 'primary',
     labelKey: 'content.dock.bookmarks',
-    labelFallback: 'Bookmarks',
+    labelFallback: 'Bookmarks ({{count}})',
     ariaKey: 'content.dock.bookmarksAria',
-    ariaFallback: 'Open bookmark bubble',
+    ariaFallback: 'Open bookmark bubble ({{count}} available)',
     showSearch: false,
     panelTitleKey: 'content.bubblePanels.bookmarks.title',
     panelTitleFallback: 'Conversation bookmarks',
-    placeholderTitleKey: 'content.bubblePanels.bookmarks.placeholderTitle',
-    placeholderTitleFallback: 'Bookmark tools are almost here',
-    placeholderSubtitleKey: 'content.bubblePanels.bookmarks.placeholderSubtitle',
+    placeholderTitleKey: 'content.bubblePanels.bookmarks.emptyTitle',
+    placeholderTitleFallback: 'No bookmarks yet',
+    placeholderSubtitleKey: 'content.bubblePanels.bookmarks.emptySubtitle',
     placeholderSubtitleFallback:
-      "Soon you'll capture messages, add notes, and sync them across popup and dashboard from this bubble."
+      'Bookmark ChatGPT messages to keep quick references handy in this bubble.'
   },
   {
     id: 'pinned',
@@ -620,7 +626,12 @@ function refreshBubbleLabels() {
     }
 
     const { button, label } = entry;
-    const count = config.id === 'prompts' ? state.prompts.length : undefined;
+    const count =
+      config.id === 'prompts'
+        ? state.prompts.length
+        : config.id === 'bookmarks'
+          ? state.bookmarks.length
+          : undefined;
     const options = typeof count === 'number' ? { count } : undefined;
     const labelText = translate(config.labelKey, config.labelFallback, options);
 
@@ -732,6 +743,12 @@ function renderActivePanel() {
   }
 
   searchWrapper.hidden = true;
+
+  if (config.id === 'bookmarks') {
+    renderBookmarkList();
+    return;
+  }
+
   promptList.innerHTML = '';
   promptList.hidden = true;
   emptyState.hidden = false;
@@ -762,6 +779,23 @@ function subscribeToPrompts() {
     },
     error: (error) => {
       console.error('[ai-companion] prompt launcher query failed', error);
+    }
+  });
+}
+
+function subscribeToBookmarks() {
+  bookmarksSubscription?.unsubscribe();
+
+  bookmarksSubscription = liveQuery(() => getRecentBookmarks(MAX_BOOKMARKS)).subscribe({
+    next: (bookmarks) => {
+      state.bookmarks = bookmarks;
+      refreshBubbleLabels();
+      if (state.activeBubble === 'bookmarks') {
+        renderBookmarkList();
+      }
+    },
+    error: (error) => {
+      console.error('[ai-companion] bookmark launcher query failed', error);
     }
   });
 }
@@ -814,6 +848,37 @@ function renderPromptList() {
   promptList.append(...items);
 }
 
+function renderBookmarkList() {
+  if (!promptList || !emptyState || !emptyTitleEl || !emptySubtitleEl) {
+    return;
+  }
+
+  if (state.activeBubble !== 'bookmarks') {
+    return;
+  }
+
+  const bookmarks = state.bookmarks ?? [];
+  promptList.innerHTML = '';
+
+  if (bookmarks.length === 0) {
+    promptList.hidden = true;
+    emptyState.hidden = false;
+    emptyTitleEl.textContent = translate('content.bubblePanels.bookmarks.emptyTitle', 'No bookmarks yet');
+    emptySubtitleEl.textContent = translate(
+      'content.bubblePanels.bookmarks.emptySubtitle',
+      'Bookmark ChatGPT messages to keep quick references handy in this bubble.'
+    );
+    return;
+  }
+
+  emptyState.hidden = true;
+  promptList.hidden = false;
+
+  const limited = bookmarks.slice(0, MAX_BOOKMARKS);
+  const items = limited.map((bookmark) => createBookmarkListItem(bookmark));
+  promptList.append(...items);
+}
+
 function openDashboard() {
   const dashboardUrl =
     chrome.runtime?.getURL?.('src/options/index.html') ??
@@ -840,6 +905,37 @@ function openDashboard() {
   }
 
   console.error('[ai-companion] dashboard URL could not be resolved');
+}
+
+function buildConversationUrl(conversationId: string) {
+  const origin = window.location.origin.replace(/\/$/, '');
+  if (!conversationId || conversationId.startsWith('local-')) {
+    return origin || window.location.origin;
+  }
+  return `${origin || window.location.origin}/c/${conversationId}`;
+}
+
+function openConversation(conversationId: string) {
+  const url = buildConversationUrl(conversationId);
+  if (!url) {
+    return;
+  }
+
+  if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+    try {
+      chrome.tabs.create({ url }, () => {
+        const lastError = chrome.runtime?.lastError;
+        if (lastError) {
+          console.error('[ai-companion] failed to open conversation tab', lastError);
+        }
+      });
+      return;
+    } catch (error) {
+      console.error('[ai-companion] failed to open conversation via chrome.tabs.create', error);
+    }
+  }
+
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function matchesPrompt(prompt: PromptRecord, term: string) {
@@ -916,6 +1012,68 @@ function createPromptListItem(prompt: PromptRecord) {
     handleInsert(prompt);
   });
   actions.appendChild(insertBtn);
+
+  return item;
+}
+
+function createBookmarkListItem(bookmark: BookmarkSummary) {
+  const item = document.createElement('li');
+  item.className = 'list-item';
+
+  const text = document.createElement('div');
+  text.className = 'list-item-text';
+  item.appendChild(text);
+
+  const fallbackTitle = translate('popup.untitledConversation', 'Untitled conversation');
+  const title = document.createElement('p');
+  title.className = 'list-item-title';
+  title.textContent = bookmark.conversationTitle?.trim().length
+    ? bookmark.conversationTitle
+    : fallbackTitle;
+  text.appendChild(title);
+
+  const preview = document.createElement('p');
+  preview.className = 'list-item-snippet';
+  preview.textContent = bookmark.messagePreview
+    ? bookmark.messagePreview
+    : translate('popup.bookmarkConversationOnly', 'Conversation bookmark');
+  text.appendChild(preview);
+
+  if (bookmark.note) {
+    const note = document.createElement('p');
+    note.className = 'list-item-description';
+    note.textContent = translate('popup.bookmarkNote', 'Note: {{note}}', { note: bookmark.note });
+    text.appendChild(note);
+  }
+
+  const meta = document.createElement('p');
+  meta.className = 'list-item-meta';
+  const metaParts: string[] = [];
+  if (bookmark.conversationPinned) {
+    metaParts.push(translate('popup.pinnedBadge', 'Pinned'));
+  }
+  metaParts.push(
+    translate('popup.bookmarkSaved', 'Saved {{time}}', {
+      time: formatDateTime(bookmark.createdAt)
+    })
+  );
+  meta.textContent = metaParts.join(' · ');
+  text.appendChild(meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'list-item-actions';
+  item.appendChild(actions);
+
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'insert-button';
+  openButton.textContent = translate('popup.openConversation', 'Open');
+  attachClickHandler(openButton, (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openConversation(bookmark.conversationId);
+  });
+  actions.appendChild(openButton);
 
   return item;
 }
@@ -1067,6 +1225,8 @@ function cleanup() {
   closePanel();
   promptsSubscription?.unsubscribe();
   promptsSubscription = null;
+  bookmarksSubscription?.unsubscribe();
+  bookmarksSubscription = null;
   document.removeEventListener('click', handleDocumentClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('pagehide', handlePageHide);
@@ -1083,6 +1243,7 @@ export async function mountPromptLauncher(): Promise<void> {
   ensureContainer();
   applyTranslations();
   subscribeToPrompts();
+  subscribeToBookmarks();
 
   document.addEventListener('click', handleDocumentClick, true);
   document.addEventListener('keydown', handleKeyDown, true);

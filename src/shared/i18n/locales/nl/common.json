@@ -217,8 +217,8 @@
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Prompt-bubbel openen ({{count}} beschikbaar)",
-      "bookmarks": "Bladwijzers",
-      "bookmarksAria": "Bladwijzerbubbel openen",
+      "bookmarks": "Bladwijzers ({{count}})",
+      "bookmarksAria": "Bladwijzerbubbel openen ({{count}} beschikbaar)",
       "pinned": "Vastgezet",
       "pinnedAria": "Vastgezette bubbel openen",
       "actions": "Acties",
@@ -232,8 +232,8 @@
     "bubblePanels": {
       "bookmarks": {
         "title": "Gespreksbladwijzers",
-        "placeholderTitle": "Bladwijzerhulpmiddelen zijn bijna klaar",
-        "placeholderSubtitle": "Binnenkort kun je hier berichten bewaren, notities toevoegen en synchroniseren met popup en dashboard."
+        "emptyTitle": "Nog geen bladwijzers",
+        "emptySubtitle": "Maak bladwijzers van ChatGPT-berichten om ze hier snel terug te vinden."
       },
       "pinned": {
         "title": "Vastgezette gesprekken",
