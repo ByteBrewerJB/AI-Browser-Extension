@@ -979,6 +979,8 @@ function PinnedTab(): ReactElement {
   const { t } = useTranslation();
   const pinnedConversations = usePinnedConversations(12);
   const conversationFolders = useFolderTree('conversation');
+  const recentConversations = useRecentConversations(6);
+  const bookmarks = useRecentBookmarks(4);
   const cachedFolderShortcuts = useBubbleLauncherStore((state) => state.conversationFolderShortcuts);
   const setConversationFolderShortcuts = useBubbleLauncherStore(
     (state) => state.setConversationFolderShortcuts
@@ -1005,27 +1007,44 @@ function PinnedTab(): ReactElement {
     return map;
   }, [folderOptions]);
 
+  const flattenedFolderTree = useMemo(
+    () => flattenFolderTree(conversationFolders),
+    [conversationFolders]
+  );
+
+  useEffect(() => {
+    if (flattenedFolderTree.length === 0) {
+      return;
+    }
+    setConversationFolderShortcuts(flattenedFolderTree);
+  }, [flattenedFolderTree, setConversationFolderShortcuts]);
+
+  const folderOptions = flattenedFolderTree.length > 0 ? flattenedFolderTree : cachedFolderShortcuts;
+
   const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(() => new Set());
 
-  const handleToggleFavorite = useCallback(async (folderId: string, next: boolean) => {
-    setFavoritePendingIds((current) => {
-      const nextSet = new Set(current);
-      nextSet.add(folderId);
-      return nextSet;
-    });
-
-    try {
-      await toggleFavoriteFolder(folderId, next);
-    } catch (error) {
-      console.error('[ai-companion] failed to toggle favorite folder from pinned bubble', error);
-    } finally {
+  const handleToggleFavorite = useCallback(
+    async (folderId: string, next: boolean) => {
       setFavoritePendingIds((current) => {
         const nextSet = new Set(current);
-        nextSet.delete(folderId);
+        nextSet.add(folderId);
         return nextSet;
       });
-    }
-  }, []);
+
+      try {
+        await toggleFavoriteFolder(folderId, next);
+      } catch (error) {
+        console.error('[ai-companion] failed to toggle favorite folder from dock', error);
+      } finally {
+        setFavoritePendingIds((current) => {
+          const nextSet = new Set(current);
+          nextSet.delete(folderId);
+          return nextSet;
+        });
+      }
+    },
+    [toggleFavoriteFolder]
+  );
 
   const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
   const [movePending, setMovePending] = useState(false);

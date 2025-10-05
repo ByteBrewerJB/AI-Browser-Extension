@@ -9,6 +9,13 @@ export interface FolderShortcut {
   favorite: boolean;
 }
 
+export interface FolderShortcut {
+  id: string;
+  name: string;
+  depth: number;
+  favorite: boolean;
+}
+
 export interface BubbleLauncherState {
   activeBubble: Bubble | null;
   conversationFolderShortcuts: FolderShortcut[];
