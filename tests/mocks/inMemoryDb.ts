@@ -14,6 +14,8 @@ type WhereResult<T extends RecordWithId> = {
   count(): Promise<number>;
   toArray(): Promise<T[]>;
   delete(): Promise<void>;
+  and(predicate: (item: T) => boolean): WhereResult<T>;
+  first(): Promise<T | undefined>;
 };
 
 type WhereQuery<T extends RecordWithId> = {
@@ -61,6 +63,14 @@ function createWhereResult<T extends RecordWithId>(
       for (const item of items) {
         table.deleteSync(item.id);
       }
+    },
+    and(predicate: (item: T) => boolean) {
+      const filtered = items.filter((item) => predicate(item));
+      return createWhereResult(table, filtered);
+    },
+    async first() {
+      const [first] = items;
+      return first ? clone(first) : undefined;
     }
   };
 }
