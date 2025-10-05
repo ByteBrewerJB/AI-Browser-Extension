@@ -14,6 +14,13 @@ import {
   updatePromptChain
 } from '@/core/storage';
 import type { PromptChainRecord } from '@/core/models';
+import {
+  PROMPT_CHAIN_VARIABLE_LIMIT,
+  getPromptVariableKey,
+  promptVariablesSchema,
+  type PromptVariablesSchemaIssue,
+  validatePromptVariable
+} from '@/core/validation/promptChains';
 
 export interface EditingGptState {
   id: string;
@@ -35,6 +42,33 @@ export interface EditingPromptChainState {
   id: string;
   name: string;
   nodeIds: string[];
+  variables: string[];
+}
+
+type PromptChainVariablesErrorCode = 'empty' | 'pattern' | 'tooLong' | 'duplicate' | 'tooMany';
+
+interface PromptChainVariablesError {
+  code: PromptChainVariablesErrorCode;
+  value?: string;
+}
+
+function mapIssueToErrorCode(issue: PromptVariablesSchemaIssue | undefined): PromptChainVariablesError {
+  if (!issue) {
+    return { code: 'pattern' };
+  }
+
+  switch (issue.code) {
+    case 'empty':
+      return { code: 'empty', value: issue.value };
+    case 'tooLong':
+      return { code: 'tooLong', value: issue.value };
+    case 'duplicate':
+      return { code: 'duplicate', value: issue.value };
+    case 'tooMany':
+      return { code: 'tooMany' };
+    default:
+      return { code: 'pattern', value: issue.value };
+  }
 }
 
 interface PromptsState {
@@ -53,6 +87,9 @@ interface PromptsState {
   promptChainName: string;
   promptChainNodeIds: string[];
   editingPromptChain: EditingPromptChainState | null;
+  promptChainVariables: string[];
+  promptChainVariableInput: string;
+  promptChainVariablesError: PromptChainVariablesError | null;
   setGptName: (value: string) => void;
   setGptDescription: (value: string) => void;
   setGptFolderId: (value: string) => void;
@@ -85,6 +122,9 @@ interface PromptsState {
   resetPromptChainForm: () => void;
   savePromptChain: () => Promise<void>;
   removePromptChain: (id: string) => Promise<void>;
+  setPromptChainVariableInput: (value: string) => void;
+  addPromptChainVariable: () => void;
+  removePromptChainVariable: (value: string) => void;
 }
 
 export const usePromptsStore = create<PromptsState>((set, get) => ({
@@ -103,6 +143,9 @@ export const usePromptsStore = create<PromptsState>((set, get) => ({
   promptChainName: '',
   promptChainNodeIds: [],
   editingPromptChain: null,
+  promptChainVariables: [],
+  promptChainVariableInput: '',
+  promptChainVariablesError: null,
   setGptName: (value) => set({ gptName: value }),
   setGptDescription: (value) => set({ gptDescription: value }),
   setGptFolderId: (value) => set({ gptFolderId: value }),
@@ -293,31 +336,62 @@ export const usePromptsStore = create<PromptsState>((set, get) => ({
     }),
   loadPromptChain: (chain) =>
     set({
-      editingPromptChain: { id: chain.id, name: chain.name, nodeIds: [...chain.nodeIds] },
+      editingPromptChain: {
+        id: chain.id,
+        name: chain.name,
+        nodeIds: [...chain.nodeIds],
+        variables: [...chain.variables]
+      },
       promptChainName: chain.name,
-      promptChainNodeIds: [...chain.nodeIds]
+      promptChainNodeIds: [...chain.nodeIds],
+      promptChainVariables: [...chain.variables],
+      promptChainVariableInput: '',
+      promptChainVariablesError: null
     }),
   resetPromptChainForm: () =>
-    set({ editingPromptChain: null, promptChainName: '', promptChainNodeIds: [] }),
+    set({
+      editingPromptChain: null,
+      promptChainName: '',
+      promptChainNodeIds: [],
+      promptChainVariables: [],
+      promptChainVariableInput: '',
+      promptChainVariablesError: null
+    }),
   savePromptChain: async () => {
-    const { editingPromptChain, promptChainName, promptChainNodeIds } = get();
+    const { editingPromptChain, promptChainName, promptChainNodeIds, promptChainVariables } = get();
     if (!promptChainName.trim()) {
       return;
     }
+
+    const parsedVariables = promptVariablesSchema.safeParse(promptChainVariables);
+    if (!parsedVariables.success) {
+      set({ promptChainVariablesError: mapIssueToErrorCode(parsedVariables.error.issues[0]) });
+      return;
+    }
+
     try {
       if (editingPromptChain) {
         await updatePromptChain({
           id: editingPromptChain.id,
           name: promptChainName,
-          nodeIds: promptChainNodeIds
+          nodeIds: promptChainNodeIds,
+          variables: parsedVariables.data
         });
       } else {
         await createPromptChain({
           name: promptChainName,
-          nodeIds: promptChainNodeIds
+          nodeIds: promptChainNodeIds,
+          variables: parsedVariables.data
         });
       }
-      set({ editingPromptChain: null, promptChainName: '', promptChainNodeIds: [] });
+      set({
+        editingPromptChain: null,
+        promptChainName: '',
+        promptChainNodeIds: [],
+        promptChainVariables: [],
+        promptChainVariableInput: '',
+        promptChainVariablesError: null
+      });
     } catch (error) {
       console.error('[promptsStore] failed to save prompt chain', error);
       throw error;
@@ -328,11 +402,52 @@ export const usePromptsStore = create<PromptsState>((set, get) => ({
       await deletePromptChain(id);
       const { editingPromptChain } = get();
       if (editingPromptChain?.id === id) {
-        set({ editingPromptChain: null, promptChainName: '', promptChainNodeIds: [] });
+        set({
+          editingPromptChain: null,
+          promptChainName: '',
+          promptChainNodeIds: [],
+          promptChainVariables: [],
+          promptChainVariableInput: '',
+          promptChainVariablesError: null
+        });
       }
     } catch (error) {
       console.error('[promptsStore] failed to delete prompt chain', error);
       throw error;
     }
-  }
+  },
+  setPromptChainVariableInput: (value) => set({ promptChainVariableInput: value, promptChainVariablesError: null }),
+  addPromptChainVariable: () => {
+    const { promptChainVariableInput, promptChainVariables } = get();
+
+    const validation = validatePromptVariable(promptChainVariableInput);
+    if (!validation.success) {
+      set({ promptChainVariablesError: mapIssueToErrorCode(validation.issue) });
+      return;
+    }
+
+    if (promptChainVariables.length >= PROMPT_CHAIN_VARIABLE_LIMIT) {
+      set({ promptChainVariablesError: { code: 'tooMany' } });
+      return;
+    }
+
+    const key = getPromptVariableKey(validation.value);
+    if (promptChainVariables.some((variable) => getPromptVariableKey(variable) === key)) {
+      set({ promptChainVariablesError: { code: 'duplicate', value: validation.value } });
+      return;
+    }
+
+    set({
+      promptChainVariables: [...promptChainVariables, validation.value],
+      promptChainVariableInput: '',
+      promptChainVariablesError: null
+    });
+  },
+  removePromptChainVariable: (value) =>
+    set((state) => ({
+      promptChainVariables: state.promptChainVariables.filter(
+        (variable) => getPromptVariableKey(variable) !== getPromptVariableKey(value)
+      ),
+      promptChainVariablesError: null
+    }))
 }));

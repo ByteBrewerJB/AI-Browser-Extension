@@ -1,5 +1,10 @@
 import { db } from './db';
 import type { PromptChainRecord } from '@/core/models';
+import {
+  PROMPT_CHAIN_VARIABLE_LIMIT,
+  getPromptVariableKey,
+  validatePromptVariable
+} from '@/core/validation/promptChains';
 
 type PromptChainTable = {
   put(record: PromptChainRecord): Promise<unknown>;
@@ -86,14 +91,26 @@ function sanitizeVariables(variables: readonly string[] | undefined) {
 
   const seen = new Set<string>();
   const cleaned: string[] = [];
+
   for (const rawValue of variables) {
-    const trimmed = rawValue.trim();
-    if (!trimmed || seen.has(trimmed)) {
+    if (cleaned.length >= PROMPT_CHAIN_VARIABLE_LIMIT) {
+      break;
+    }
+
+    const validation = validatePromptVariable(rawValue);
+    if (!validation.success) {
       continue;
     }
-    seen.add(trimmed);
-    cleaned.push(trimmed);
+
+    const key = getPromptVariableKey(validation.value);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    cleaned.push(validation.value);
   }
+
   return cleaned;
 }
 
