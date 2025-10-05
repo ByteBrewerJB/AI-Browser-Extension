@@ -106,6 +106,16 @@
       "failed": "Failed after {{attempts}}/{{max}} attempts",
       "completed": "Completed after {{attempts}} attempts"
     },
+    "exportJobsTypeHeading": "Type",
+    "exportJobsFilterStatusLabel": "Status",
+    "exportJobsFilterTypeLabel": "Type",
+    "exportJobsFilterStatusAll": "All statuses",
+    "exportJobsFilterTypeAll": "All job types",
+    "exportJobsFilterNoResults": "No jobs match the selected filters.",
+    "exportJobsTypes": {
+      "export": "Export"
+    },
+    "exportJobsTypeFallback": "Job",
     "guideResources": {
       "heading": "Guides & updates",
       "description": "Explore quickstart guides to learn new workflows and settings.",

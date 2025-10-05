@@ -38,7 +38,7 @@ Dit werkdocument houdt bij hoe de huidige extensie zich verhoudt tot de oorspron
 ## Actieve iteraties & opvolgers
 - **Export & jobs UI polish**
   - [x] Status-badges uitbreiden met retry count en volgende backoff tijd.
-  - [ ] Filterpaneel toevoegen aan het jobs-overzicht (status/type).
+  - [x] Filterpaneel toevoegen aan het jobs-overzicht (status/type) – 2025-10-05.
   - [ ] Toast naar popup sturen wanneer een geplande export voltooid is.
 - **Zoekindex worker**
   - [ ] MiniSearch-index rebuild verplaatsen naar een worker (`SharedWorker`/`ServiceWorker`) zodat grote datasets non-blocking zijn.
@@ -82,6 +82,6 @@ Gebruik onderstaande checklists wanneer je aan de respectieve featuregroepen wer
 | Datum | Commit | Featuregroep(en) | Notities |
 | --- | --- | --- | --- |
 | 2024-10-20 | _pending_ | Documentatie | Mapstructuur geherorganiseerd naar `docs/handbook/`, roadmap/regressie/ADR’s geactualiseerd, contextmenu playbook bijgewerkt. |
-| 2025-10-05 | _pending_ | Export & jobs UI | Status-badges tonen retry/backoff details; `npm run lint`. |
+| 2025-10-05 | _pending_ | Export & jobs UI | Status-badges tonen retry/backoff details; filterpaneel voor status/type toegevoegd aan dashboard; `npm run lint`, `npm run test`, `npm run build`. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
