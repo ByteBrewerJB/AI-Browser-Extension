@@ -4,6 +4,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
+import { useHistoryStore } from './features/history/historyStore';
 import type { JobSnapshot } from '@/core/models';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
@@ -38,6 +39,7 @@ export function Options() {
   const { t } = useTranslation();
   const direction = useSettingsStore((state) => state.direction);
   const hydrated = useSettingsStore((state) => state.hydrated);
+  const updateConversationConfig = useHistoryStore((state) => state.updateConversationConfig);
   const [isSchedulingExport, setIsSchedulingExport] = useState(false);
   const [optimisticExportAt, setOptimisticExportAt] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -49,6 +51,18 @@ export function Options() {
   useEffect(() => {
     document.documentElement.dir = direction;
   }, [direction]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const historyFolder = params.get('historyFolder');
+    if (historyFolder) {
+      updateConversationConfig({ folderId: historyFolder });
+    }
+  }, [updateConversationConfig]);
 
   const loadJobs = useCallback(async () => {
     setIsFetchingJobs(true);

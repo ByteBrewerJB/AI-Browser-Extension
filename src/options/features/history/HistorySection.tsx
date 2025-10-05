@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
@@ -35,7 +35,13 @@ export function HistorySection() {
     applyPreset,
     createConversationFolder,
     deleteConversationFolder,
-    togglePin
+    togglePin,
+    selectedConversationIds,
+    toggleSelection,
+    setSelectedConversationIds,
+    clearSelection,
+    archiveSelected,
+    deleteSelected
   } = useHistoryStore();
 
   const conversationFolderOptions = useMemo(
@@ -120,6 +126,32 @@ export function HistorySection() {
     return sorted;
   }, [conversations, conversationConfig]);
 
+  const filteredConversationIds = useMemo(
+    () => filteredConversations.map((conversation) => conversation.id),
+    [filteredConversations]
+  );
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const selectionSet = useMemo(() => new Set(selectedConversationIds), [selectedConversationIds]);
+  const allFilteredSelected = filteredConversationIds.length > 0 && filteredConversationIds.every((id) => selectionSet.has(id));
+  const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
+  const selectionCount = selectedConversationIds.length;
+
+  useEffect(() => {
+    if (!selectAllRef.current) {
+      return;
+    }
+    selectAllRef.current.indeterminate = !allFilteredSelected && someFilteredSelected;
+  }, [allFilteredSelected, someFilteredSelected]);
+
+  const selectionLabel = selectionCount
+    ? t('options.bulkSelectedCount', {
+        count: selectionCount,
+        defaultValue: selectionCount === 1 ? '1 conversation selected' : '{{count}} conversations selected'
+      })
+    : t('options.bulkNoSelection', { defaultValue: 'No conversations selected' });
+
   const handleSavePreset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await savePreset();
@@ -145,6 +177,32 @@ export function HistorySection() {
 
   const handlePinToggle = async (conversationId: string) => {
     await togglePin(conversationId);
+  };
+
+  const handleToggleAll = () => {
+    if (filteredConversationIds.length === 0) {
+      return;
+    }
+    if (allFilteredSelected) {
+      const remaining = selectedConversationIds.filter((id) => !filteredConversationIds.includes(id));
+      setSelectedConversationIds(remaining);
+      return;
+    }
+    const merged = new Set(selectedConversationIds);
+    filteredConversationIds.forEach((id) => merged.add(id));
+    setSelectedConversationIds(Array.from(merged));
+  };
+
+  const handleSelectionToggle = (conversationId: string) => {
+    toggleSelection(conversationId);
+  };
+
+  const handleArchiveSelection = async (archived: boolean) => {
+    await archiveSelected(archived);
+  };
+
+  const handleDeleteSelection = async () => {
+    await deleteSelected();
   };
 
   return (
@@ -466,10 +524,65 @@ export function HistorySection() {
           )}
         </div>
 
+        <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t('options.bulkSelectionHeading')}
+              </p>
+              <p className="text-xs text-slate-500">{selectionLabel}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleArchiveSelection(true)}
+                type="button"
+              >
+                {t('options.bulkArchive')}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleArchiveSelection(false)}
+                type="button"
+              >
+                {t('options.bulkRestore')}
+              </button>
+              <button
+                className="rounded-md border border-rose-600 px-3 py-1 text-xs uppercase tracking-wide text-rose-200 transition hover:bg-rose-600/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => void handleDeleteSelection()}
+                type="button"
+              >
+                {t('options.bulkDelete')}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={() => clearSelection()}
+                type="button"
+              >
+                {t('options.bulkClear')}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-hidden rounded-xl border border-slate-800">
           <table className="min-w-full divide-y divide-slate-800 text-sm">
             <thead className="bg-slate-900/70 text-left text-xs uppercase tracking-wide text-slate-400">
               <tr>
+                <th className="w-12 px-4 py-3">
+                  <input
+                    ref={selectAllRef}
+                    aria-label={t('options.bulkSelectAll') ?? 'Select all conversations'}
+                    checked={allFilteredSelected && filteredConversationIds.length > 0}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                    onChange={handleToggleAll}
+                    type="checkbox"
+                  />
+                </th>
                 <th className="px-4 py-3">{t('options.columnTitle')}</th>
                 <th className="px-4 py-3">{t('popup.messages')}</th>
                 <th className="px-4 py-3">{t('popup.words')}</th>
@@ -481,7 +594,7 @@ export function HistorySection() {
             <tbody className="divide-y divide-slate-900/60">
               {filteredConversations.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6" colSpan={6}>
+                  <td className="px-4 py-6" colSpan={7}>
                     <EmptyState
                       title={
                         conversations.length === 0
@@ -493,33 +606,49 @@ export function HistorySection() {
                   </td>
                 </tr>
               ) : (
-                filteredConversations.map((conversation) => (
-                  <tr key={conversation.id} className="bg-slate-900/30">
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-100">
-                          {conversation.title || t('options.untitledConversation')}
-                        </span>
-                        <span className="text-xs text-slate-400">
+                filteredConversations.map((conversation) => {
+                  const title = conversation.title || t('options.untitledConversation');
+                  const isSelected = selectionSet.has(conversation.id);
+                  return (
+                    <tr key={conversation.id} className="bg-slate-900/30">
+                      <td className="px-4 py-3">
+                        <input
+                          aria-label={
+                            t('options.bulkSelectConversation', {
+                              title,
+                              defaultValue: `Select ${title}`
+                            }) ?? `Select ${title}`
+                          }
+                          checked={isSelected}
+                          className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                          onChange={() => handleSelectionToggle(conversation.id)}
+                          type="checkbox"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-100">{title}</span>
+                          <span className="text-xs text-slate-400">
+                            {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{formatNumber(conversation.messageCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.wordCount)}</td>
+                      <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
+                      <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
+                          onClick={() => void handlePinToggle(conversation.id)}
+                          type="button"
+                        >
                           {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{formatNumber(conversation.messageCount)}</td>
-                    <td className="px-4 py-3">{formatNumber(conversation.wordCount)}</td>
-                    <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
-                    <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
-                        onClick={() => void handlePinToggle(conversation.id)}
-                        type="button"
-                      >
-                        {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
