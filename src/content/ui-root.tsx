@@ -1,13 +1,14 @@
 ﻿import React, { StrictMode, useCallback, useEffect, useId, useMemo, useState } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import type { ChangeEvent, FormEvent, ReactElement, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
-import { archiveConversations, togglePinned, upsertConversation } from '@/core/storage';
+import { collectMessageElements, getConversationId } from './chatDom';
+import { archiveConversations, getBookmarks, toggleBookmark, togglePinned, upsertConversation } from '@/core/storage';
 import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/core/storage';
-import type { PromptRecord } from '@/core/models';
+import type { BookmarkRecord, PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
@@ -101,6 +102,437 @@ function createSnippet(content: string, maxLength = 160) {
     return normalized;
   }
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+const CONVERSATION_BOOKMARK_KEY = '__conversation__';
+
+interface BookmarkCandidateOption {
+  key: string;
+  messageId: string | null;
+  title: string;
+  subtitle: string;
+}
+
+function normalizeMessageContent(content: string) {
+  return content.replace(/\s+/g, ' ').trim();
+}
+
+function toBookmarkKey(messageId: string | null | undefined) {
+  return messageId ? `message:${messageId}` : CONVERSATION_BOOKMARK_KEY;
+}
+
+function formatBookmarkRole(
+  role: string | null | undefined,
+  t: ReturnType<typeof useTranslation>['t']
+) {
+  switch ((role ?? '').toLowerCase()) {
+    case 'user':
+      return t('content.sidebar.history.bookmarkModalRoleUser', { defaultValue: 'You' });
+    case 'assistant':
+      return t('content.sidebar.history.bookmarkModalRoleAssistant', { defaultValue: 'Assistant' });
+    case 'system':
+      return t('content.sidebar.history.bookmarkModalRoleSystem', { defaultValue: 'System' });
+    case 'tool':
+      return t('content.sidebar.history.bookmarkModalRoleTool', { defaultValue: 'Tool' });
+    default:
+      return t('content.sidebar.history.bookmarkModalRoleDefault', { defaultValue: 'Message' });
+  }
+}
+
+interface BookmarkDialogProps {
+  open: boolean;
+  onClose: () => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
+function BookmarkDialog({ open, onClose, t }: BookmarkDialogProps): ReactElement | null {
+  const headingId = useId();
+  const descriptionId = `${headingId}-description`;
+  const noteFieldId = `${headingId}-note`;
+
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<BookmarkCandidateOption[]>([]);
+  const [existingMap, setExistingMap] = useState<Map<string, BookmarkRecord>>(new Map());
+  const [selectedKey, setSelectedKey] = useState<string>('');
+  const [note, setNote] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setConversationId(null);
+      setCandidates([]);
+      setExistingMap(new Map());
+      setSelectedKey('');
+      setNote('');
+      setPending(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      const resolvedConversationId = getConversationId();
+      if (cancelled) {
+        return;
+      }
+
+      setConversationId(resolvedConversationId);
+
+      const elements = collectMessageElements();
+      const seen = new Set<string>();
+      const messageCandidates: BookmarkCandidateOption[] = [];
+
+      for (const element of elements) {
+        const messageId = element.getAttribute('data-message-id');
+        if (!messageId) {
+          continue;
+        }
+        const key = toBookmarkKey(messageId);
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+
+        const rawText = normalizeMessageContent(element.textContent ?? '');
+        if (!rawText) {
+          continue;
+        }
+
+        const role = element.getAttribute('data-message-author-role');
+        const roleLabel = formatBookmarkRole(role, t);
+        const title = t('content.sidebar.history.bookmarkModalMessageTitle', {
+          role: roleLabel,
+          defaultValue: '{{role}} message'
+        });
+
+        messageCandidates.push({
+          key,
+          messageId,
+          title,
+          subtitle: createSnippet(rawText, 200)
+        });
+      }
+
+      const nextCandidates: BookmarkCandidateOption[] = [];
+
+      if (resolvedConversationId) {
+        nextCandidates.push({
+          key: CONVERSATION_BOOKMARK_KEY,
+          messageId: null,
+          title: t('content.sidebar.history.bookmarkModalConversationOption', {
+            defaultValue: 'Bookmark entire conversation'
+          }),
+          subtitle: t('content.sidebar.history.bookmarkModalConversationDescription', {
+            defaultValue: 'Save without linking to a specific message.'
+          })
+        });
+      }
+
+      nextCandidates.push(...messageCandidates);
+
+      let bookmarkMap = new Map<string, BookmarkRecord>();
+
+      if (resolvedConversationId) {
+        try {
+          const bookmarks = await getBookmarks(resolvedConversationId);
+          if (!cancelled) {
+            bookmarkMap = new Map(
+              bookmarks.map((bookmark) => [toBookmarkKey(bookmark.messageId ?? null), bookmark])
+            );
+          }
+        } catch (loadError) {
+          console.error('[ai-companion] failed to load conversation bookmarks', loadError);
+          if (!cancelled) {
+            setError(
+              t('content.sidebar.history.bookmarkModalLoadError', {
+                defaultValue: 'We could not load existing bookmarks. Try again later.'
+              })
+            );
+          }
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      setCandidates(nextCandidates);
+      setExistingMap(bookmarkMap);
+
+      const defaultKey =
+        bookmarkMap.size > 0
+          ? bookmarkMap.keys().next().value ?? nextCandidates[0]?.key ?? ''
+          : nextCandidates[0]?.key ?? '';
+
+      setSelectedKey(defaultKey);
+      const defaultBookmark = defaultKey ? bookmarkMap.get(defaultKey) : undefined;
+      setNote(defaultBookmark?.note ?? '');
+      setError(null);
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, t]);
+
+  const selectedCandidate = useMemo(
+    () => candidates.find((candidate) => candidate.key === selectedKey) ?? null,
+    [candidates, selectedKey]
+  );
+
+  const selectedBookmark = selectedCandidate
+    ? existingMap.get(selectedCandidate.key)
+    : undefined;
+
+  const handleCandidateChange = useCallback(
+    (key: string) => {
+      setSelectedKey(key);
+      const bookmark = existingMap.get(key);
+      setNote(bookmark?.note ?? '');
+      setError(null);
+    },
+    [existingMap]
+  );
+
+  const handleNoteChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+    setNote(event.target.value);
+  }, []);
+
+  const handleRequestClose = useCallback(() => {
+    if (pending) {
+      return;
+    }
+    onClose();
+  }, [onClose, pending]);
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (pending) {
+        return;
+      }
+      if (!conversationId || !selectedCandidate) {
+        setError(
+          t('content.sidebar.history.bookmarkModalNoConversation', {
+            defaultValue: 'Open a ChatGPT conversation to add bookmarks.'
+          })
+        );
+        return;
+      }
+
+      const bookmark = selectedBookmark;
+      const trimmedNote = note.trim();
+      const normalizedExistingNote = bookmark?.note?.trim() ?? '';
+      if (bookmark && normalizedExistingNote === trimmedNote) {
+        onClose();
+        return;
+      }
+
+      const noteValue = trimmedNote.length > 0 ? trimmedNote : undefined;
+
+      setPending(true);
+      setError(null);
+
+      try {
+        const targetMessageId = selectedCandidate.messageId ?? undefined;
+        if (bookmark) {
+          await toggleBookmark(conversationId, targetMessageId);
+          await toggleBookmark(conversationId, targetMessageId, noteValue);
+        } else {
+          await toggleBookmark(conversationId, targetMessageId, noteValue);
+        }
+        onClose();
+      } catch (submitError) {
+        console.error('[ai-companion] failed to save bookmark', submitError);
+        setError(
+          t('content.sidebar.history.bookmarkModalError', {
+            defaultValue: 'Failed to save bookmark. Please try again.'
+          })
+        );
+      } finally {
+        setPending(false);
+      }
+    },
+    [conversationId, note, onClose, pending, selectedBookmark, selectedCandidate, t]
+  );
+
+  const handleRemove = useCallback(async () => {
+    if (pending) {
+      return;
+    }
+    if (!conversationId || !selectedCandidate) {
+      return;
+    }
+    try {
+      setPending(true);
+      setError(null);
+      await toggleBookmark(conversationId, selectedCandidate.messageId ?? undefined);
+      onClose();
+    } catch (removeError) {
+      console.error('[ai-companion] failed to remove bookmark', removeError);
+      setError(
+        t('content.sidebar.history.bookmarkModalRemoveError', {
+          defaultValue: 'Failed to remove bookmark. Please try again.'
+        })
+      );
+    } finally {
+      setPending(false);
+    }
+  }, [conversationId, onClose, pending, selectedCandidate, t]);
+
+  const disableSubmit = !conversationId || !selectedCandidate || pending;
+
+  return (
+    <Modal
+      open={open}
+      onClose={handleRequestClose}
+      labelledBy={headingId}
+      describedBy={descriptionId}
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <ModalHeader className="space-y-2">
+          <h3 id={headingId} className="text-lg font-semibold text-slate-100">
+            {t('content.sidebar.history.bookmarkModalTitle', { defaultValue: 'Save bookmark' })}
+          </h3>
+          <p id={descriptionId} className="text-sm text-slate-300">
+            {t('content.sidebar.history.bookmarkModalDescription', {
+              defaultValue: 'Choose a message and add an optional note to store it in your bookmark bubble.'
+            })}
+          </p>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+          {conversationId ? (
+            <>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {t('content.sidebar.history.bookmarkModalSelectLabel', { defaultValue: 'Choose a target' })}
+                </p>
+                {candidates.length === 0 ? (
+                  <p className="rounded-md border border-white/10 bg-slate-900/60 px-3 py-4 text-sm text-slate-300">
+                    {t('content.sidebar.history.bookmarkModalNoMessages', {
+                      defaultValue: 'No messages available yet. Send a prompt or wait for responses to appear.'
+                    })}
+                  </p>
+                ) : (
+                  <ul className="space-y-2" role="radiogroup" aria-labelledby={headingId}>
+                    {candidates.map((candidate) => {
+                      const isSelected = candidate.key === selectedKey;
+                      const existing = existingMap.get(candidate.key);
+                      return (
+                        <li key={candidate.key}>
+                          <label
+                            className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-left text-sm transition ${
+                              isSelected
+                                ? 'border-emerald-400 bg-emerald-500/10 text-emerald-100'
+                                : 'border-white/10 bg-slate-900/60 text-slate-200 hover:border-emerald-400 hover:text-emerald-100'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                              name={`${headingId}-target`}
+                              value={candidate.key}
+                              checked={isSelected}
+                              onChange={() => handleCandidateChange(candidate.key)}
+                              disabled={pending}
+                            />
+                            <span className="flex-1 space-y-1">
+                              <span className="flex items-center justify-between gap-3">
+                                <span className="font-semibold">{candidate.title}</span>
+                                {existing ? (
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                                    {t('content.sidebar.history.bookmarkModalExistingBadge', {
+                                      defaultValue: 'Saved'
+                                    })}
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="block text-xs text-slate-300">{candidate.subtitle}</span>
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label
+                  className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+                  htmlFor={noteFieldId}
+                >
+                  {t('content.sidebar.history.bookmarkModalNoteLabel', { defaultValue: 'Note (optional)' })}
+                </label>
+                <textarea
+                  id={noteFieldId}
+                  className="min-h-[96px] w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+                  value={note}
+                  onChange={handleNoteChange}
+                  placeholder={t('content.sidebar.history.bookmarkModalNotePlaceholder', {
+                    defaultValue: 'Add context or reminders for this bookmark.'
+                  })}
+                  disabled={pending || !selectedCandidate}
+                />
+                <p className="text-xs text-slate-500">
+                  {selectedBookmark
+                    ? t('content.sidebar.history.bookmarkModalUpdateInfo', {
+                        defaultValue: 'Saving will update the note for this bookmark.'
+                      })
+                    : t('content.sidebar.history.bookmarkModalCreateInfo', {
+                        defaultValue: 'Notes help you remember why you saved the message.'
+                      })}
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className="rounded-md border border-white/10 bg-slate-900/60 px-3 py-4 text-sm text-slate-300">
+              {t('content.sidebar.history.bookmarkModalNoConversation', {
+                defaultValue: 'Open a ChatGPT conversation to add bookmarks.'
+              })}
+            </p>
+          )}
+        </ModalBody>
+        <ModalFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {selectedBookmark ? (
+              <button
+                type="button"
+                className="rounded-md border border-rose-600 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-rose-300 transition hover:bg-rose-600/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                onClick={handleRemove}
+                disabled={pending}
+              >
+                {t('content.sidebar.history.bookmarkModalRemove', { defaultValue: 'Remove bookmark' })}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              className="rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+              onClick={handleRequestClose}
+              disabled={pending}
+            >
+              {t('content.sidebar.history.bookmarkModalCancel', { defaultValue: 'Cancel' })}
+            </button>
+            <button
+              type="submit"
+              className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 shadow-sm transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              disabled={disableSubmit}
+            >
+              {selectedBookmark
+                ? t('content.sidebar.history.bookmarkModalUpdate', { defaultValue: 'Update bookmark' })
+                : t('content.sidebar.history.bookmarkModalSave', { defaultValue: 'Save bookmark' })}
+            </button>
+          </div>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
 }
 
 interface FolderOption {
@@ -310,22 +742,32 @@ function ConversationList({ title, conversations, emptyTitle, emptyDescription, 
 
 interface BookmarkListProps {
   bookmarks: BookmarkSummary[];
+  onAddBookmark: () => void;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function BookmarkList({ bookmarks, t }: BookmarkListProps) {
+function BookmarkList({ bookmarks, onAddBookmark, t }: BookmarkListProps) {
   return (
     <SidebarSection
       action={
-        bookmarks.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-            onClick={() => openDashboard()}
+            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={onAddBookmark}
             type="button"
           >
-            {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
+            {t('content.sidebar.history.addBookmark', { defaultValue: 'Bookmark message' })}
           </button>
-        ) : undefined
+          {bookmarks.length > 0 ? (
+            <button
+              className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+              onClick={() => openDashboard()}
+              type="button"
+            >
+              {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
+            </button>
+          ) : null}
+        </div>
       }
       title={t('content.sidebar.history.bookmarksHeading', { defaultValue: 'Latest bookmarks' })}
     >
@@ -469,12 +911,22 @@ function HistoryTab(): ReactElement {
   const recentConversations = useRecentConversations(6);
   const bookmarks = useRecentBookmarks(4);
 
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
+
   const handleTogglePin = useCallback((conversationId: string) => {
     void togglePinned(conversationId);
   }, []);
 
   const handleArchiveToggle = useCallback((conversationId: string, archived: boolean | undefined) => {
     void archiveConversations([conversationId], !archived);
+  }, []);
+
+  const openBookmarkDialog = useCallback(() => {
+    setBookmarkDialogOpen(true);
+  }, []);
+
+  const closeBookmarkDialog = useCallback(() => {
+    setBookmarkDialogOpen(false);
   }, []);
 
   const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
@@ -711,7 +1163,8 @@ function HistoryTab(): ReactElement {
         title={t('content.sidebar.history.recentHeading', { defaultValue: 'Recent updates' })}
       />
 
-      <BookmarkList bookmarks={bookmarks} t={t} />
+      <BookmarkList bookmarks={bookmarks} onAddBookmark={openBookmarkDialog} t={t} />
+      <BookmarkDialog open={bookmarkDialogOpen} onClose={closeBookmarkDialog} t={t} />
       <MoveDialog
         open={Boolean(moveTarget)}
         title={moveDialogTitle}

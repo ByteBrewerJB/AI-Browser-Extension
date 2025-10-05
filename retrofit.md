@@ -8,7 +8,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | --- | --- | --- | --- |
 | Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
 | Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
-| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-05 – pending |
+| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-05 – pending (bookmark-modal overlay) |
 | Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 📝 Ontwerp | _nog te plannen_ |
 | Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
 | Conversatieanalyse & export | Full-text search, analytics, export-UI | 📝 Ontwerp | _nog te plannen_ |
@@ -161,5 +161,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | --- | --- | --- | --- |
 | 2025-10-05 | _pending_ | Conversatiedock; pin/verplaats | Dexie v6 favoriete mappen + MoveDialog toegevoegd; lint uitgevoerd |
 | 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkbubble toont live Dexie-data + notities; lint/test/build uitgevoerd |
+| 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkmodal voor selectie & notities in content; lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
