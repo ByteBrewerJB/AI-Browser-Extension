@@ -79,15 +79,36 @@ function sanitizeNodeIds(nodeIds: readonly string[] | undefined) {
   return cleaned;
 }
 
+function sanitizeVariables(variables: readonly string[] | undefined) {
+  if (!variables || variables.length === 0) {
+    return [] as string[];
+  }
+
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+  for (const rawValue of variables) {
+    const trimmed = rawValue.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    cleaned.push(trimmed);
+  }
+  return cleaned;
+}
+
 export interface CreatePromptChainInput {
   name: string;
   nodeIds?: readonly string[];
+  variables?: readonly string[];
 }
 
 export interface UpdatePromptChainInput {
   id: string;
   name?: string;
   nodeIds?: readonly string[];
+  variables?: readonly string[];
+  lastExecutedAt?: string | null;
 }
 
 export async function createPromptChain(input: CreatePromptChainInput) {
@@ -102,8 +123,10 @@ export async function createPromptChain(input: CreatePromptChainInput) {
     id: crypto.randomUUID(),
     name: trimmedName,
     nodeIds: sanitizeNodeIds(input.nodeIds),
+    variables: sanitizeVariables(input.variables),
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    lastExecutedAt: null
   };
 
   await promptChainTable.put(record);
@@ -127,6 +150,14 @@ export async function updatePromptChain(input: UpdatePromptChainInput) {
     changes.nodeIds = sanitizeNodeIds(input.nodeIds);
   }
 
+  if (input.variables !== undefined) {
+    changes.variables = sanitizeVariables(input.variables);
+  }
+
+  if ('lastExecutedAt' in input) {
+    changes.lastExecutedAt = input.lastExecutedAt ?? null;
+  }
+
   await promptChainTable.update(input.id, changes);
 }
 
@@ -135,7 +166,23 @@ export async function deletePromptChain(id: string) {
 }
 
 export async function listPromptChains() {
-  return promptChainTable.orderBy('updatedAt').reverse().toArray();
+  const chains = await promptChainTable.orderBy('updatedAt').reverse().toArray();
+
+  return chains.sort((a, b) => {
+    if (a.lastExecutedAt && b.lastExecutedAt) {
+      return a.lastExecutedAt < b.lastExecutedAt ? 1 : a.lastExecutedAt > b.lastExecutedAt ? -1 : 0;
+    }
+
+    if (a.lastExecutedAt) {
+      return -1;
+    }
+
+    if (b.lastExecutedAt) {
+      return 1;
+    }
+
+    return a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0;
+  });
 }
 
 export async function getPromptChainById(id: string) {

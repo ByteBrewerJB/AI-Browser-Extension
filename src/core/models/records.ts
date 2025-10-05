@@ -48,8 +48,10 @@ export interface PromptChainRecord {
   id: string;
   name: string;
   nodeIds: string[];
+  variables: string[];
   createdAt: string;
   updatedAt: string;
+  lastExecutedAt: string | null;
 }
 
 export interface FolderRecord {
