@@ -99,6 +99,13 @@
       "completed": "Completed",
       "failed": "Failed"
     },
+    "exportJobsStatusDetails": {
+      "pendingInitial": "First run at {{time}}",
+      "pendingRetry": "Retry {{attempt}}/{{max}} at {{time}}",
+      "running": "Attempt {{attempt}}/{{max}} in progress",
+      "failed": "Failed after {{attempts}}/{{max}} attempts",
+      "completed": "Completed after {{attempts}} attempts"
+    },
     "guideResources": {
       "heading": "Guides & updates",
       "description": "Explore quickstart guides to learn new workflows and settings.",

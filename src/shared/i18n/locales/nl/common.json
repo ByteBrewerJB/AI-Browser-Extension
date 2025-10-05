@@ -99,6 +99,13 @@
       "completed": "Voltooid",
       "failed": "Mislukt"
     },
+    "exportJobsStatusDetails": {
+      "pendingInitial": "Eerste run om {{time}}",
+      "pendingRetry": "Volgende retry {{attempt}}/{{max}} om {{time}}",
+      "running": "Poging {{attempt}}/{{max}} bezig",
+      "failed": "Mislukt na {{attempts}}/{{max}} pogingen",
+      "completed": "Voltooid na {{attempts}} pogingen"
+    },
     "guideResources": {
       "heading": "Gidsen & updates",
       "description": "Ontdek snelstartgidsen om nieuwe workflows en instellingen te leren.",

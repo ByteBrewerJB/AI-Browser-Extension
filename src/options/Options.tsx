@@ -133,6 +133,58 @@ export function Options() {
     [t]
   );
 
+  const getStatusBadgeDetails = useCallback(
+    (job: JobSnapshot) => {
+      if (job.status === 'pending') {
+        if (job.attempts > 0) {
+          const nextAttempt = Math.min(job.attempts + 1, job.maxAttempts);
+          return (
+            t('options.exportJobsStatusDetails.pendingRetry', {
+              defaultValue: 'Retry {{attempt}}/{{max}} at {{time}}',
+              attempt: nextAttempt,
+              max: job.maxAttempts,
+              time: formatDateTime(job.runAt)
+            }) ?? undefined
+          );
+        }
+        return (
+          t('options.exportJobsStatusDetails.pendingInitial', {
+            defaultValue: 'First run at {{time}}',
+            time: formatDateTime(job.runAt)
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'running') {
+        return (
+          t('options.exportJobsStatusDetails.running', {
+            defaultValue: 'Attempt {{attempt}}/{{max}} in progress',
+            attempt: job.attempts,
+            max: job.maxAttempts
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'failed') {
+        return (
+          t('options.exportJobsStatusDetails.failed', {
+            defaultValue: 'Failed after {{attempts}}/{{max}} attempts',
+            attempts: job.attempts,
+            max: job.maxAttempts
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'completed' && job.attempts > 1) {
+        return (
+          t('options.exportJobsStatusDetails.completed', {
+            defaultValue: 'Completed after {{attempts}} attempts',
+            attempts: job.attempts
+          }) ?? undefined
+        );
+      }
+      return undefined;
+    },
+    [formatDateTime, t]
+  );
+
   const exportStatusMessage = useMemo(() => {
     if (runningExportJob) {
       return (
@@ -288,18 +340,23 @@ export function Options() {
                     </tr>
                   </thead>
                   <tbody className="text-slate-200">
-                    {exportJobs.map((job) => (
-                      <tr key={job.id} className="rounded-md bg-slate-900/80">
-                        <td className="rounded-l-md px-3 py-2 align-top">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              STATUS_BADGE_CLASSES[job.status]
-                            }`}
-                          >
-                            {statusLabels[job.status]}
-                          </span>
-                          <div className="mt-1 text-[11px] text-slate-500">#{job.id.slice(0, 8)}</div>
-                        </td>
+                    {exportJobs.map((job) => {
+                      const badgeDetails = getStatusBadgeDetails(job);
+                      return (
+                        <tr key={job.id} className="rounded-md bg-slate-900/80">
+                          <td className="rounded-l-md px-3 py-2 align-top">
+                            <span
+                              className={`inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                STATUS_BADGE_CLASSES[job.status]
+                              }`}
+                            >
+                              <span>{statusLabels[job.status]}</span>
+                              {badgeDetails ? (
+                                <span className="text-[10px] font-normal opacity-80">{badgeDetails}</span>
+                              ) : null}
+                            </span>
+                            <div className="mt-1 text-[11px] text-slate-500">#{job.id.slice(0, 8)}</div>
+                          </td>
                         <td className="px-3 py-2 align-top text-[11px] text-slate-300">
                           {job.attempts}/{job.maxAttempts}
                         </td>
@@ -324,7 +381,8 @@ export function Options() {
                               : 'â€”'}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
