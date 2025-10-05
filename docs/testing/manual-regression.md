@@ -96,6 +96,16 @@ Execute this pass in both Chrome and Edge once per release when bookmark overlay
 4. Close the overlay with `Escape`, reopen it from another message, and ensure focus is trapped within the modal. The overlay must close automatically if the dock is hidden.
 5. Switch to the second browser (Chrome ↔ Edge) and repeat steps 2–4. Record any DOM mismatches or timing issues in the retrofit log.
 
+## Guides bubble modal
+
+Run this checklist whenever the guides modal, settings persistence, or guide dataset changes.
+
+1. In an active ChatGPT conversation, open the bubble dock and click the new “Guides” bubble.
+2. Confirm a modal renders within the extension shadow-root, shows the "Guides & updates" heading, and lists the same guides as the dashboard card.
+3. Click “View” for a guide and verify a new tab opens on the configured Guideflow URL while the modal stays open.
+4. Toggle “Mark as viewed” for one of the guides, close the modal, reopen it, and confirm the badge reflects the updated state.
+5. Close the modal via the “Close” button and with the `Escape` key to ensure the bubble resets and focus returns to the dock.
+
 ## Promptketens
 
 1. Open de dashboardpagina en navigeer naar het tabblad “Prompts”. Maak een keten met minimaal twee stappen en voeg één variabele toe via het pillenveld. Controleer dat dubbele variabelen geweigerd worden en dat de teller niet boven de limiet uitkomt.

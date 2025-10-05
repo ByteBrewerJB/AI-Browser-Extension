@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Bubble = 'history' | 'prompts' | 'media' | 'actions';
+export type Bubble = 'history' | 'prompts' | 'media' | 'actions' | 'guides';
 
 export interface FolderShortcut {
   id: string;

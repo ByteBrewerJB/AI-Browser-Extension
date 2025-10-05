@@ -9,6 +9,7 @@ interface ModalProps {
   describedBy?: string;
   children: ReactNode;
   className?: string;
+  container?: Element | null;
 }
 
 function ensureModalRoot(): HTMLElement {
@@ -23,7 +24,7 @@ function ensureModalRoot(): HTMLElement {
   return container;
 }
 
-export function Modal({ open, onClose, labelledBy, describedBy, children, className }: ModalProps) {
+export function Modal({ open, onClose, labelledBy, describedBy, children, className, container }: ModalProps) {
   if (typeof window === 'undefined' || typeof document === 'undefined' || typeof document.createElement !== 'function') {
     if (!open) {
       return null;
@@ -79,7 +80,17 @@ export function Modal({ open, onClose, labelledBy, describedBy, children, classN
     };
   }, [open, onClose]);
 
-  const portalTarget = useMemo(() => (open ? ensureModalRoot() : null), [open]);
+  const portalTarget = useMemo(() => {
+    if (!open) {
+      return null;
+    }
+
+    if (container) {
+      return container;
+    }
+
+    return ensureModalRoot();
+  }, [open, container]);
 
   if (!open || !portalTarget) {
     return null;

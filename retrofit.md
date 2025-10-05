@@ -148,7 +148,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 1. ✅ Kopieer `example/example/1/assets/data/guides.json` naar `public/guides.json` en breid het schema uit met `title`, `description` en `badgeColor` zodat we eigen copy kunnen plaatsen. Maak een type `GuideResource` in `src/core/models/guides.ts` met validatie via Zod. _(2025-10-16 – dataset + schema live)_
 2. ✅ Bouw in `src/options/features/infoAndUpdates/GuideResourcesCard.tsx` een kaart die de gidsen toont met knoppen "Bekijken". Gebruik `chrome.tabs.create` om de Guideflow-URL in een nieuw tabblad te openen en log kliktelemetrie via `background/jobs/scheduler` (event `guide-opened`). _(2025-10-17 – _pending_ (GuideResourcesCard + event logging))_
 3. Introduceer in `useSettingsStore` een veld `dismissedGuideIds: string[]`. Voeg een "Markeer als bekeken"-toggle toe per gids (zowel in options als in popup) en synchroniseer de status naar `chrome.storage.local` vergelijkbaar met het voorbeeld `setPreviousModal`/`setSelectedManageTabsItem` patroon.
-4. Plaats in het promptlauncher-dock een nieuwe bubble "Guides" die de `GuideResourcesCard` in een modal opent. Gebruik `Modal` component en zorg dat het modaal in de content-shadow-root rendert zodat de gebruiker in-context hulp krijgt zoals in `html/infoAndUpdates`.
+4. ✅ Plaats in het promptlauncher-dock een nieuwe bubble "Guides" die de `GuideResourcesCard` in een modal opent. Gebruik `Modal` component en zorg dat het modaal in de content-shadow-root rendert zodat de gebruiker in-context hulp krijgt zoals in `html/infoAndUpdates`. _(2025-10-18 – _pending_ (Guides bubble + shadow-root modal))_
 
 ### 12. Internationalisatie en direction (`locales/*.json`)
 1. Importeer de talen uit `example/example/1/locales` (ar, de, en, es, fr, he, hi, it, ja, zh). Schrijf een script `scripts/generate-locales.ts` dat de sleutel-naamgeving omzet naar onze `content.dock.*` structuur en voeg de resultaten toe aan `src/shared/i18n/locales/<lang>/common.json`.
@@ -211,5 +211,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-17 | _pending_ | Onboarding & gidsen | Options-gidsenkaart + telemetry event logging; npm run lint/test/build uitgevoerd |
 | 2025-10-18 | _pending_ | Pin- & bulkbeheer | Dock-favorieten cache hydrateert via chrome.storage; unit test bubbleLauncherStore + lint/test/build uitgevoerd |
 | 2025-10-18 | _pending_ | Onboarding & gidsen | Guides “Markeer als bekeken”-toggles + storage sync; npm run lint/test/build uitgevoerd |
+| 2025-10-18 | _pending_ | Onboarding & gidsen | Guides bubble modal in content + shadow-root modalcontainer; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
