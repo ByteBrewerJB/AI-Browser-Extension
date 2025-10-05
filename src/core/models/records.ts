@@ -64,6 +64,18 @@ export interface FolderRecord {
   favorite?: boolean;
 }
 
+export type FolderItemType = 'conversation' | 'prompt' | 'gpt';
+
+export interface FolderItemRecord {
+  id: string;
+  folderId: string;
+  itemId: string;
+  itemType: FolderItemType;
+  sortIndex?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BookmarkRecord {
   id: string;
   conversationId: string;

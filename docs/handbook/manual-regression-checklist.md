@@ -8,6 +8,7 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
 1. **Browser profile**
    - Load the unpacked extension in a Chromium-based browser.
    - Clear extension storage (`chrome://extensions` → Inspect views → Application → Clear storage) unless migration testing is in scope.
+   - For schema migrations: delete the `AICompanionDB` database under **IndexedDB** and reload the extension to ensure the new `folders` and `folder_items` tables initialise cleanly before running tests.
 2. **ChatGPT sessions**
    - Sign in to the same ChatGPT account on both `https://chat.openai.com` and `https://chatgpt.com`.
    - Keep the UI language on English for baseline copy unless you are validating localization.

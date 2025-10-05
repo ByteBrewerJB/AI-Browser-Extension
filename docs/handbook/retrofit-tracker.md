@@ -39,7 +39,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 
 ## Actieve iteraties & deliverables
 - **Search & sidebar spike**
-  - [ ] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
+  - [x] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
   - [ ] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten.
   - [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 - **Launcher ervaring**
@@ -56,10 +56,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [ ] Locale switcher koppelen aan instellingenstore met persistente voorkeur.
 
 ## Volgende stappen
-1. [ ] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
-   - **Prioritering** – Hoog: blokkert bulkverplaatsing, pins en zoekhiërarchie. Implementatie moet vóór Minisearch-uitbreiding klaar zijn zodat index zich op stabiele sleutels kan baseren. Schat 2 dagen werk: 1 dag schema & migratie, 1 dag API-aanpassing/seeddata.
-   - **Documentatie** – Breid `docs/handbook/adr-20240215-auth-and-data-model.md` uit met de nieuwe tabellen, relaties en migratiepad. Update `docs/handbook/product-roadmap.md` sectie "Search & sidebar" naar status "in uitvoering" zodra de migratie start. Voeg migratie-instructies toe aan `docs/handbook/manual-regression-checklist.md` (IndexedDB reset) na implementatie.
-   - **QA-notes** – Na oplevering: run `npm run lint`, `npm run test`, `npm run build`. Handmatige check: DevTools Application → IndexedDB (`folders`, `folder_items`) aanmaken/verplaatsen/verwijderen; verify geen Network POSTs met chatcontent. Documenteer bevindingen (browser, datum, dataset) in retrofit logboek en regression checklist.
+1. [x] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen. _(afgerond 2025-02-15)_
+   - **Prioritering** – Gereed: schema v8 levert stabiele sleutels voor bulkacties en toekomstige Minisearch-indexering. Volgende stap is de indexuitbreiding zodat hiërarchische queries performant blijven.
+   - **Documentatie** – ADR `docs/handbook/adr-20240215-auth-and-data-model.md`, roadmap (`docs/handbook/product-roadmap.md`) en regressiegids zijn bijgewerkt met de nieuwe pivot (`folder_items`) en IndexedDB-resetinstructies.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: bij eerstvolgende browserrun DevTools → Application → IndexedDB controleren op `folders`/`folder_items`, basis CRUD uitvoeren en netwerkverkeer inspecteren (geen chatcontent POSTs) en vastleggen in logboek/regressiechecklist.
 2. [ ] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten.
 3. [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 
@@ -115,5 +115,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | Datum | Commit | Scope | Notities |
 | --- | --- | --- | --- |
 | 2025-02-14 | _pending_ | Documentatie | Tracker herschreven volgens pariteit→plus roadmap; statuslegenda toegevoegd; acties voor search/launcher/privacy gepland. |
+| 2025-02-15 | _pending_ | Storage | Dexie v8 met `folder_items` pivot geland; folderhelpers + docs/QA-updates toegevoegd; lint/test/build uitgevoerd. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.

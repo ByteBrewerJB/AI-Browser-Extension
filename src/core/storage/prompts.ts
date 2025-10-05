@@ -1,4 +1,5 @@
 import { db } from './db';
+import { removeItemsFromFolders, setItemFolder } from './folderItems';
 import type { PromptRecord } from '@/core/models';
 
 function nowIso() {
@@ -46,51 +47,79 @@ export async function createPrompt(input: CreatePromptInput) {
     updatedAt: timestamp
   };
 
-  await db.prompts.put(record);
+  await db.transaction('rw', db.prompts, db.folderItems, async () => {
+    await db.prompts.put(record);
+    await setItemFolder({
+      itemId: record.id,
+      itemType: 'prompt',
+      folderId: record.folderId,
+      timestamp,
+      table: db.folderItems
+    });
+  });
+
   return record;
 }
 
 export async function updatePrompt(input: UpdatePromptInput) {
-  const changes: Partial<PromptRecord> = {
-    updatedAt: nowIso()
-  };
-
-  if (input.name !== undefined) {
-    const trimmed = input.name.trim();
-    if (!trimmed) {
-      throw new Error('Prompt name is required');
+  await db.transaction('rw', db.prompts, db.folderItems, async () => {
+    const existing = await db.prompts.get(input.id);
+    if (!existing) {
+      throw new Error(`Prompt ${input.id} not found`);
     }
-    changes.name = trimmed;
-  }
 
-  if (input.content !== undefined) {
-    const trimmed = input.content.trim();
-    if (!trimmed) {
-      throw new Error('Prompt content is required');
+    const next: PromptRecord = {
+      ...existing,
+      updatedAt: nowIso()
+    };
+
+    if (input.name !== undefined) {
+      const trimmed = input.name.trim();
+      if (!trimmed) {
+        throw new Error('Prompt name is required');
+      }
+      next.name = trimmed;
     }
-    changes.content = trimmed;
-  }
 
-  if (input.description !== undefined) {
-    const trimmed = input.description?.trim();
-    changes.description = trimmed ? trimmed : undefined;
-  }
+    if (input.content !== undefined) {
+      const trimmed = input.content.trim();
+      if (!trimmed) {
+        throw new Error('Prompt content is required');
+      }
+      next.content = trimmed;
+    }
 
-  if (input.folderId !== undefined) {
-    const trimmed = input.folderId?.trim();
-    changes.folderId = trimmed ? trimmed : undefined;
-  }
+    if (input.description !== undefined) {
+      const trimmed = input.description?.trim();
+      next.description = trimmed ? trimmed : undefined;
+    }
 
-  if (input.gptId !== undefined) {
-    const trimmed = input.gptId?.trim();
-    changes.gptId = trimmed ? trimmed : undefined;
-  }
+    if (input.folderId !== undefined) {
+      const trimmed = input.folderId?.trim();
+      next.folderId = trimmed ? trimmed : undefined;
+    }
 
-  await db.prompts.update(input.id, changes);
+    if (input.gptId !== undefined) {
+      const trimmed = input.gptId?.trim();
+      next.gptId = trimmed ? trimmed : undefined;
+    }
+
+    await db.prompts.put(next);
+    await setItemFolder({
+      itemId: next.id,
+      itemType: 'prompt',
+      folderId: next.folderId,
+      timestamp: next.updatedAt,
+      table: db.folderItems
+    });
+  });
 }
 
 export async function deletePrompt(id: string) {
-  await db.prompts.delete(id);
+  await db.transaction('rw', db.prompts, db.folderItems, async () => {
+    await db.prompts.delete(id);
+    await removeItemsFromFolders({ itemType: 'prompt', itemIds: [id], table: db.folderItems });
+  });
 }
 
 export async function listPrompts() {
