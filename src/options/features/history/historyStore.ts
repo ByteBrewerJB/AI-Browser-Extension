@@ -1,9 +1,18 @@
 import { create } from 'zustand';
 
 import type { ConversationTableConfig, ConversationTablePreset } from '@/core/models';
-import { archiveConversations, createFolder, deleteConversations, deleteFolder, toggleFavoriteFolder, togglePinned } from '@/core/storage';
+import {
+  archiveConversations,
+  createFolder,
+  deleteConversations,
+  deleteFolder,
+  toggleFavoriteFolder,
+  togglePinned,
+  upsertConversation
+} from '@/core/storage';
 import { createConversationTablePreset, deleteConversationTablePreset } from '@/core/storage/settings';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
+import type { ConversationOverview } from '@/core/storage';
 
 interface HistoryState {
   conversationConfig: ConversationTableConfig;
@@ -23,6 +32,7 @@ interface HistoryState {
   toggleSelection: (conversationId: string) => void;
   setSelectedConversationIds: (ids: string[]) => void;
   clearSelection: () => void;
+  moveConversation: (conversation: ConversationOverview, folderId?: string) => Promise<void>;
   archiveSelected: (archived: boolean) => Promise<void>;
   deleteSelected: () => Promise<void>;
   exportSelected: (format: 'json' | 'txt') => Promise<void>;
@@ -122,6 +132,23 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     }),
   setSelectedConversationIds: (ids: string[]) => set({ selectedConversationIds: Array.from(new Set(ids)) }),
   clearSelection: () => set({ selectedConversationIds: [] }),
+  moveConversation: async (conversation, folderId) => {
+    try {
+      await upsertConversation({
+        id: conversation.id,
+        title: conversation.title,
+        folderId,
+        pinned: conversation.pinned,
+        archived: conversation.archived ?? false,
+        createdAt: conversation.createdAt,
+        wordCount: conversation.wordCount,
+        charCount: conversation.charCount
+      });
+    } catch (error) {
+      console.error('[historyStore] failed to move conversation', error);
+      throw error;
+    }
+  },
   archiveSelected: async (archived: boolean) => {
     const ids = get().selectedConversationIds;
     if (ids.length === 0) {

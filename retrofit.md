@@ -67,6 +67,9 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 4. **Bulkexport conversaties** –
    - ✅ Dashboard/Options toont nu een "Selectie exporteren"-actie in de gesprekssectie inclusief JSON/TXT-keuze en planning via `jobs/schedule-export`.
    - ✅ QA: Exportmodal getest met één en meerdere gesprekken en genoteerd in de regressiegids (Dashboard stap 6) + job zichtbaar in de kaart "Scheduled exports".
+5. **Verplaatsdialogen afronden** –
+   - ✅ Options-geschiedenis hergebruikt `MoveDialog` per rij zodat gesprekken naar mapstructuur of bovenste niveau verplaatst kunnen worden.
+   - ✅ QA: Chrome 129 (Linux) – verplaatsing heen en terug gevalideerd; nieuwe stap toegevoegd aan regressiegids (Dashboard stap 7).
 
 ## Prioriteiten en stappen per featuregroep
 
@@ -187,5 +190,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-09 | _pending_ | Promptbibliotheek & ketens | Promptketen-variabelen, cancel-runner + QA-notes; npm run lint/test/build uitgevoerd |
 | 2025-10-10 | _pending_ | Bladwijzers & contextmenu | Chrome 129 (Linux) + Edge 128 smoke-test bookmark overlay; npm run lint/test/build uitgevoerd |
 | 2025-10-11 | _pending_ | Pin- & bulkbeheer | Bulkexportmodal ingepland voor selectie (JSON/TXT) + regressiegids bijgewerkt; npm run lint/test/build uitgevoerd |
+| 2025-10-11 | _pending_ | Pin- & bulkbeheer | MoveDialog in options-geschiedenis + statusnotitie en regressiestap; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

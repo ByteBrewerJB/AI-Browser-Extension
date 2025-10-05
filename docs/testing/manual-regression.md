@@ -48,6 +48,7 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 4. Save a table preset, reload the page, and apply the preset to confirm it restores filters/sorts.
 5. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
 6. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
+7. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
 
 ## Bookmark & pin workflow
 

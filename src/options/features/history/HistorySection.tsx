@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
@@ -14,6 +14,8 @@ import { useConversationPresets } from '@/shared/hooks/useConversationPresets';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
+import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
+import type { ConversationOverview } from '@/core/storage';
 
 import { OptionBubble, flattenFolderOptions, formatDate, formatNumber } from '../shared';
 import { useHistoryStore } from './historyStore';
@@ -42,6 +44,7 @@ export function HistorySection() {
     toggleSelection,
     setSelectedConversationIds,
     clearSelection,
+    moveConversation,
     archiveSelected,
     deleteSelected,
     exportSelected
@@ -140,7 +143,20 @@ export function HistorySection() {
   const allFilteredSelected = filteredConversationIds.length > 0 && filteredConversationIds.every((id) => selectionSet.has(id));
   const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
   const selectionCount = selectedConversationIds.length;
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
+  const [movePending, setMovePending] = useState(false);
+
+  const moveDialogOptions = useMemo<MoveDialogOption[]>(
+    () =>
+      conversationFolderOptions.map((option) => ({
+        id: option.id,
+        label: option.name,
+        depth: option.depth,
+        favorite: option.favorite
+      })),
+    [conversationFolderOptions]
+  );
 
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'json' | 'txt'>('json');
@@ -194,6 +210,51 @@ export function HistorySection() {
     await togglePin(conversationId);
   };
 
+  const handleOpenMoveDialog = useCallback((conversation: ConversationOverview) => {
+    setMoveTarget(conversation);
+  }, []);
+
+  const handleMoveDialogClose = useCallback(() => {
+    if (!movePending) {
+      setMoveTarget(null);
+    }
+  }, [movePending]);
+
+  const handleMoveSubmit = useCallback(
+    async (folderId?: string) => {
+      if (!moveTarget) {
+        return;
+      }
+      setMovePending(true);
+      try {
+        await moveConversation(moveTarget, folderId);
+        const folderName =
+          folderId !== undefined
+            ? conversationFolderOptions.find((option) => option.id === folderId)?.name
+            : undefined;
+        const notice =
+          folderName
+            ? t('options.moveConversationSuccess', {
+                folder: folderName,
+                defaultValue: `Conversation moved to ${folderName}.`
+              })
+            : t('options.moveConversationSuccessRoot', {
+                defaultValue: 'Conversation moved to the top level.'
+              });
+        setStatusNotice(notice ?? null);
+        setMoveTarget(null);
+      } catch (error) {
+        const fallback = 'Conversation could not be moved. Try again.';
+        setStatusNotice(
+          t('options.moveConversationError', { defaultValue: fallback }) ?? fallback
+        );
+      } finally {
+        setMovePending(false);
+      }
+    },
+    [conversationFolderOptions, moveConversation, moveTarget, t]
+  );
+
   const handleToggleAll = () => {
     if (filteredConversationIds.length === 0) {
       return;
@@ -246,7 +307,7 @@ export function HistorySection() {
               ? 'Export scheduled for 1 conversation. Track progress in the export queue.'
               : 'Export scheduled for {{count}} conversations. Track progress in the export queue.'
         }) ?? null;
-      setExportNotice(notice);
+      setStatusNotice(notice);
     } catch (error) {
       const fallback = 'Export could not be scheduled. Try again.';
       setExportError(
@@ -265,6 +326,23 @@ export function HistorySection() {
     }
     setShowExportModal(false);
   };
+
+  const untitledConversationLabel = t('options.untitledConversation') ?? 'Untitled conversation';
+  const normalizedMoveTitle = moveTarget?.title?.trim()
+    ? moveTarget.title
+    : untitledConversationLabel;
+  const moveDialogTitle = moveTarget
+    ? t('content.sidebar.history.moveDialogTitle', {
+        title: normalizedMoveTitle
+      }) ?? `Move "${normalizedMoveTitle}"`
+    : t('content.sidebar.history.moveDialogTitleDefault', { defaultValue: 'Move conversation' });
+  const moveDialogDescription = moveTarget
+    ? t('content.sidebar.history.moveDialogDescription', {
+        title: normalizedMoveTitle
+      }) ?? `Choose where to store "${normalizedMoveTitle}".`
+    : t('content.sidebar.history.moveDialogDescriptionDefault', {
+        defaultValue: 'Select a destination folder for this conversation.'
+      });
 
   return (
     <section className="space-y-6" aria-labelledby="history-heading">
@@ -660,7 +738,7 @@ export function HistorySection() {
               </button>
             </div>
           </div>
-          {exportNotice ? <p className="text-xs text-emerald-300">{exportNotice}</p> : null}
+          {statusNotice ? <p className="text-xs text-emerald-300">{statusNotice}</p> : null}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-800">
@@ -732,13 +810,22 @@ export function HistorySection() {
                       <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
                       <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
-                          onClick={() => void handlePinToggle(conversation.id)}
-                          type="button"
-                        >
-                          {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100"
+                            onClick={() => handleOpenMoveDialog(conversation)}
+                            type="button"
+                          >
+                            {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
+                          </button>
+                          <button
+                            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100"
+                            onClick={() => void handlePinToggle(conversation.id)}
+                            type="button"
+                          >
+                            {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -818,6 +905,21 @@ export function HistorySection() {
           </button>
         </ModalFooter>
       </Modal>
+      <MoveDialog
+        open={Boolean(moveTarget)}
+        title={moveDialogTitle}
+        description={moveDialogDescription}
+        currentFolderId={moveTarget?.folderId}
+        rootOptionLabel={
+          t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' })
+        }
+        confirmLabel={t('content.sidebar.history.moveConfirm', { defaultValue: 'Move' })}
+        cancelLabel={t('content.sidebar.history.moveCancel', { defaultValue: 'Cancel' })}
+        folders={moveDialogOptions}
+        pending={movePending}
+        onMove={handleMoveSubmit}
+        onClose={handleMoveDialogClose}
+      />
     </section>
   );
 
