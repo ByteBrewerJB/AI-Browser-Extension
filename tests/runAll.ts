@@ -5,6 +5,7 @@ async function runSequentially() {
   await import('./conversationIngestion.spec');
   await import('./jobScheduler.spec');
   await import('./backgroundMessaging.spec');
+  await import('./shared/bubbleLauncherStore.spec');
 }
 
 runSequentially()

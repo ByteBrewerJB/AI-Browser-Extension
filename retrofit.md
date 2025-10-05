@@ -75,7 +75,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - ✅ QA: Bulk-move gevalideerd op de dashboardtabel; regressiegids uitgebreid met stap 8 en logboek bijgewerkt.
 7. **Favoriete mappen in het dock beheren** –
    - ✅ Map-snelkoppelingen in de History-tab tonen sterknoppen zodat favorieten direct vanuit het bubbledock aangepast kunnen worden.
-   - ✅ `useBubbleLauncherStore` cachet nu de geflatteerde mapstructuur waardoor favorieten onmiddellijk zichtbaar zijn bij heropenen.
+   - ✅ `useBubbleLauncherStore` hydrateert via `chrome.storage.local` (`initializeBubbleLauncherStore`) en cachet de geflatteerde mapstructuur, zodat favorieten onmiddellijk zichtbaar zijn bij heropenen.
    - ✅ QA: Nieuwe regressiestap voor dock-favorieten toegevoegd aan [`docs/testing/manual-regression.md`](docs/testing/manual-regression.md#bookmark--pin-workflow).
 
 ## Prioriteiten en stappen per featuregroep
@@ -204,5 +204,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-15 | _pending_ | Bladwijzers & contextmenu | Actions-bubbel activeert selecties + snelle acties; npm run lint/test/build uitgevoerd |
 | 2025-10-16 | _pending_ | Onboarding & gidsen | Guides dataset + Zod-validatie toegevoegd; npm run lint/test uitgevoerd |
 | 2025-10-17 | _pending_ | Onboarding & gidsen | Options-gidsenkaart + telemetry event logging; npm run lint/test/build uitgevoerd |
+| 2025-10-18 | _pending_ | Pin- & bulkbeheer | Dock-favorieten cache hydrateert via chrome.storage; unit test bubbleLauncherStore + lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
