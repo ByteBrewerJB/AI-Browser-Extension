@@ -356,6 +356,12 @@
       "folderLabel": "Map: {{name}}",
       "closeAria": "Promptmenu sluiten"
     },
+    "composerCounters": {
+      "wordsLabel": "Woorden",
+      "charactersLabel": "Tekens",
+      "tokensLabel": "Tokens",
+      "tokensValue": "{{count}} / {{limit}}"
+    },
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Promptmenu openen of sluiten ({{count}} beschikbaar)",

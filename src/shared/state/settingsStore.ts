@@ -7,6 +7,7 @@ interface SettingsSnapshot {
   language: string;
   direction: TextDirection;
   showSidebar: boolean;
+  maxTokens: number;
 }
 
 interface SettingsState extends SettingsSnapshot {
@@ -14,6 +15,7 @@ interface SettingsState extends SettingsSnapshot {
   setLanguage: (language: string) => void;
   toggleDirection: () => void;
   setShowSidebar: (value: boolean) => void;
+  setMaxTokens: (value: number) => void;
 }
 
 const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
@@ -21,7 +23,8 @@ const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   language: 'en',
   direction: 'ltr',
-  showSidebar: true
+  showSidebar: true,
+  maxTokens: 4096
 };
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
@@ -33,8 +36,12 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
   const language = typeof record.language === 'string' ? record.language : DEFAULT_SNAPSHOT.language;
   const direction: TextDirection = record.direction === 'rtl' ? 'rtl' : 'ltr';
   const showSidebar = typeof record.showSidebar === 'boolean' ? record.showSidebar : DEFAULT_SNAPSHOT.showSidebar;
+  const parsedMaxTokens = Number(record.maxTokens);
+  const maxTokens = Number.isFinite(parsedMaxTokens) && parsedMaxTokens > 0
+    ? Math.round(parsedMaxTokens)
+    : DEFAULT_SNAPSHOT.maxTokens;
 
-  return { language, direction, showSidebar };
+  return { language, direction, showSidebar, maxTokens };
 }
 
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
@@ -124,12 +131,18 @@ function toSnapshot(state: SettingsState): SettingsSnapshot {
   return {
     language: state.language,
     direction: state.direction,
-    showSidebar: state.showSidebar
+    showSidebar: state.showSidebar,
+    maxTokens: state.maxTokens
   };
 }
 
 function areSnapshotsEqual(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
-  return a.language === b.language && a.direction === b.direction && a.showSidebar === b.showSidebar;
+  return (
+    a.language === b.language &&
+    a.direction === b.direction &&
+    a.showSidebar === b.showSidebar &&
+    a.maxTokens === b.maxTokens
+  );
 }
 
 const fallbackStore = new Map<string, SettingsSnapshot>();
@@ -145,7 +158,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setLanguage: (language) => set({ language }),
   toggleDirection: () =>
     set((state) => ({ direction: state.direction === 'ltr' ? 'rtl' : 'ltr' })),
-  setShowSidebar: (value) => set({ showSidebar: value })
+  setShowSidebar: (value) => set({ showSidebar: value }),
+  setMaxTokens: (value) =>
+    set(() => ({ maxTokens: Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_SNAPSHOT.maxTokens }))
 }));
 
 function registerStorageListener() {
