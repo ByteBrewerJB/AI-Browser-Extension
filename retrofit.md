@@ -15,7 +15,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | Media & audio | Audio capture, mediagalerij, voice presets, audio cues | 💤 Gepland | _nog te plannen_ |
 | Richting & instellingen | Dynamische taal/dir, settings-tab | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
 | Info & betalingen | Release notes, billing CTA, webhook-poller | 📝 Ontwerp | _nog te plannen_ |
-| Composer uitbreidingen | Telleroverlay, placeholderhelper, instructieoverlay, ketentab | 🚧 Ontwikkeling | 2025-10-06 – _pending_ (ketentab volgt) |
+| Composer uitbreidingen | Telleroverlay, placeholderhelper, instructieoverlay, ketentab | 🚧 Ontwikkeling | 2025-10-07 – _pending_ (ketentab live, keten-runner QA volgt) |
 | Onboarding & gidsen | Guides dataset, kaart in options/popup, modal in content | 📝 Ontwerp | _nog te plannen_ |
 | Internationalisatie | Locale-generator, initI18n updates, RTL helpers, tests | 📝 Ontwerp | _nog te plannen_ |
 | Iconen, beelden & audio | Icon-generator, styleguide, media-assets, notificatiesound | 📝 Ontwerp | _nog te plannen_ |
@@ -121,7 +121,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 - [x] Introduceer `initComposerCounters` in `src/content/textareaPrompts.ts` die, naar analogie met `example/example/1/scripts/counter/injectWordsCounter.js`, via een `MutationObserver` de actieve ChatGPT-composer detecteert. Render een `div[data-ai-companion="composer-counters"]` in dezelfde shadow-root als de promptlauncher en toon woorden-, tekens- en tokenaantallen. Baseer tokenlimits op `settingsStore.maxTokens` (fallback 4096) en kleur de badge rood zodra limieten overschreden worden.
 - [x] Vervang de placeholderlogica in `textareaPrompts` door een helper `updateComposerPlaceholder(language, promptHint)` die het bestaande `CHATGPT_PROMPT_PLACEHOLDER`-patroon uit de voorbeeldmanifest ("Message ChatGPT Normally, Use // ...") gebruikt. Luister naar `chrome.storage.onChanged` zodat taalwissels of aangepaste hints direct worden toegepast zoals in `scripts/textareaPrompts/changeDefaultPlaceholder.js`.
 - [x] Voeg een instructieoverlay toe gebaseerd op `example/example/1/scripts/textareaPrompts/promptListInstructions.js`: richt een `Popover`-component in `src/ui/components` in die de combinaties `//` (prompt), `..` (keten) en `@@` (bookmark) uitlegt. Toon deze overlay de eerste drie keer nadat de launcher openklapt en bewaar de teller in `settingsStore.dismissedLauncherTips`.
-- [ ] Breid het launcherpanel uit met een tab "Ketens" waarin `PromptChainRecord`s compact getoond worden (titel, aantal stappen, laatst gebruikt). Hergebruik de instructies uit `scripts/textareaPrompts/chainListUI.js` door een React-versie (`ChainPreviewList`) te bouwen. Center de call-to-action "Start keten" rechtsboven en koppel aan het `content/run-chain` bericht dat in sectie 4 wordt toegevoegd.
+- [x] Breid het launcherpanel uit met een tab "Ketens" waarin `PromptChainRecord`s compact getoond worden (titel, aantal stappen, laatst gebruikt). Hergebruik de instructies uit `scripts/textareaPrompts/chainListUI.js` door een React-versie (`ChainPreviewList`) te bouwen. Center de call-to-action "Start keten" rechtsboven en koppel aan het `content/run-chain` bericht dat in sectie 4 wordt toegevoegd. _(2025-10-07 – content runner + launcher UI live)_
 
 ### 11. Onboarding en gidsen (`assets/data/guides.json`, `html/infoAndUpdates`)
 1. Kopieer `example/example/1/assets/data/guides.json` naar `public/guides.json` en breid het schema uit met `title`, `description` en `badgeColor` zodat we eigen copy kunnen plaatsen. Maak een type `GuideResource` in `src/core/models/guides.ts` met validatie via Zod.
@@ -177,5 +177,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-06 | _pending_ | Bladwijzers & contextmenu | Contextmenu met bookmark/prompt/pin/copy-acties + toastfeedback toegevoegd; lint/test/build gepland |
 | 2025-10-06 | _pending_ | Composer uitbreidingen | Launcher-instructiepopover + teller in settings; lint/test/build uitgevoerd |
 | 2025-10-07 | _pending_ | Bladwijzers & contextmenu | Contextmenu sluit bij unmount; accessibiliteitsnotitie + E2E-plan toegevoegd; lint/test/build gepland |
+| 2025-10-07 | _pending_ | Composer uitbreidingen | Ketentab + ketenrunner in launcher; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

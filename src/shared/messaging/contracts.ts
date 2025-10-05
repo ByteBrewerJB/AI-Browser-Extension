@@ -34,6 +34,15 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
     request: { conversationId?: string | null; messageId?: string | null };
     response: { status: 'pending' };
   };
+  'content/run-chain': {
+    request: { chainId: string };
+    response:
+      | { status: 'completed'; chainId: string; executedAt: string; steps: number }
+      | { status: 'busy' }
+      | { status: 'not_found' }
+      | { status: 'empty' }
+      | { status: 'error'; message: string };
+  };
   'jobs/schedule-export': {
     request: {
       exportId: string;

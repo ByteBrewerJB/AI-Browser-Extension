@@ -230,6 +230,24 @@
       "closePanelAria": "Bubbelpaneel sluiten"
     },
     "bubblePanels": {
+      "chains": {
+        "title": "Promptketens",
+        "emptyTitle": "Nog geen ketens",
+        "emptySubtitle": "Bundel prompts tot ketens in het dashboard om ze hier te starten.",
+        "stepCountOne": "1 stap",
+        "stepCountOther": "{{count}} stappen",
+        "lastUsed": "Laatst gebruikt {{time}}",
+        "lastUsedNever": "Nog niet uitgevoerd",
+        "runningStatus": "Bezig ({{current}} / {{total}})",
+        "busyStatus": "Er draait al een andere keten",
+        "errorStatus": "Mislukt: {{message}}",
+        "genericError": "Er ging iets mis",
+        "completedStatus": "Afgerond {{time}}",
+        "startButton": "Keten starten",
+        "runningButton": "Bezig…",
+        "startAria": "Keten {{name}} starten",
+        "variablesLabel": "Variabelen: {{count}}"
+      },
       "bookmarks": {
         "title": "Gespreksbladwijzers",
         "emptyTitle": "Nog geen bladwijzers",
@@ -369,7 +387,12 @@
       "insertButton": "Invoegen",
       "updatedAt": "Bijgewerkt {{time}}",
       "folderLabel": "Map: {{name}}",
-      "closeAria": "Promptmenu sluiten"
+      "closeAria": "Promptmenu sluiten",
+      "tips": {
+        "prompts": "Typ // om opgeslagen prompts te openen.",
+        "chains": "Gebruik .. om promptketens te starten.",
+        "bookmarks": "Gebruik @@ om het huidige bericht te bookmarken."
+      }
     },
     "composerCounters": {
       "wordsLabel": "Woorden",
@@ -380,6 +403,8 @@
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Promptmenu openen of sluiten ({{count}} beschikbaar)",
+      "chains": "Ketens ({{count}})",
+      "chainsAria": "Ketensbubbel openen ({{count}} beschikbaar)",
       "dashboard": "Dashboard",
       "dashboardAria": "Dashboard openen"
     }

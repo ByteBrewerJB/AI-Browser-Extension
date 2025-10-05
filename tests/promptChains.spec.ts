@@ -16,15 +16,19 @@ const tests: AsyncTest[] = [
     async () => {
       const created = await createPromptChain({
         name: ' Research flow ',
-        nodeIds: [' alpha ', '', 'beta', 'alpha', 'gamma ']
+        nodeIds: [' alpha ', '', 'beta', 'alpha', 'gamma '],
+        variables: [' topic ', 'persona', 'topic']
       });
 
       assert.equal(created.name, 'Research flow');
       assert.deepEqual(created.nodeIds, ['alpha', 'beta', 'gamma']);
+      assert.deepEqual(created.variables, ['topic', 'persona']);
+      assert.equal(created.lastExecutedAt, null);
 
       const stored = await listPromptChains();
       assert.equal(stored.length, 1);
       assert.deepEqual(stored[0].nodeIds, ['alpha', 'beta', 'gamma']);
+      assert.deepEqual(stored[0].variables, ['topic', 'persona']);
     }
   ],
   [
@@ -45,19 +49,37 @@ const tests: AsyncTest[] = [
     }
   ],
   [
-    'orders prompt chains by most recently updated first',
+    'orders prompt chains by last executed then updated timestamps',
     async () => {
       const first = await createPromptChain({ name: 'First', nodeIds: [] });
       await new Promise((resolve) => setTimeout(resolve, 5));
       const second = await createPromptChain({ name: 'Second', nodeIds: [] });
 
       await updatePromptChain({ id: first.id, nodeIds: ['revisit'] });
+      await updatePromptChain({ id: second.id, lastExecutedAt: new Date().toISOString() });
 
       const chains = await listPromptChains();
       assert.deepEqual(
         chains.map((chain) => chain.id),
-        [first.id, second.id]
+        [second.id, first.id]
       );
+    }
+  ],
+  [
+    'updates variables and last executed timestamp',
+    async () => {
+      const created = await createPromptChain({ name: 'Chain', nodeIds: ['one'] });
+
+      const timestamp = new Date().toISOString();
+      await updatePromptChain({
+        id: created.id,
+        variables: ['first', 'second', 'first'],
+        lastExecutedAt: timestamp
+      });
+
+      const [chain] = await listPromptChains();
+      assert.deepEqual(chain.variables, ['first', 'second']);
+      assert.equal(chain.lastExecutedAt, timestamp);
     }
   ],
   [

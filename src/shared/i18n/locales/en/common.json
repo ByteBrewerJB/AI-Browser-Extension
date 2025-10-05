@@ -230,6 +230,24 @@
       "closePanelAria": "Close bubble panel"
     },
     "bubblePanels": {
+      "chains": {
+        "title": "Prompt chains",
+        "emptyTitle": "No chains yet",
+        "emptySubtitle": "Group prompts into chains in the dashboard to launch them here.",
+        "stepCountOne": "1 step",
+        "stepCountOther": "{{count}} steps",
+        "lastUsed": "Last used {{time}}",
+        "lastUsedNever": "Not run yet",
+        "runningStatus": "Running ({{current}} / {{total}})",
+        "busyStatus": "Another chain is running",
+        "errorStatus": "Failed: {{message}}",
+        "genericError": "Something went wrong",
+        "completedStatus": "Completed {{time}}",
+        "startButton": "Start chain",
+        "runningButton": "Running…",
+        "startAria": "Start chain {{name}}",
+        "variablesLabel": "Variables: {{count}}"
+      },
       "bookmarks": {
         "title": "Conversation bookmarks",
         "emptyTitle": "No bookmarks yet",
@@ -369,7 +387,12 @@
       "insertButton": "Insert",
       "updatedAt": "Updated {{time}}",
       "folderLabel": "Folder: {{name}}",
-      "closeAria": "Close prompt launcher"
+      "closeAria": "Close prompt launcher",
+      "tips": {
+        "prompts": "Type // to browse saved prompts.",
+        "chains": "Use .. to launch prompt chains.",
+        "bookmarks": "Try @@ to bookmark the current message."
+      }
     },
     "composerCounters": {
       "wordsLabel": "Words",
@@ -380,6 +403,8 @@
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Toggle prompts dock ({{count}} available)",
+      "chains": "Chains ({{count}})",
+      "chainsAria": "Open chains bubble ({{count}} available)",
       "dashboard": "Dashboard",
       "dashboardAria": "Open dashboard"
     }

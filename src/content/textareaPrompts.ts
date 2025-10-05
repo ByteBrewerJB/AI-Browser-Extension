@@ -1,23 +1,28 @@
 import { liveQuery } from 'dexie';
-import type { FolderRecord, PromptRecord } from '@/core/models';
+import type { FolderRecord, PromptChainRecord, PromptRecord } from '@/core/models';
 import type { BookmarkSummary } from '@/core/storage/insights';
 import { db } from '@/core/storage/db';
 import { getRecentBookmarks } from '@/core/storage/insights';
+import { listPromptChains } from '@/core/storage';
 import { initI18n } from '@/shared/i18n';
 import { DEFAULT_PROMPT_HINT, initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 import { createPopover } from '@/ui/components/Popover';
 import type { i18n as I18nInstance } from 'i18next';
+import { sendRuntimeMessage } from '@/shared/messaging/router';
+import { usePromptChainsStore } from '@/shared/state/promptChainsStore';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
 const MAX_PROMPTS = 100;
 const MAX_BOOKMARKS = 40;
+const MAX_CHAINS = 40;
 
-type PanelBubbleId = 'prompts' | 'bookmarks' | 'pinned' | 'actions' | 'settings';
+type PanelBubbleId = 'prompts' | 'chains' | 'bookmarks' | 'pinned' | 'actions' | 'settings';
 type LinkBubbleId = 'dashboard';
 type BubbleId = PanelBubbleId | LinkBubbleId;
 
 interface LauncherState {
   prompts: PromptRecord[];
+  promptChains: PromptChainRecord[];
   folderNames: Map<string, string>;
   bookmarks: BookmarkSummary[];
   filter: string;
@@ -56,6 +61,7 @@ type BubbleConfig = PanelBubbleConfig | LinkBubbleConfig;
 
 const state: LauncherState = {
   prompts: [],
+  promptChains: [],
   folderNames: new Map(),
   bookmarks: [],
   filter: '',
@@ -79,6 +85,8 @@ let titleEl: HTMLHeadingElement | null = null;
 let i18nInstance: I18nInstance | null = null;
 let promptsSubscription: { unsubscribe(): void } | null = null;
 let bookmarksSubscription: { unsubscribe(): void } | null = null;
+let promptChainsSubscription: { unsubscribe(): void } | null = null;
+let promptChainsRuntimeUnsubscribe: (() => void) | null = null;
 let mounted = false;
 
 const DEFAULT_TOKEN_LIMIT = 4096;
@@ -116,6 +124,8 @@ const launcherPopoverItemLabels = new Map<string, HTMLParagraphElement>();
 
 const MAX_LAUNCHER_TIP_DISPLAYS = 3;
 
+type PromptChainsRuntimeSnapshot = ReturnType<typeof usePromptChainsStore.getState>;
+
 const LAUNCHER_TIP_CONFIGS = [
   {
     id: 'prompts',
@@ -127,7 +137,7 @@ const LAUNCHER_TIP_CONFIGS = [
     id: 'chains',
     key: '..',
     labelKey: 'content.promptLauncher.tips.chains',
-    labelFallback: 'Use .. to open prompt chains (coming soon).'
+    labelFallback: 'Use .. to open prompt chains quickly.'
   },
   {
     id: 'bookmarks',
@@ -547,6 +557,23 @@ const BUBBLE_CONFIGS: BubbleConfig[] = [
     placeholderTitleFallback: 'No prompts yet',
     placeholderSubtitleKey: 'content.promptLauncher.emptySubtitle',
     placeholderSubtitleFallback: 'Save prompts in the dashboard or popup to reuse them here.'
+  },
+  {
+    id: 'chains',
+    kind: 'panel',
+    variant: 'primary',
+    labelKey: 'content.dock.chains',
+    labelFallback: 'Chains ({{count}})',
+    ariaKey: 'content.dock.chainsAria',
+    ariaFallback: 'Open chains bubble ({{count}} available)',
+    showSearch: false,
+    panelTitleKey: 'content.bubblePanels.chains.title',
+    panelTitleFallback: 'Prompt chains',
+    placeholderTitleKey: 'content.bubblePanels.chains.emptyTitle',
+    placeholderTitleFallback: 'No chains yet',
+    placeholderSubtitleKey: 'content.bubblePanels.chains.emptySubtitle',
+    placeholderSubtitleFallback:
+      'Group prompts into chains in the dashboard to launch them here.'
   },
   {
     id: 'bookmarks',
@@ -1385,9 +1412,11 @@ function refreshBubbleLabels() {
     const count =
       config.id === 'prompts'
         ? state.prompts.length
-        : config.id === 'bookmarks'
-          ? state.bookmarks.length
-          : undefined;
+        : config.id === 'chains'
+          ? state.promptChains.length
+          : config.id === 'bookmarks'
+            ? state.bookmarks.length
+            : undefined;
     const options = typeof count === 'number' ? { count } : undefined;
     const labelText = translate(config.labelKey, config.labelFallback, options);
 
@@ -1504,6 +1533,11 @@ function renderActivePanel() {
 
   searchWrapper.hidden = true;
 
+  if (config.id === 'chains') {
+    renderChainList();
+    return;
+  }
+
   if (config.id === 'bookmarks') {
     renderBookmarkList();
     return;
@@ -1543,6 +1577,23 @@ function subscribeToPrompts() {
   });
 }
 
+function subscribeToPromptChains() {
+  promptChainsSubscription?.unsubscribe();
+
+  promptChainsSubscription = liveQuery(() => listPromptChains()).subscribe({
+    next: (chains) => {
+      state.promptChains = chains;
+      refreshBubbleLabels();
+      if (state.activeBubble === 'chains') {
+        renderChainList();
+      }
+    },
+    error: (error) => {
+      console.error('[ai-companion] prompt chain launcher query failed', error);
+    }
+  });
+}
+
 function subscribeToBookmarks() {
   bookmarksSubscription?.unsubscribe();
 
@@ -1556,6 +1607,15 @@ function subscribeToBookmarks() {
     },
     error: (error) => {
       console.error('[ai-companion] bookmark launcher query failed', error);
+    }
+  });
+}
+
+function subscribeToPromptChainRuntime() {
+  promptChainsRuntimeUnsubscribe?.();
+  promptChainsRuntimeUnsubscribe = usePromptChainsStore.subscribe(() => {
+    if (state.activeBubble === 'chains') {
+      renderChainList();
     }
   });
 }
@@ -1605,6 +1665,38 @@ function renderPromptList() {
 
   const limited = filtered.slice(0, MAX_PROMPTS);
   const items = limited.map((prompt) => createPromptListItem(prompt));
+  promptList.append(...items);
+}
+
+function renderChainList() {
+  if (!promptList || !emptyState || !emptyTitleEl || !emptySubtitleEl) {
+    return;
+  }
+
+  if (state.activeBubble !== 'chains') {
+    return;
+  }
+
+  const chains = state.promptChains ?? [];
+  promptList.innerHTML = '';
+
+  if (chains.length === 0) {
+    promptList.hidden = true;
+    emptyState.hidden = false;
+    emptyTitleEl.textContent = translate('content.bubblePanels.chains.emptyTitle', 'No chains yet');
+    emptySubtitleEl.textContent = translate(
+      'content.bubblePanels.chains.emptySubtitle',
+      'Group prompts into chains in the dashboard to launch them here.'
+    );
+    return;
+  }
+
+  emptyState.hidden = true;
+  promptList.hidden = false;
+
+  const runtime = usePromptChainsStore.getState();
+  const limited = chains.slice(0, MAX_CHAINS);
+  const items = limited.map((chain) => createChainListItem(chain, runtime));
   promptList.append(...items);
 }
 
@@ -1776,6 +1868,75 @@ function createPromptListItem(prompt: PromptRecord) {
   return item;
 }
 
+function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRuntimeSnapshot) {
+  const item = document.createElement('li');
+  item.className = 'list-item';
+
+  const text = document.createElement('div');
+  text.className = 'list-item-text';
+  item.appendChild(text);
+
+  const title = document.createElement('p');
+  title.className = 'list-item-title';
+  title.textContent = chain.name;
+  text.appendChild(title);
+
+  if (chain.variables.length > 0) {
+    const variables = document.createElement('p');
+    variables.className = 'list-item-description';
+    variables.textContent = translate(
+      'content.bubblePanels.chains.variablesLabel',
+      'Variables: {{count}}',
+      { count: chain.variables.length }
+    );
+    text.appendChild(variables);
+  }
+
+  const meta = document.createElement('p');
+  meta.className = 'list-item-meta';
+  const metaParts = [formatChainStepCount(chain.nodeIds.length)];
+  const statusText = formatChainStatus(chain, runtime);
+  if (statusText) {
+    metaParts.push(statusText);
+  }
+  meta.textContent = metaParts.join(' · ');
+  text.appendChild(meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'list-item-actions';
+  item.appendChild(actions);
+
+  const startButton = document.createElement('button');
+  startButton.type = 'button';
+  startButton.className = 'insert-button';
+
+  const isRunning = runtime.status === 'running' && runtime.activeChainId === chain.id;
+  const isBusy = runtime.status === 'running' && runtime.activeChainId !== chain.id;
+
+  startButton.textContent = isRunning
+    ? translate('content.bubblePanels.chains.runningButton', 'Running…')
+    : translate('content.bubblePanels.chains.startButton', 'Start chain');
+
+  startButton.disabled = isRunning || isBusy;
+  const ariaLabel = translate('content.bubblePanels.chains.startAria', 'Start chain {{name}}', {
+    name: chain.name
+  });
+  startButton.setAttribute('aria-label', ariaLabel);
+
+  attachClickHandler(startButton, (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (startButton.disabled) {
+      return;
+    }
+    void handleRunChain(chain);
+  });
+
+  actions.appendChild(startButton);
+
+  return item;
+}
+
 function createBookmarkListItem(bookmark: BookmarkSummary) {
   const item = document.createElement('li');
   item.className = 'list-item';
@@ -1844,6 +2005,69 @@ function createSnippet(content: string, maxLength = 160) {
     return normalized;
   }
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+function formatChainStepCount(count: number) {
+  if (count === 1) {
+    return translate('content.bubblePanels.chains.stepCountOne', '1 step');
+  }
+
+  return translate('content.bubblePanels.chains.stepCountOther', '{{count}} steps', { count });
+}
+
+function formatChainStatus(chain: PromptChainRecord, runtime: PromptChainsRuntimeSnapshot) {
+  const { status, activeChainId, totalSteps, completedSteps, error, completedAt } = runtime;
+  const normalizedTotal = totalSteps > 0 ? totalSteps : Math.max(1, chain.nodeIds.length);
+
+  if (status === 'running') {
+    if (activeChainId === chain.id) {
+      const current = Math.min(Math.max(completedSteps, 0), normalizedTotal);
+      return translate('content.bubblePanels.chains.runningStatus', 'Running ({{current}} / {{total}})', {
+        current,
+        total: normalizedTotal
+      });
+    }
+    return translate('content.bubblePanels.chains.busyStatus', 'Another chain is running');
+  }
+
+  if (status === 'error' && activeChainId === chain.id) {
+    return translate('content.bubblePanels.chains.errorStatus', 'Failed: {{message}}', {
+      message:
+        error ?? translate('content.bubblePanels.chains.genericError', 'Something went wrong')
+    });
+  }
+
+  if (status === 'completed' && activeChainId === chain.id) {
+    const timestamp = completedAt ?? chain.lastExecutedAt ?? new Date().toISOString();
+    return translate('content.bubblePanels.chains.completedStatus', 'Completed {{time}}', {
+      time: formatDateTime(timestamp)
+    });
+  }
+
+  if (chain.lastExecutedAt) {
+    return translate('content.bubblePanels.chains.lastUsed', 'Last used {{time}}', {
+      time: formatDateTime(chain.lastExecutedAt)
+    });
+  }
+
+  return translate('content.bubblePanels.chains.lastUsedNever', 'Not run yet');
+}
+
+async function handleRunChain(chain: PromptChainRecord) {
+  try {
+    const response = await sendRuntimeMessage('content/run-chain', { chainId: chain.id });
+    if (response.status === 'busy') {
+      console.warn('[ai-companion] a prompt chain is already running');
+    } else if (response.status === 'empty') {
+      console.warn('[ai-companion] prompt chain has no steps to run');
+    } else if (response.status === 'not_found') {
+      console.warn('[ai-companion] prompt chain not found for execution');
+    } else if (response.status === 'error') {
+      console.error('[ai-companion] prompt chain run failed', response.message);
+    }
+  } catch (error) {
+    console.error('[ai-companion] failed to start prompt chain run', error);
+  }
 }
 
 export function insertTextIntoComposer(text: string): boolean {
@@ -1991,6 +2215,10 @@ function cleanup() {
   promptsSubscription = null;
   bookmarksSubscription?.unsubscribe();
   bookmarksSubscription = null;
+  promptChainsSubscription?.unsubscribe();
+  promptChainsSubscription = null;
+  promptChainsRuntimeUnsubscribe?.();
+  promptChainsRuntimeUnsubscribe = null;
   document.removeEventListener('click', handleDocumentClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('pagehide', handlePageHide);
@@ -2025,7 +2253,9 @@ export async function mountPromptLauncher(): Promise<void> {
   ensureContainer();
   applyTranslations();
   subscribeToPrompts();
+  subscribeToPromptChains();
   subscribeToBookmarks();
+  subscribeToPromptChainRuntime();
   initComposerCounters();
   initComposerPlaceholder();
 

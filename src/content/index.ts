@@ -5,6 +5,7 @@ import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messagi
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import { mountPromptLauncher } from './textareaPrompts';
+import { runPromptChainById } from './chainRunner';
 
 void initializeSettingsStore();
 
@@ -126,6 +127,10 @@ function registerMessageHandlers() {
   messageRouter.register('content/audio-download', async () => {
     console.debug('[ai-companion] download audio requested');
     return { status: 'pending' } as const;
+  });
+
+  messageRouter.register('content/run-chain', async ({ chainId }) => {
+    return runPromptChainById(chainId);
   });
 
   messageRouter.attach();
