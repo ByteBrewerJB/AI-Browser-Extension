@@ -34,6 +34,7 @@ import {
 import type { Bubble } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
+import { GuideResourcesCard } from '@/options/features/infoAndUpdates/GuideResourcesCard';
 
 function ensureShadowRoot(host: HTMLElement): ShadowRoot {
   const shadow = host.shadowRoot ?? host.attachShadow({ mode: 'open' });
@@ -206,9 +207,10 @@ interface BookmarkDialogProps {
   onClose: () => void;
   initialTarget?: BookmarkTarget | null;
   t: ReturnType<typeof useTranslation>['t'];
+  modalContainer?: Element | null;
 }
 
-function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps): ReactElement | null {
+function BookmarkDialog({ open, onClose, initialTarget, t, modalContainer }: BookmarkDialogProps): ReactElement | null {
   const headingId = useId();
   const descriptionId = `${headingId}-description`;
   const noteFieldId = `${headingId}-note`;
@@ -465,6 +467,7 @@ function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps
       onClose={handleRequestClose}
       labelledBy={headingId}
       describedBy={descriptionId}
+      container={modalContainer}
     >
       <form className="space-y-4" onSubmit={handleSubmit}>
         <ModalHeader className="space-y-2">
@@ -2001,6 +2004,11 @@ function BubbleDock({ onShowPatterns }: BubbleDockProps): ReactElement {
       description: t('content.sidebar.toolbars.prompts', { defaultValue: 'Prompt toolbox' })
     },
     {
+      key: 'guides',
+      label: t('content.sidebar.tabs.guides', { defaultValue: 'Guides' }),
+      description: t('content.sidebar.toolbars.guides', { defaultValue: 'Guides & updates' })
+    },
+    {
       key: 'media',
       label: t('content.sidebar.tabs.media', { defaultValue: 'Media' }),
       description: t('content.sidebar.toolbars.media', { defaultValue: 'Voice controls' })
@@ -2069,6 +2077,33 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   const toastTimeoutRef = useRef<number | null>(null);
   const [isPatternModalOpen, setPatternModalOpen] = useState(false);
   const modalHeadingId = useId();
+  const guidesModalHeadingId = useId();
+  const modalContainerRef = useRef<Element | null>(null);
+
+  useEffect(() => {
+    const shadow = host.shadowRoot;
+    if (!shadow) {
+      modalContainerRef.current = null;
+      return;
+    }
+
+    let container = shadow.querySelector<HTMLElement>('[data-ai-companion="modal-root"]');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'ai-companion-modal-root';
+      container.setAttribute('data-ai-companion', 'modal-root');
+      shadow.appendChild(container);
+    }
+
+    modalContainerRef.current = container;
+
+    return () => {
+      if (container && container.parentNode === shadow) {
+        shadow.removeChild(container);
+      }
+      modalContainerRef.current = null;
+    };
+  }, [host]);
 
   useEffect(() => {
     const shouldShow = hydrated && showSidebar;
@@ -2358,6 +2393,13 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     return Array.isArray(points) ? (points as string[]) : [];
   }, [t]);
 
+  const guidesHeadingLabel = t('content.sidebar.guides.heading', { defaultValue: 'Guides & updates' });
+  const guidesDescription = t('content.sidebar.guides.description', {
+    defaultValue: 'Browse quick tips and release highlights without leaving ChatGPT.'
+  });
+  const guidesCloseLabel = t('content.sidebar.guides.close', { defaultValue: 'Close' });
+  const guidesCloseAria = t('content.sidebar.guides.closeAria', { defaultValue: 'Close guides dialog' });
+
   if (!hydrated) {
     return null;
   }
@@ -2398,6 +2440,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
         onClose={handleCloseBookmarkDialog}
         initialTarget={bookmarkDialogTarget ?? undefined}
         t={t}
+        modalContainer={modalContainerRef.current}
       />
       <ContextMenuOverlay
         state={contextMenuState}
@@ -2411,7 +2454,12 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
         t={t}
       />
       <ActionToastView toast={toast} />
-      <Modal labelledBy={modalHeadingId} onClose={() => setPatternModalOpen(false)} open={isPatternModalOpen}>
+      <Modal
+        labelledBy={modalHeadingId}
+        onClose={() => setPatternModalOpen(false)}
+        open={isPatternModalOpen}
+        container={modalContainerRef.current}
+      >
         <ModalHeader className="space-y-2">
           <h3 id={modalHeadingId} className="text-lg font-semibold text-slate-100">
             {t('content.sidebar.modal.title')}
@@ -2433,6 +2481,35 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
             type="button"
           >
             {t('content.sidebar.modal.close')}
+          </button>
+        </ModalFooter>
+      </Modal>
+      <Modal
+        open={activeBubble === 'guides'}
+        onClose={() => setActiveBubble(null)}
+        labelledBy={guidesModalHeadingId}
+        describedBy={`${guidesModalHeadingId}-description`}
+        container={modalContainerRef.current}
+      >
+        <ModalHeader className="space-y-2">
+          <h3 id={guidesModalHeadingId} className="text-lg font-semibold text-slate-100">
+            {guidesHeadingLabel}
+          </h3>
+          <p id={`${guidesModalHeadingId}-description`} className="text-sm text-slate-300">
+            {guidesDescription}
+          </p>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <GuideResourcesCard surface="content" showHeader={false} />
+        </ModalBody>
+        <ModalFooter>
+          <button
+            type="button"
+            className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => setActiveBubble(null)}
+            aria-label={guidesCloseAria}
+          >
+            {guidesCloseLabel}
           </button>
         </ModalFooter>
       </Modal>

@@ -19,7 +19,12 @@ function formatBadgeLabel(color: GuideResource['badgeColor']) {
   return color.charAt(0).toUpperCase() + color.slice(1);
 }
 
-export function GuideResourcesCard() {
+interface GuideResourcesCardProps {
+  surface?: 'options' | 'content';
+  showHeader?: boolean;
+}
+
+export function GuideResourcesCard({ surface = 'options', showHeader = true }: GuideResourcesCardProps) {
   const { t } = useTranslation();
   const guidesState = useGuideResources();
   const [pendingGuideId, setPendingGuideId] = useState<string | null>(null);
@@ -54,7 +59,7 @@ export function GuideResourcesCard() {
             topics: guide.topics,
             estimatedTimeMinutes: guide.estimatedTimeMinutes
           },
-          surface: 'options'
+          surface
         });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : String(error));
@@ -153,10 +158,12 @@ export function GuideResourcesCard() {
 
   return (
     <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-4">
-      <header className="mb-4 space-y-1">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{heading}</h2>
-        <p className="text-xs text-slate-400">{description}</p>
-      </header>
+      {showHeader ? (
+        <header className="mb-4 space-y-1">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{heading}</h2>
+          <p className="text-xs text-slate-400">{description}</p>
+        </header>
+      ) : null}
 
       {actionError ? <p className="mb-3 text-xs text-rose-400">{actionError}</p> : null}
 
