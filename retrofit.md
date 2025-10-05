@@ -8,7 +8,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | --- | --- | --- | --- |
 | Conversatiedock & bubbels | Shadow-root host, dock rechts, contextuele bubbels, sneltoetsen | ✅ Gereed | 2024-06-15 |
 | Pin- & bulkbeheer | Pinned-overzicht, bulkacties, verplaatsingen, favoriete mappen | 🚧 Ontwikkeling | _bijwerken tijdens iteratie_ |
-| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-05 – pending (bookmark-modal overlay) |
+| Bladwijzers & contextmenu | Bubbelgestuurde acties, notitiemodaal, contextmenu, popup-sync | 🚧 Ontwikkeling | 2025-10-07 – pending (bookmark-modal overlay + metadata sync) |
 | Promptbibliotheek & ketens | Variabelen, invulscherm, chain runner, GPT-koppelingen | 📝 Ontwerp | _nog te plannen_ |
 | Mapbeheer & GPT's | Drag & drop, inline create, GPT-detailmodaal, import/export | 📝 Ontwerp | _nog te plannen_ |
 | Conversatieanalyse & export | Full-text search, analytics, export-UI | 📝 Ontwerp | _nog te plannen_ |
@@ -48,9 +48,19 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 
 ## Volgende stappen
 
-1. **Bladwijzer-overlay afronden** – Koppel `collectMessageElements` in `src/content/ui-root.tsx` aan een bubbelpaneel i.p.v. inline acties. Bouw een shadow-root modal (hergebruik `Modal`) die note-opslag afhandelt via `toggleBookmark` en breid `BookmarkSummary` uit met `messagePreview` (`db.bookmarks` migreren met een fallback voor bestaande records).
-2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`).
-3. **Promptketens en variabelen** – Werk `src/core/models/records.ts` bij met `variables: string[]` voor prompts, schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` en verbind de nieuwe chain-runner (`textareaPrompts`) zodat `MoveDialog`-achtige state wordt hergebruikt voor promptketens.
+1. **Bladwijzer-overlay afronden** –
+   - Verplaats de huidige `collectMessageElements`-flow in `src/content/ui-root.tsx` naar een bubbelgestuurd paneel zodat selectie en acties op één plaats samenkomen.
+   - Bouw een modal binnen de shadow-root (hergebruik `Modal`) die notities opslaat via `toggleBookmark` en een inline preview toont. Gebruik `BookmarkSummary` als basiscomponent en breid deze uit met `messagePreview` en `createdAt` badges.
+   - Migreer `db.bookmarks` met een Dexie `version(7)` stap die ontbrekende `messagePreview`-velden invult via een fallback (`conversation.latestMessage?.slice(0, 200) ?? ''`). Val terug op oude records indien de migratie faalt en log een QA-item.
+   - Synchroniseer de nieuwe velden naar popup/options door `useRecentBookmarks` uit te breiden en een regressietest toe te voegen in `tests/content/bookmarks.test.ts` die het modalpad en Dexie-opslag controleert.
+2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`). Volgende acties:
+   - Voeg een guard toe zodat het menu sluit wanneer `CompanionSidebarRoot` ontmount (fix voor race condition bij het wisselen tussen ChatGPT-domains).
+   - Documenteer toetscombinaties en accessible labels in `docs/accessibility/context-menu.md` en plan een Playwright-scenario (`tests/e2e/context-menu.spec.ts`).
+3. **Promptketens en variabelen** –
+   - Werk `src/core/models/records.ts` bij met `variables: string[]` en een `lastExecutedAt` veld zodat UX flow de meest recente keten bovenaan plaatst.
+   - Schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` met pill-componenten voor variabelen. Voeg validatie toe via Zod (`promptVariablesSchema`).
+   - Verbind de nieuwe chain-runner (`textareaPrompts`) zodat `MoveDialog`-achtige state wordt hergebruikt voor promptketens; gebruik `usePromptChainsStore` om runtime state te delen.
+   - Voorzie QA-notes in `docs/testing/manual-regression.md` (sectie "Promptketens") inclusief een scenario voor het annuleren van een keten midden in uitvoering.
 
 ## Prioriteiten en stappen per featuregroep
 
