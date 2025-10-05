@@ -71,6 +71,16 @@ Execute this pass in both Chrome and Edge once per release when bookmark overlay
 4. Close the overlay with `Escape`, reopen it from another message, and ensure focus is trapped within the modal. The overlay must close automatically if the dock is hidden.
 5. Switch to the second browser (Chrome ↔ Edge) and repeat steps 2–4. Record any DOM mismatches or timing issues in the retrofit log.
 
+## Bookmark overlay smoke test
+
+Execute this pass in both Chrome and Edge once per release when bookmark overlay code changes ship. Run it on `chat.openai.com` with the dock visible; repeat a subset of the checks on `chatgpt.com` to confirm selectors stay stable.
+
+1. Open an existing conversation and hover over a user message to reveal the bubble launcher.
+2. Trigger the bookmark action from the context bubble and confirm the inline overlay renders inside the shadow-root without layout shifts.
+3. Validate that the overlay shows the message preview, existing note textarea, saved-badge, and `createdAt` timestamp. Editing the note should persist after closing and reopening the overlay.
+4. Close the overlay with `Escape`, reopen it from another message, and ensure focus is trapped within the modal. The overlay must close automatically if the dock is hidden.
+5. Switch to the second browser (Chrome ↔ Edge) and repeat steps 2–4. Record any DOM mismatches or timing issues in the retrofit log.
+
 ## Promptketens
 
 1. Open de dashboardpagina en navigeer naar het tabblad “Prompts”. Maak een keten met minimaal twee stappen en voeg één variabele toe via het pillenveld. Controleer dat dubbele variabelen geweigerd worden en dat de teller niet boven de limiet uitkomt.
