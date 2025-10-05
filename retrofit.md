@@ -49,7 +49,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 ## Volgende stappen
 
 1. **Bladwijzer-overlay afronden** – Koppel `collectMessageElements` in `src/content/ui-root.tsx` aan een bubbelpaneel i.p.v. inline acties. Bouw een shadow-root modal (hergebruik `Modal`) die note-opslag afhandelt via `toggleBookmark` en breid `BookmarkSummary` uit met `messagePreview` (`db.bookmarks` migreren met een fallback voor bestaande records).
-2. **Contextmenu herintroduceren** – Voeg een custom contextmenu toe in `src/content/sidebar-host.ts` dat de bestaande stores (`usePinnedConversations`, `usePrompts`) aanspreekt. Gebruik `chrome.runtime.sendMessage` routes die nu al voor MoveDialog aanwezig zijn als template.
+2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`).
 3. **Promptketens en variabelen** – Werk `src/core/models/records.ts` bij met `variables: string[]` voor prompts, schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` en verbind de nieuwe chain-runner (`textareaPrompts`) zodat `MoveDialog`-achtige state wordt hergebruikt voor promptketens.
 
 ## Prioriteiten en stappen per featuregroep
@@ -164,5 +164,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkmodal voor selectie & notities in content; lint/test/build uitgevoerd |
 | 2025-10-05 | 4a71f23 | Composer uitbreidingen | initComposerCounters + composer telleroverlay; lint/test/build uitgevoerd |
 | 2025-10-06 | _pending_ | Composer uitbreidingen | Placeholder helper + settings promptHint sync; lint/test/build uitgevoerd |
+| 2025-10-06 | _pending_ | Bladwijzers & contextmenu | Contextmenu met bookmark/prompt/pin/copy-acties + toastfeedback toegevoegd; lint/test/build gepland |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 

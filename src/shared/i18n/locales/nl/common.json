@@ -328,7 +328,22 @@
         "bookmarkModalError": "Bladwijzer opslaan mislukt. Probeer het opnieuw.",
         "bookmarkModalRemoveError": "Bladwijzer verwijderen mislukt. Probeer het opnieuw.",
         "bookmarkModalLoadError": "Bestaande bladwijzers konden niet worden geladen. Probeer het later opnieuw.",
-        "bookmarkModalNoConversation": "Open een ChatGPT-gesprek om bladwijzers toe te voegen."
+        "bookmarkModalNoConversation": "Open een ChatGPT-gesprek om bladwijzers toe te voegen.",
+        "contextMenuTitle": "Snelle acties",
+        "contextMenuBookmarkMessage": "Bericht bookmarken",
+        "contextMenuBookmarkConversation": "Gesprek bookmarken",
+        "contextMenuSavePrompt": "Opslaan als prompt",
+        "contextMenuCopy": "Berichttekst kopiëren",
+        "contextMenuPin": "Gesprek vastzetten",
+        "contextMenuUnpin": "Pin verwijderen",
+        "contextMenuOpenDashboard": "Dashboard openen",
+        "contextMenuNoText": "Bericht bevat geen tekst om te hergebruiken.",
+        "contextMenuPromptFallback": "Prompt uit {{title}}",
+        "contextMenuPromptSaved": "Prompt \"{{name}}\" is opgeslagen in je bibliotheek.",
+        "contextMenuCopied": "Bericht gekopieerd naar het klembord.",
+        "contextMenuPinSuccess": "Gesprek vastgezet.",
+        "contextMenuUnpinSuccess": "Pin verwijderd.",
+        "contextMenuError": "Actie kon niet worden voltooid. Probeer het opnieuw."
       },
       "prompts": {
         "heading": "Promptsjablonen",
