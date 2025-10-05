@@ -5,6 +5,7 @@ import { db } from '@/core/storage/db';
 import { getRecentBookmarks } from '@/core/storage/insights';
 import { initI18n } from '@/shared/i18n';
 import { DEFAULT_PROMPT_HINT, initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
+import { createPopover } from '@/ui/components/Popover';
 import type { i18n as I18nInstance } from 'i18next';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
@@ -105,6 +106,36 @@ let composerPlaceholderSignature: string | null = null;
 let composerPlaceholderUnsubscribe: (() => void) | null = null;
 let composerOriginalPlaceholder: string | null = null;
 let composerOriginalDataPlaceholder: string | null = null;
+let launcherPopover: HTMLDivElement | null = null;
+let launcherPopoverTitle: HTMLHeadingElement | null = null;
+let launcherPopoverSubtitle: HTMLParagraphElement | null = null;
+let launcherPopoverList: HTMLUListElement | null = null;
+let launcherPopoverDismissButton: HTMLButtonElement | null = null;
+let launcherPopoverVisible = false;
+const launcherPopoverItemLabels = new Map<string, HTMLParagraphElement>();
+
+const MAX_LAUNCHER_TIP_DISPLAYS = 3;
+
+const LAUNCHER_TIP_CONFIGS = [
+  {
+    id: 'prompts',
+    key: '//',
+    labelKey: 'content.promptLauncher.tips.prompts',
+    labelFallback: 'Type // to browse saved prompts.'
+  },
+  {
+    id: 'chains',
+    key: '..',
+    labelKey: 'content.promptLauncher.tips.chains',
+    labelFallback: 'Use .. to open prompt chains (coming soon).'
+  },
+  {
+    id: 'bookmarks',
+    key: '@@',
+    labelKey: 'content.promptLauncher.tips.bookmarks',
+    labelFallback: 'Try @@ to bookmark the current message.'
+  }
+] as const;
 
 function attachEvent<K extends keyof HTMLElementEventMap>(
   target: HTMLElement,
@@ -395,6 +426,99 @@ button {
   border-color: rgba(248, 113, 113, 0.85);
   color: #fecaca;
 }
+.launcher-popover {
+  position: absolute;
+  right: calc(100% + 16px);
+  bottom: 0;
+  width: 260px;
+  pointer-events: none;
+  z-index: 2;
+}
+.launcher-popover[data-open="false"],
+.launcher-popover[hidden] {
+  display: none;
+}
+.launcher-popover[data-open="true"] {
+  display: block;
+  pointer-events: auto;
+}
+.launcher-popover-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.45);
+  padding: 16px 18px 18px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.launcher-popover-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f8fafc;
+}
+.launcher-popover-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.85);
+  line-height: 1.5;
+}
+.launcher-popover-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.launcher-popover-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.launcher-popover-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #38bdf8;
+  letter-spacing: 0.08em;
+}
+.launcher-popover-label {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.88);
+  line-height: 1.4;
+}
+.launcher-popover-dismiss {
+  align-self: flex-end;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.7);
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.launcher-popover-dismiss:hover,
+.launcher-popover-dismiss:focus-visible {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.95);
+  color: #a7f3d0;
+  outline: none;
+}
 @media (max-width: 768px) {
   .launcher {
     bottom: 78px;
@@ -563,6 +687,8 @@ function ensureContainer() {
   wrapper.className = 'launcher';
   shadowRoot.appendChild(wrapper);
 
+  createLauncherPopover(wrapper);
+
   const dock = document.createElement('div');
   dock.className = 'bubble-dock';
   wrapper.appendChild(dock);
@@ -708,7 +834,151 @@ function ensureContainer() {
   renderActivePanel();
 }
 
+function createLauncherPopover(wrapper: HTMLDivElement) {
+  launcherPopoverVisible = false;
+  launcherPopoverItemLabels.clear();
+
+  const instance = createPopover({
+    shortcuts: LAUNCHER_TIP_CONFIGS.map((config) => ({ id: config.id, key: config.key })),
+    onDismiss: (event) => {
+      event.preventDefault();
+      hideLauncherPopover({ markDismissed: true });
+    },
+    rootClassName: 'launcher-popover',
+    cardClassName: 'launcher-popover-card',
+    titleClassName: 'launcher-popover-title',
+    subtitleClassName: 'launcher-popover-subtitle',
+    listClassName: 'launcher-popover-list',
+    itemClassName: 'launcher-popover-item',
+    keyClassName: 'launcher-popover-key',
+    labelClassName: 'launcher-popover-label',
+    dismissButtonClassName: 'launcher-popover-dismiss'
+  });
+
+  launcherPopover = instance.root;
+  launcherPopoverTitle = instance.title;
+  launcherPopoverSubtitle = instance.subtitle;
+  launcherPopoverList = instance.list;
+  launcherPopoverDismissButton = instance.dismissButton;
+
+  launcherPopover.setAttribute('role', 'dialog');
+  launcherPopover.setAttribute('aria-live', 'polite');
+  launcherPopover.setAttribute('aria-hidden', 'true');
+  launcherPopover.setAttribute('data-open', 'false');
+  launcherPopover.hidden = true;
+
+  if (!launcherPopoverTitle.id) {
+    launcherPopoverTitle.id = 'ai-companion-launcher-tips-title';
+  }
+  if (!launcherPopoverSubtitle.id) {
+    launcherPopoverSubtitle.id = 'ai-companion-launcher-tips-subtitle';
+  }
+
+  launcherPopoverList.setAttribute('aria-labelledby', launcherPopoverTitle.id);
+  launcherPopoverList.setAttribute('aria-describedby', launcherPopoverSubtitle.id);
+
+  launcherPopoverItemLabels.clear();
+  for (const [id, label] of instance.itemLabels.entries()) {
+    launcherPopoverItemLabels.set(id, label);
+  }
+
+  wrapper.appendChild(launcherPopover);
+}
+
+function applyLauncherPopoverTranslations() {
+  if (!launcherPopover) {
+    return;
+  }
+
+  if (launcherPopoverTitle) {
+    launcherPopoverTitle.textContent = translate('content.promptLauncher.tipsTitle', 'Composer shortcuts');
+  }
+
+  if (launcherPopoverSubtitle) {
+    launcherPopoverSubtitle.textContent = translate(
+      'content.promptLauncher.tipsSubtitle',
+      'Use quick prefixes to speed up your workflow.'
+    );
+  }
+
+  for (const config of LAUNCHER_TIP_CONFIGS) {
+    const label = launcherPopoverItemLabels.get(config.id);
+    if (label) {
+      label.textContent = translate(config.labelKey, config.labelFallback);
+    }
+  }
+
+  if (launcherPopoverDismissButton) {
+    const text = translate('content.promptLauncher.tipsDismiss', 'Got it');
+    launcherPopoverDismissButton.textContent = text;
+    launcherPopoverDismissButton.setAttribute('aria-label', text);
+  }
+}
+
+function showLauncherPopover() {
+  if (!launcherPopover || launcherPopoverVisible) {
+    return;
+  }
+
+  applyLauncherPopoverTranslations();
+
+  launcherPopover.hidden = false;
+  launcherPopover.setAttribute('data-open', 'true');
+  launcherPopover.setAttribute('aria-hidden', 'false');
+  launcherPopoverVisible = true;
+
+  window.setTimeout(() => {
+    launcherPopoverDismissButton?.focus({ preventScroll: true });
+  }, 0);
+}
+
+function hideLauncherPopover(options: { markDismissed?: boolean } = {}) {
+  if (!launcherPopover) {
+    return;
+  }
+
+  if (!launcherPopoverVisible) {
+    launcherPopover.hidden = true;
+    launcherPopover.setAttribute('data-open', 'false');
+    launcherPopover.setAttribute('aria-hidden', 'true');
+    return;
+  }
+
+  launcherPopoverVisible = false;
+  launcherPopover.hidden = true;
+  launcherPopover.setAttribute('data-open', 'false');
+  launcherPopover.setAttribute('aria-hidden', 'true');
+
+  if (options.markDismissed) {
+    const settings = useSettingsStore.getState();
+    if (settings.dismissedLauncherTips < MAX_LAUNCHER_TIP_DISPLAYS) {
+      settings.incrementDismissedLauncherTips();
+    }
+  }
+}
+
+function maybeShowLauncherPopover(bubbleId: PanelBubbleId) {
+  if (bubbleId !== 'prompts') {
+    hideLauncherPopover();
+    return;
+  }
+
+  const settings = useSettingsStore.getState();
+  if (!settings.hydrated) {
+    return;
+  }
+
+  if (settings.dismissedLauncherTips >= MAX_LAUNCHER_TIP_DISPLAYS) {
+    hideLauncherPopover();
+    return;
+  }
+
+  showLauncherPopover();
+}
+
 function applyTranslations() {
+  applyLauncherPopoverTranslations();
+
   if (!closeButton || !searchInput || !titleEl || !emptyTitleEl || !emptySubtitleEl) {
     return;
   }
@@ -1152,6 +1422,8 @@ function openPanel(bubbleId: PanelBubbleId) {
   refreshBubbleLabels();
   renderActivePanel();
 
+  maybeShowLauncherPopover(bubbleId);
+
   if (bubbleId === 'prompts') {
     searchInput?.focus({ preventScroll: true });
   }
@@ -1168,6 +1440,8 @@ function closePanel(options: { focusTrigger?: boolean } = {}) {
   state.open = false;
   state.activeBubble = null;
   state.filter = '';
+
+  hideLauncherPopover();
 
   if (searchInput) {
     searchInput.value = '';
@@ -1730,6 +2004,13 @@ function cleanup() {
   composerCharactersValue = null;
   composerTokensValue = null;
   composerTokensBadge = null;
+  launcherPopover = null;
+  launcherPopoverTitle = null;
+  launcherPopoverSubtitle = null;
+  launcherPopoverList = null;
+  launcherPopoverDismissButton = null;
+  launcherPopoverVisible = false;
+  launcherPopoverItemLabels.clear();
   mounted = false;
 }
 
