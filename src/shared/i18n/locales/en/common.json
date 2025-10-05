@@ -217,8 +217,8 @@
     "dock": {
       "prompts": "Prompts ({{count}})",
       "promptsAria": "Toggle prompts bubble ({{count}} available)",
-      "bookmarks": "Bookmarks",
-      "bookmarksAria": "Open bookmark bubble",
+      "bookmarks": "Bookmarks ({{count}})",
+      "bookmarksAria": "Open bookmark bubble ({{count}} available)",
       "pinned": "Pinned",
       "pinnedAria": "Open pinned bubble",
       "actions": "Actions",
@@ -232,8 +232,8 @@
     "bubblePanels": {
       "bookmarks": {
         "title": "Conversation bookmarks",
-        "placeholderTitle": "Bookmark tools are almost here",
-        "placeholderSubtitle": "Soon you'll capture messages, add notes, and sync them across popup and dashboard from this bubble."
+        "emptyTitle": "No bookmarks yet",
+        "emptySubtitle": "Bookmark ChatGPT messages to keep quick references handy in this bubble."
       },
       "pinned": {
         "title": "Pinned conversations",

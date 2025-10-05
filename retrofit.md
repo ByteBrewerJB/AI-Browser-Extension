@@ -160,6 +160,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | Datum | Commit | Featuregroep(en) | Opmerkingen |
 | --- | --- | --- | --- |
 | 2025-10-05 | _pending_ | Conversatiedock; pin/verplaats | Dexie v6 favoriete mappen + MoveDialog toegevoegd; lint uitgevoerd |
-| 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmark previews opgeslagen in Dexie; lint/test/build uitgevoerd |
+| 2025-10-05 | _pending_ | Bladwijzers & contextmenu | Bookmarkbubble toont live Dexie-data + notities; lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
