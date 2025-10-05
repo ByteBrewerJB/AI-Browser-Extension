@@ -55,6 +55,14 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [ ] RTL smoketests uitvoeren in content, popup en options.
   - [ ] Locale switcher koppelen aan instellingenstore met persistente voorkeur.
 
+## Volgende stappen
+1. [ ] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen.
+   - **Prioritering** – Hoog: blokkert bulkverplaatsing, pins en zoekhiërarchie. Implementatie moet vóór Minisearch-uitbreiding klaar zijn zodat index zich op stabiele sleutels kan baseren. Schat 2 dagen werk: 1 dag schema & migratie, 1 dag API-aanpassing/seeddata.
+   - **Documentatie** – Breid `docs/handbook/adr-20240215-auth-and-data-model.md` uit met de nieuwe tabellen, relaties en migratiepad. Update `docs/handbook/product-roadmap.md` sectie "Search & sidebar" naar status "in uitvoering" zodra de migratie start. Voeg migratie-instructies toe aan `docs/handbook/manual-regression-checklist.md` (IndexedDB reset) na implementatie.
+   - **QA-notes** – Na oplevering: run `npm run lint`, `npm run test`, `npm run build`. Handmatige check: DevTools Application → IndexedDB (`folders`, `folder_items`) aanmaken/verplaatsen/verwijderen; verify geen Network POSTs met chatcontent. Documenteer bevindingen (browser, datum, dataset) in retrofit logboek en regression checklist.
+2. [ ] MiniSearch indexeren op titel, tags, map-hiërarchie; meten latency bij 10k berichten.
+3. [ ] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
+
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
 - [ ] CRUD-operaties O(1) in Dexie, inclusief nested structuren.
