@@ -11,6 +11,7 @@ import {
   getBookmarks,
   getConversationOverviewById,
   toggleBookmark,
+  toggleFavoriteFolder,
   togglePinned,
   upsertConversation
 } from '@/core/storage';
@@ -25,7 +26,10 @@ import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
-import { useBubbleLauncherStore } from '@/shared/state/bubbleLauncherStore';
+import {
+  useBubbleLauncherStore,
+  type FolderShortcut
+} from '@/shared/state/bubbleLauncherStore';
 import type { Bubble } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
@@ -609,14 +613,7 @@ function BookmarkDialog({ open, onClose, initialTarget, t }: BookmarkDialogProps
   );
 }
 
-interface FolderOption {
-  id: string;
-  name: string;
-  depth: number;
-  favorite: boolean;
-}
-
-function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderOption[] {
+function flattenFolderTree(nodes: FolderTreeNode[], depth = 0): FolderShortcut[] {
   return nodes.flatMap((node) => [
     { id: node.id, name: node.name, depth, favorite: Boolean(node.favorite) },
     ...flattenFolderTree(node.children, depth + 1)
@@ -978,26 +975,57 @@ function PromptList({ prompts, folderNames, t }: PromptListProps) {
   );
 }
 
-interface HistoryTabProps {
-  onAddBookmark: (target?: BookmarkTarget) => void;
-}
-
-function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
+function PinnedTab(): ReactElement {
   const { t } = useTranslation();
-  const pinnedConversations = usePinnedConversations(6);
+  const pinnedConversations = usePinnedConversations(12);
   const conversationFolders = useFolderTree('conversation');
-  const recentConversations = useRecentConversations(6);
-  const bookmarks = useRecentBookmarks(4);
+  const cachedFolderShortcuts = useBubbleLauncherStore((state) => state.conversationFolderShortcuts);
+  const setConversationFolderShortcuts = useBubbleLauncherStore(
+    (state) => state.setConversationFolderShortcuts
+  );
 
-  const handleTogglePin = useCallback((conversationId: string) => {
-    void togglePinned(conversationId);
+  const flattenedFolderTree = useMemo(
+    () => flattenFolderTree(conversationFolders),
+    [conversationFolders]
+  );
+
+  useEffect(() => {
+    if (flattenedFolderTree.length === 0) {
+      return;
+    }
+    setConversationFolderShortcuts(flattenedFolderTree);
+  }, [flattenedFolderTree, setConversationFolderShortcuts]);
+
+  const folderOptions = flattenedFolderTree.length > 0 ? flattenedFolderTree : cachedFolderShortcuts;
+  const folderNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    folderOptions.forEach((folder) => {
+      map.set(folder.id, folder.name);
+    });
+    return map;
+  }, [folderOptions]);
+
+  const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(() => new Set());
+
+  const handleToggleFavorite = useCallback(async (folderId: string, next: boolean) => {
+    setFavoritePendingIds((current) => {
+      const nextSet = new Set(current);
+      nextSet.add(folderId);
+      return nextSet;
+    });
+
+    try {
+      await toggleFavoriteFolder(folderId, next);
+    } catch (error) {
+      console.error('[ai-companion] failed to toggle favorite folder from pinned bubble', error);
+    } finally {
+      setFavoritePendingIds((current) => {
+        const nextSet = new Set(current);
+        nextSet.delete(folderId);
+        return nextSet;
+      });
+    }
   }, []);
-
-  const handleArchiveToggle = useCallback((conversationId: string, archived: boolean | undefined) => {
-    void archiveConversations([conversationId], !archived);
-  }, []);
-
-  const folderOptions = useMemo(() => flattenFolderTree(conversationFolders), [conversationFolders]);
 
   const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
   const [movePending, setMovePending] = useState(false);
@@ -1042,7 +1070,302 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
         });
         setMoveTarget(null);
       } catch (error) {
-        console.error('[ai-companion] failed to move conversation', error);
+        console.error('[ai-companion] failed to move pinned conversation', error);
+      } finally {
+        setMovePending(false);
+      }
+    },
+    [moveTarget]
+  );
+
+  const handleTogglePin = useCallback((conversationId: string) => {
+    void togglePinned(conversationId);
+  }, []);
+
+  const handleArchiveToggle = useCallback((conversationId: string, archived: boolean | undefined) => {
+    void archiveConversations([conversationId], !archived);
+  }, []);
+
+  const handleNavigateToFolder = useCallback((folderId: string | undefined) => {
+    const searchParams: Record<string, string | undefined> = {
+      view: 'history',
+      historyFolder: folderId ?? 'all'
+    };
+    openDashboard({ searchParams });
+  }, []);
+
+  const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
+  const moveDialogTitle = moveTarget
+    ? t('content.sidebar.history.moveDialogTitle', {
+        title: normalizeTitle(moveTarget.title, fallbackTitle)
+      })
+    : t('content.sidebar.history.moveDialogTitleDefault', { defaultValue: 'Move conversation' });
+  const moveDialogDescription = moveTarget
+    ? t('content.sidebar.history.moveDialogDescription', {
+        title: normalizeTitle(moveTarget.title, fallbackTitle)
+      })
+    : t('content.sidebar.history.moveDialogDescriptionDefault', {
+        defaultValue: 'Select a destination folder for this conversation.'
+      });
+
+  return (
+    <div className="space-y-4">
+      <SidebarSection
+        action={
+          pinnedConversations.length > 0
+            ? (
+                <button
+                  className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                  onClick={() => openDashboard({ searchParams: { view: 'history' } })}
+                  type="button"
+                >
+                  {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
+                </button>
+              )
+            : undefined
+        }
+        title={t('content.sidebar.history.pinnedHeading', { defaultValue: 'Pinned conversations' })}
+      >
+        {pinnedConversations.length === 0 ? (
+          <EmptyState
+            align="start"
+            className="px-4 py-6 text-sm"
+            description={t('content.sidebar.history.emptyPinned', {
+              defaultValue: 'Pin chats from ChatGPT to keep them handy.'
+            })}
+            title={t('popup.noPinned', { defaultValue: 'No pinned chats yet.' })}
+          />
+        ) : (
+          <ul className="space-y-2">
+            {pinnedConversations.map((conversation) => {
+              const titleLabel = normalizeTitle(conversation.title, fallbackTitle);
+              const metrics = t('popup.activityConversationMetrics', {
+                messages: formatNumber(conversation.messageCount),
+                words: formatNumber(conversation.wordCount)
+              });
+              const characterLabel = `${t('popup.characters')}: ${formatNumber(conversation.charCount)}`;
+              const updatedAtLabel = formatDateTime(conversation.updatedAt);
+              const archiveLabel = conversation.archived
+                ? t('content.sidebar.history.restore', { defaultValue: 'Restore' })
+                : t('content.sidebar.history.archive', { defaultValue: 'Archive' });
+              const folderLabel = conversation.folderId
+                ? folderNameById.get(conversation.folderId) ??
+                  t('options.noneOption', { defaultValue: 'None' })
+                : t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' });
+
+              return (
+                <li
+                  key={conversation.id}
+                  className="rounded-md border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-100">{titleLabel}</p>
+                      <p className="text-[11px] text-slate-400">{metrics}</p>
+                      <p className="text-[11px] text-slate-500">{characterLabel}</p>
+                      <p className="text-[11px] text-slate-500">{folderLabel}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 text-right">
+                      <button
+                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                        onClick={() => openConversationTab(conversation.id)}
+                        type="button"
+                      >
+                        {t('popup.openConversation') ?? 'Open'}
+                      </button>
+                      <button
+                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                        onClick={() => openMoveDialog(conversation)}
+                        type="button"
+                      >
+                        {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
+                      </button>
+                      <button
+                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                        onClick={() => handleTogglePin(conversation.id)}
+                        type="button"
+                      >
+                        {t('popup.unpin')}
+                      </button>
+                      <button
+                        className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                        onClick={() => handleArchiveToggle(conversation.id, conversation.archived)}
+                        type="button"
+                      >
+                        {archiveLabel}
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SidebarSection>
+
+      <SidebarSection
+        action={
+          folderOptions.length > 0
+            ? (
+                <button
+                  className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                  onClick={() => openDashboard({ searchParams: { view: 'history' } })}
+                  type="button"
+                >
+                  {t('content.sidebar.history.manageFolders', { defaultValue: 'Manage folders' })}
+                </button>
+              )
+            : undefined
+        }
+        title={t('content.sidebar.history.folderShortcuts', { defaultValue: 'Folder shortcuts' })}
+      >
+        {folderOptions.length === 0 ? (
+          <p className="mt-2 text-xs text-slate-400">
+            {t('content.sidebar.history.folderShortcutsEmpty', {
+              defaultValue: 'Create folders in the dashboard to access them quickly here.'
+            })}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            <li>
+              <button
+                className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                onClick={() => handleNavigateToFolder(undefined)}
+                type="button"
+              >
+                {t('options.filterFolderAll', { defaultValue: 'All folders' })}
+              </button>
+            </li>
+            {folderOptions.map((folder) => {
+              const favoriteToggleLabel = folder.favorite
+                ? t('content.sidebar.history.unfavoriteFolder', {
+                    defaultValue: 'Remove favorite'
+                  })
+                : t('content.sidebar.history.favoriteFolder', {
+                    defaultValue: 'Mark as favorite'
+                  });
+              const pendingFavorite = favoritePendingIds.has(folder.id);
+
+              return (
+                <li key={folder.id}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="flex-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                      onClick={() => handleNavigateToFolder(folder.id)}
+                      type="button"
+                    >
+                      <span className="flex items-center gap-2" style={{ paddingLeft: `${folder.depth * 12}px` }}>
+                        <span className="truncate">{folder.name}</span>
+                        {folder.favorite ? (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                            {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                    <button
+                      className="rounded-md border border-amber-400/70 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleToggleFavorite(folder.id, !folder.favorite)}
+                      type="button"
+                      aria-label={favoriteToggleLabel}
+                      aria-pressed={folder.favorite}
+                      disabled={pendingFavorite}
+                      title={favoriteToggleLabel ?? undefined}
+                    >
+                      {folder.favorite ? '★' : '☆'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SidebarSection>
+
+      <MoveDialog
+        open={Boolean(moveTarget)}
+        title={moveDialogTitle}
+        description={moveDialogDescription}
+        currentFolderId={moveTarget?.folderId}
+        rootOptionLabel={t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' })}
+        confirmLabel={t('content.sidebar.history.moveConfirm', { defaultValue: 'Move' })}
+        cancelLabel={t('content.sidebar.history.moveCancel', { defaultValue: 'Cancel' })}
+        folders={moveDialogOptions}
+        pending={movePending}
+        onMove={handleMoveSubmit}
+        onClose={handleMoveDialogClose}
+      />
+    </div>
+  );
+}
+
+interface HistoryTabProps {
+  onAddBookmark: (target?: BookmarkTarget) => void;
+}
+
+function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
+  const { t } = useTranslation();
+  const conversationFolders = useFolderTree('conversation');
+  const recentConversations = useRecentConversations(6);
+  const bookmarks = useRecentBookmarks(4);
+  const setActiveBubble = useBubbleLauncherStore((state) => state.setActiveBubble);
+
+  const handleTogglePin = useCallback((conversationId: string) => {
+    void togglePinned(conversationId);
+  }, []);
+
+  const flattenedFolderTree = useMemo(
+    () => flattenFolderTree(conversationFolders),
+    [conversationFolders]
+  );
+
+  const [moveTarget, setMoveTarget] = useState<ConversationOverview | null>(null);
+  const [movePending, setMovePending] = useState(false);
+
+  const moveDialogOptions = useMemo<MoveDialogOption[]>(
+    () =>
+      flattenedFolderTree.map((folder) => ({
+        id: folder.id,
+        label: folder.name,
+        depth: folder.depth,
+        favorite: folder.favorite
+      })),
+    [flattenedFolderTree]
+  );
+
+  const openMoveDialog = useCallback((conversation: ConversationOverview) => {
+    setMoveTarget(conversation);
+  }, []);
+
+  const handleMoveDialogClose = useCallback(() => {
+    if (!movePending) {
+      setMoveTarget(null);
+    }
+  }, [movePending]);
+
+  const handleMoveSubmit = useCallback(
+    async (folderId?: string) => {
+      if (!moveTarget) {
+        return;
+      }
+      setMovePending(true);
+      try {
+        await upsertConversation({
+          id: moveTarget.id,
+          title: moveTarget.title,
+          folderId,
+          pinned: moveTarget.pinned,
+          archived: moveTarget.archived ?? false,
+          createdAt: moveTarget.createdAt,
+          wordCount: moveTarget.wordCount,
+          charCount: moveTarget.charCount
+        });
+        setMoveTarget(null);
+      } catch (error) {
+        console.error('[ai-companion] failed to move conversation from history bubble', error);
       } finally {
         setMovePending(false);
       }
@@ -1067,156 +1390,25 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
       });
 
 
-  const handleNavigateToFolder = useCallback((folderId: string | undefined) => {
-    const searchParams: Record<string, string | undefined> = {
-      view: 'history',
-      historyFolder: folderId ?? 'all'
-    };
-    openDashboard({ searchParams });
-  }, []);
-
   return (
     <div className="space-y-4">
       <SidebarSection
         action={
-          pinnedConversations.length > 0 || folderOptions.length > 0
-            ? (
-                <button
-                  className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                  onClick={() => openDashboard({ searchParams: { view: 'history' } })}
-                  type="button"
-                >
-                  {t('content.sidebar.history.openDashboard', { defaultValue: 'Dashboard' })}
-                </button>
-              )
-            : undefined
+          <button
+            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => setActiveBubble('pinned')}
+            type="button"
+          >
+            {t('content.sidebar.history.openPinnedBubble', { defaultValue: 'Pinned bubble' })}
+          </button>
         }
-        title={t('content.sidebar.history.pinnedHeading', { defaultValue: 'Pinned conversations' })}
+        title={t('content.sidebar.history.quickAccessHeading', { defaultValue: 'Quick actions' })}
       >
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div>
-            {pinnedConversations.length === 0 ? (
-              <EmptyState
-                align="start"
-                className="px-4 py-6 text-sm"
-                description={t('content.sidebar.history.emptyPinned', {
-                  defaultValue: 'Pin chats from ChatGPT to keep them handy.'
-                })}
-                title={t('popup.noPinned', { defaultValue: 'No pinned chats yet.' })}
-              />
-            ) : (
-              <ul className="space-y-2">
-                {pinnedConversations.map((conversation) => {
-                  const fallbackTitle = t('popup.untitledConversation') ?? 'Untitled conversation';
-                  const titleLabel = normalizeTitle(conversation.title, fallbackTitle);
-                  const metrics = t('popup.activityConversationMetrics', {
-                    messages: formatNumber(conversation.messageCount),
-                    words: formatNumber(conversation.wordCount)
-                  });
-                  const characterLabel = `${t('popup.characters')}: ${formatNumber(conversation.charCount)}`;
-                  const updatedAtLabel = formatDateTime(conversation.updatedAt);
-                  const archiveLabel = conversation.archived
-                    ? t('content.sidebar.history.restore', { defaultValue: 'Restore' })
-                    : t('content.sidebar.history.archive', { defaultValue: 'Archive' });
-
-                  return (
-                    <li
-                      key={conversation.id}
-                      className="rounded-md border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-100">{titleLabel}</p>
-                          <p className="text-[11px] text-slate-400">{metrics}</p>
-                          <p className="text-[11px] text-slate-500">{characterLabel}</p>
-                          <p className="text-[11px] text-slate-500">
-                            {t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 text-right">
-                          <button
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                            onClick={() => openConversationTab(conversation.id)}
-                            type="button"
-                          >
-                            {t('popup.openConversation') ?? 'Open'}
-                          </button>
-                          <button
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                            onClick={() => openMoveDialog(conversation)}
-                            type="button"
-                          >
-                            {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
-                          </button>
-
-                          <button
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                            onClick={() => handleTogglePin(conversation.id)}
-                            type="button"
-                          >
-                            {t('popup.unpin')}
-                          </button>
-                          <button
-                            className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                            onClick={() => handleArchiveToggle(conversation.id, conversation.archived)}
-                            type="button"
-                          >
-                            {archiveLabel}
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-          <div className="rounded-md border border-white/10 bg-slate-900/60 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
-              {t('content.sidebar.history.folderShortcuts', { defaultValue: 'Folder shortcuts' })}
-            </p>
-            {folderOptions.length === 0 ? (
-              <p className="mt-2 text-xs text-slate-400">
-                {t('content.sidebar.history.folderShortcutsEmpty', {
-                  defaultValue: 'Create folders in the dashboard to access them quickly here.'
-                })}
-              </p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                <li>
-                  <button
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                    onClick={() => handleNavigateToFolder(undefined)}
-                    type="button"
-                  >
-                    {t('options.filterFolderAll', { defaultValue: 'All folders' })}
-                  </button>
-                </li>
-                {folderOptions.map((folder) => (
-                  <li key={folder.id}>
-                    <button
-                      className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                      onClick={() => handleNavigateToFolder(folder.id)}
-                      type="button"
-                    >
-                      <span
-                        className="flex items-center gap-2"
-                        style={{ paddingLeft: `${folder.depth * 12}px` }}
-                      >
-                        <span className="truncate">{folder.name}</span>
-                        {folder.favorite ? (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
-                            {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <p className="text-xs text-slate-300">
+          {t('content.sidebar.history.quickAccessDescription', {
+            defaultValue: 'Use the pinned bubble to manage favorites and folder shortcuts without leaving the chat.'
+          })}
+        </p>
       </SidebarSection>
 
       <ConversationList
@@ -1450,6 +1642,11 @@ function BubbleDock({ onShowPatterns }: BubbleDockProps): ReactElement {
       key: 'history',
       label: t('content.sidebar.tabs.history', { defaultValue: 'History' }),
       description: t('content.sidebar.toolbars.history', { defaultValue: 'Conversation tools' })
+    },
+    {
+      key: 'pinned',
+      label: t('content.sidebar.tabs.pinned', { defaultValue: 'Pinned' }),
+      description: t('content.sidebar.toolbars.pinned', { defaultValue: 'Favorites & shortcuts' })
     },
     {
       key: 'prompts',
@@ -1824,6 +2021,12 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     </div>
   );
 
+  const PinnedPanel = () => (
+    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+      <PinnedTab />
+    </div>
+  );
+
   const PromptsPanel = () => (
     <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
       <PromptsTab />
@@ -1841,6 +2044,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
       <div className="pointer-events-auto flex items-start gap-3">
         <BubbleDock onShowPatterns={() => setPatternModalOpen(true)} />
         {activeBubble === 'history' && <HistoryPanel />}
+        {activeBubble === 'pinned' && <PinnedPanel />}
         {activeBubble === 'prompts' && <PromptsPanel />}
         {activeBubble === 'media' && <MediaPanel />}
       </div>

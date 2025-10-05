@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import type {
@@ -13,9 +13,16 @@ import { EmptyState } from '@/shared/components';
 import { useConversationPresets } from '@/shared/hooks/useConversationPresets';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
+import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
+import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
+import type { ConversationOverview } from '@/core/storage';
 
 import { OptionBubble, flattenFolderOptions, formatDate, formatNumber } from '../shared';
 import { useHistoryStore } from './historyStore';
+
+type MoveContext =
+  | { type: 'single'; conversation: ConversationOverview }
+  | { type: 'bulk'; conversations: ConversationOverview[] };
 
 export function HistorySection() {
   const { t } = useTranslation();
@@ -41,14 +48,24 @@ export function HistorySection() {
     toggleSelection,
     setSelectedConversationIds,
     clearSelection,
+    moveConversation,
     archiveSelected,
-    deleteSelected
+    deleteSelected,
+    exportSelected
   } = useHistoryStore();
 
   const conversationFolderOptions = useMemo(
     () => flattenFolderOptions(conversationFolders),
     [conversationFolders]
   );
+
+  const conversationsById = useMemo(() => {
+    const map = new Map<string, ConversationOverview>();
+    conversations.forEach((conversation) => {
+      map.set(conversation.id, conversation);
+    });
+    return map;
+  }, [conversations]);
 
   const [showConversationFolderForm, setShowConversationFolderForm] = useState(false);
 
@@ -138,6 +155,25 @@ export function HistorySection() {
   const allFilteredSelected = filteredConversationIds.length > 0 && filteredConversationIds.every((id) => selectionSet.has(id));
   const someFilteredSelected = filteredConversationIds.some((id) => selectionSet.has(id));
   const selectionCount = selectedConversationIds.length;
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [moveContext, setMoveContext] = useState<MoveContext | null>(null);
+  const [movePending, setMovePending] = useState(false);
+
+  const moveDialogOptions = useMemo<MoveDialogOption[]>(
+    () =>
+      conversationFolderOptions.map((option) => ({
+        id: option.id,
+        label: option.name,
+        depth: option.depth,
+        favorite: option.favorite
+      })),
+    [conversationFolderOptions]
+  );
+
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'json' | 'txt'>('json');
+  const [exportPending, setExportPending] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectAllRef.current) {
@@ -186,6 +222,119 @@ export function HistorySection() {
     await togglePin(conversationId);
   };
 
+  const handleOpenMoveDialog = useCallback((conversation: ConversationOverview) => {
+    setMoveContext({ type: 'single', conversation });
+  }, []);
+
+  const handleMoveDialogClose = useCallback(() => {
+    if (!movePending) {
+      setMoveContext(null);
+    }
+  }, [movePending]);
+
+  const handleMoveSubmit = useCallback(
+    async (folderId?: string) => {
+      if (!moveContext) {
+        return;
+      }
+      setMovePending(true);
+      try {
+        if (moveContext.type === 'single') {
+          const target = moveContext.conversation;
+          await moveConversation(target, folderId);
+          const folderName =
+            folderId !== undefined
+              ? conversationFolderOptions.find((option) => option.id === folderId)?.name
+              : undefined;
+          const notice =
+            folderName
+              ? t('options.moveConversationSuccess', {
+                  folder: folderName,
+                  defaultValue: `Conversation moved to ${folderName}.`
+                })
+              : t('options.moveConversationSuccessRoot', {
+                  defaultValue: 'Conversation moved to the top level.'
+                });
+          setStatusNotice(notice ?? null);
+        } else {
+          const targets = moveContext.conversations;
+          const count = targets.length;
+          await Promise.all(targets.map((conversation) => moveConversation(conversation, folderId)));
+          clearSelection();
+          const folderName =
+            folderId !== undefined
+              ? conversationFolderOptions.find((option) => option.id === folderId)?.name
+              : undefined;
+          const notice =
+            folderName
+              ? t('options.bulkMoveSuccess', {
+                  count,
+                  folder: folderName,
+                  defaultValue:
+                    count === 1
+                      ? 'Moved 1 conversation to {{folder}}.'
+                      : 'Moved {{count}} conversations to {{folder}}.'
+                })
+              : t('options.bulkMoveSuccessRoot', {
+                  count,
+                  defaultValue:
+                    count === 1
+                      ? 'Moved 1 conversation to the top level.'
+                      : 'Moved {{count}} conversations to the top level.'
+                });
+          setStatusNotice(notice ?? null);
+        }
+        setMoveContext(null);
+      } catch (error) {
+        if (moveContext.type === 'single') {
+          const fallback = 'Conversation could not be moved. Try again.';
+          setStatusNotice(
+            t('options.moveConversationError', { defaultValue: fallback }) ?? fallback
+          );
+        } else {
+          const fallback =
+            moveContext.conversations.length === 1
+              ? 'Selected conversation could not be moved. Try again.'
+              : 'Selected conversations could not be moved. Try again.';
+          setStatusNotice(
+            t('options.bulkMoveError', { defaultValue: fallback }) ?? fallback
+          );
+        }
+      } finally {
+        setMovePending(false);
+      }
+    },
+    [clearSelection, conversationFolderOptions, moveContext, moveConversation, t]
+  );
+
+  const handleOpenBulkMove = useCallback(() => {
+    if (selectionCount === 0) {
+      return;
+    }
+
+    const targets = selectedConversationIds
+      .map((id) => conversationsById.get(id))
+      .filter((conversation): conversation is ConversationOverview => Boolean(conversation));
+
+    if (targets.length === 0) {
+      const fallback =
+        'Selected conversations are no longer available. Refresh the list and try again.';
+      setStatusNotice(
+        t('options.bulkMoveSelectionMissing', { defaultValue: fallback }) ?? fallback
+      );
+      clearSelection();
+      return;
+    }
+
+    setMoveContext({ type: 'bulk', conversations: targets });
+  }, [
+    clearSelection,
+    conversationsById,
+    selectedConversationIds,
+    selectionCount,
+    t
+  ]);
+
   const handleToggleAll = () => {
     if (filteredConversationIds.length === 0) {
       return;
@@ -211,6 +360,87 @@ export function HistorySection() {
   const handleDeleteSelection = async () => {
     await deleteSelected();
   };
+
+  const handleOpenExportModal = () => {
+    if (selectionCount === 0) {
+      return;
+    }
+    setExportFormat('json');
+    setExportError(null);
+    setShowExportModal(true);
+  };
+
+  const handleExport = async () => {
+    if (selectionCount === 0) {
+      return;
+    }
+    setExportPending(true);
+    setExportError(null);
+    try {
+      await exportSelected(exportFormat);
+      setShowExportModal(false);
+      const notice =
+        t('options.bulkExportScheduled', {
+          count: selectionCount,
+          defaultValue:
+            selectionCount === 1
+              ? 'Export scheduled for 1 conversation. Track progress in the export queue.'
+              : 'Export scheduled for {{count}} conversations. Track progress in the export queue.'
+        }) ?? null;
+      setStatusNotice(notice);
+    } catch (error) {
+      const fallback = 'Export could not be scheduled. Try again.';
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : t('options.bulkExportError', { defaultValue: fallback }) ?? fallback
+      );
+    } finally {
+      setExportPending(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    if (exportPending) {
+      return;
+    }
+    setShowExportModal(false);
+  };
+
+  const untitledConversationLabel = t('options.untitledConversation') ?? 'Untitled conversation';
+  const singleMoveTarget = moveContext?.type === 'single' ? moveContext.conversation : null;
+  const bulkMoveCount = moveContext?.type === 'bulk' ? moveContext.conversations.length : 0;
+  const normalizedMoveTitle = singleMoveTarget?.title?.trim()
+    ? singleMoveTarget.title
+    : untitledConversationLabel;
+  const moveDialogTitle = moveContext
+    ? moveContext.type === 'bulk'
+      ? t('options.bulkMoveDialogTitle', {
+          count: bulkMoveCount,
+          defaultValue:
+            bulkMoveCount === 1
+              ? 'Move {{count}} selected conversation'
+              : 'Move {{count}} selected conversations'
+        })
+      : t('content.sidebar.history.moveDialogTitle', {
+          title: normalizedMoveTitle
+        }) ?? `Move "${normalizedMoveTitle}"`
+    : t('content.sidebar.history.moveDialogTitleDefault', { defaultValue: 'Move conversation' });
+  const moveDialogDescription = moveContext
+    ? moveContext.type === 'bulk'
+      ? t('options.bulkMoveDialogDescription', {
+          count: bulkMoveCount,
+          defaultValue:
+            bulkMoveCount === 1
+              ? 'Select a destination folder for the chosen conversation.'
+              : 'Select a destination folder for the chosen conversations.'
+        })
+      : t('content.sidebar.history.moveDialogDescription', {
+          title: normalizedMoveTitle
+        }) ?? `Choose where to store "${normalizedMoveTitle}".`
+    : t('content.sidebar.history.moveDialogDescriptionDefault', {
+        defaultValue: 'Select a destination folder for this conversation.'
+      });
 
   return (
     <section className="space-y-6" aria-labelledby="history-heading">
@@ -590,6 +820,22 @@ export function HistorySection() {
               </button>
               <button
                 className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0 || movePending}
+                onClick={handleOpenBulkMove}
+                type="button"
+              >
+                {t('options.bulkMove', { defaultValue: 'Move selection' })}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
+                disabled={selectionCount === 0}
+                onClick={handleOpenExportModal}
+                type="button"
+              >
+                {t('options.bulkExport', { defaultValue: 'Export selected' })}
+              </button>
+              <button
+                className="rounded-md border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-600"
                 disabled={selectionCount === 0}
                 onClick={() => clearSelection()}
                 type="button"
@@ -598,6 +844,7 @@ export function HistorySection() {
               </button>
             </div>
           </div>
+          {statusNotice ? <p className="text-xs text-emerald-300">{statusNotice}</p> : null}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-800">
@@ -669,13 +916,22 @@ export function HistorySection() {
                       <td className="px-4 py-3">{formatNumber(conversation.charCount)}</td>
                       <td className="px-4 py-3 text-slate-300">{formatDate(conversation.updatedAt)}</td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200"
-                          onClick={() => void handlePinToggle(conversation.id)}
-                          type="button"
-                        >
-                          {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100"
+                            onClick={() => handleOpenMoveDialog(conversation)}
+                            type="button"
+                          >
+                            {t('content.sidebar.history.moveAction', { defaultValue: 'Move' })}
+                          </button>
+                          <button
+                            className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs uppercase tracking-wide text-slate-200 transition hover:border-emerald-400 hover:text-emerald-100"
+                            onClick={() => void handlePinToggle(conversation.id)}
+                            type="button"
+                          >
+                            {conversation.pinned ? t('popup.unpin') : t('popup.pin')}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -685,6 +941,91 @@ export function HistorySection() {
           </table>
         </div>
       </div>
+      <Modal
+        open={showExportModal}
+        onClose={handleCloseExportModal}
+        labelledBy="bulk-export-title"
+        describedBy="bulk-export-description"
+      >
+        <ModalHeader className="mb-4 space-y-1">
+          <h2 id="bulk-export-title" className="text-lg font-semibold text-emerald-200">
+            {t('options.bulkExportTitle', { defaultValue: 'Export selected conversations' })}
+          </h2>
+          <p id="bulk-export-description" className="text-sm text-slate-300">
+            {t('options.bulkExportDescription', {
+              defaultValue:
+                'Choose a format to queue a download job for the selected conversations. The file will download when the job runs.'
+            })}
+          </p>
+        </ModalHeader>
+        <ModalBody className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {t('options.bulkExportFormatLabel', { defaultValue: 'Export format' })}
+            </legend>
+            <div className="space-y-2 text-sm text-slate-200">
+              <label className="flex items-center gap-3">
+                <input
+                  checked={exportFormat === 'json'}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                  name="bulk-export-format"
+                  onChange={() => setExportFormat('json')}
+                  type="radio"
+                  value="json"
+                />
+                <span>{t('options.bulkExportFormatJson', { defaultValue: 'JSON (metadata + messages)' })}</span>
+              </label>
+              <label className="flex items-center gap-3">
+                <input
+                  checked={exportFormat === 'txt'}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400"
+                  name="bulk-export-format"
+                  onChange={() => setExportFormat('txt')}
+                  type="radio"
+                  value="txt"
+                />
+                <span>{t('options.bulkExportFormatTxt', { defaultValue: 'Plain text transcript' })}</span>
+              </label>
+            </div>
+          </fieldset>
+          {exportError ? <p className="text-sm text-rose-300">{exportError}</p> : null}
+        </ModalBody>
+        <ModalFooter className="mt-6 flex justify-end gap-3">
+          <button
+            className="rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-200"
+            disabled={exportPending}
+            onClick={handleCloseExportModal}
+            type="button"
+          >
+            {t('options.bulkExportCancel', { defaultValue: 'Cancel' })}
+          </button>
+          <button
+            className="rounded-md bg-emerald-500 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={exportPending}
+            onClick={() => void handleExport()}
+            type="button"
+          >
+            {exportPending
+              ? t('options.bulkExportScheduling', { defaultValue: 'Scheduling…' })
+              : t('options.bulkExportSchedule', { defaultValue: 'Schedule export' })}
+          </button>
+        </ModalFooter>
+      </Modal>
+      <MoveDialog
+        open={Boolean(moveContext)}
+        title={moveDialogTitle}
+        description={moveDialogDescription}
+        currentFolderId={singleMoveTarget?.folderId}
+        rootOptionLabel={
+          t('content.sidebar.history.moveRoot', { defaultValue: 'No folder (top level)' })
+        }
+        confirmLabel={t('content.sidebar.history.moveConfirm', { defaultValue: 'Move' })}
+        cancelLabel={t('content.sidebar.history.moveCancel', { defaultValue: 'Cancel' })}
+        folders={moveDialogOptions}
+        pending={movePending}
+        onMove={handleMoveSubmit}
+        onClose={handleMoveDialogClose}
+      />
     </section>
   );
 

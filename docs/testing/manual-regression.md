@@ -47,12 +47,30 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
    - Change the sort order (e.g., sort by “Title” ascending) and confirm rows reorder immediately.
 4. Save a table preset, reload the page, and apply the preset to confirm it restores filters/sorts.
 5. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
+6. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
+7. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
+8. Select at least two conversations and click “Move selection”. Choose a destination folder, confirm the success notice reports the count, and ensure the selection clears after the move. Repeat once for moving back to the top level.
 
 ## Bookmark & pin workflow
 
 1. From the popup, unbookmark the second conversation and verify the action button reverts to “Bookmark”. Close and reopen the popup to confirm the state persists.
 2. Reapply the bookmark in the popup and ensure reopening the popup shows the button as “Unbookmark” again.
 3. Unpin the first conversation in the dashboard table (via row actions) and confirm the popup no longer labels it as pinned after reopening.
+4. Open the bubble dock on an active ChatGPT conversation and switch to the “Pinned” bubble:
+   - Confirm the pinned conversation list shows Open, Move, Unpin, and Archive/Restore controls and that each action updates immediately.
+   - Run “Move” for one pinned conversation, choose a new folder, and ensure the dialog closes once the move completes. Move it back to the top level afterward.
+   - Toggle a folder shortcut to favorite via the star button, check that the “Fav” badge appears, then close and reopen the dock to confirm the cached list renders without flicker.
+   - Click “All folders” and one nested folder shortcut to verify the dashboard opens on the history view with the selected folder filter applied.
+
+## Bookmark overlay smoke test
+
+Execute this pass in both Chrome and Edge once per release when bookmark overlay code changes ship. Run it on `chat.openai.com` with the dock visible; repeat a subset of the checks on `chatgpt.com` to confirm selectors stay stable.
+
+1. Open an existing conversation and hover over a user message to reveal the bubble launcher.
+2. Trigger the bookmark action from the context bubble and confirm the inline overlay renders inside the shadow-root without layout shifts.
+3. Validate that the overlay shows the message preview, existing note textarea, saved-badge, and `createdAt` timestamp. Editing the note should persist after closing and reopening the overlay.
+4. Close the overlay with `Escape`, reopen it from another message, and ensure focus is trapped within the modal. The overlay must close automatically if the dock is hidden.
+5. Switch to the second browser (Chrome ↔ Edge) and repeat steps 2–4. Record any DOM mismatches or timing issues in the retrofit log.
 
 ## Promptketens
 
