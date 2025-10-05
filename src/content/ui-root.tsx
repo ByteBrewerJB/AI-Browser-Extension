@@ -1447,6 +1447,12 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     setContextMenuPending(null);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      closeContextMenu();
+    };
+  }, [closeContextMenu]);
+
   const handleOpenBookmarkDialog = useCallback(
     (target?: BookmarkTarget) => {
       setBookmarkDialogTarget(target ?? null);
