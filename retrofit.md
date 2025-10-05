@@ -53,9 +53,9 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
    - Bouw een modal binnen de shadow-root (hergebruik `Modal`) die notities opslaat via `toggleBookmark` en een inline preview toont. Gebruik `BookmarkSummary` als basiscomponent en breid deze uit met `messagePreview` en `createdAt` badges.
    - Migreer `db.bookmarks` met een Dexie `version(7)` stap die ontbrekende `messagePreview`-velden invult via een fallback (`conversation.latestMessage?.slice(0, 200) ?? ''`). Val terug op oude records indien de migratie faalt en log een QA-item.
    - Synchroniseer de nieuwe velden naar popup/options door `useRecentBookmarks` uit te breiden en een regressietest toe te voegen in `tests/content/bookmarks.test.ts` die het modalpad en Dexie-opslag controleert.
-2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`). Volgende acties:
-   - Voeg een guard toe zodat het menu sluit wanneer `CompanionSidebarRoot` ontmount (fix voor race condition bij het wisselen tussen ChatGPT-domains).
-   - Documenteer toetscombinaties en accessible labels in `docs/accessibility/context-menu.md` en plan een Playwright-scenario (`tests/e2e/context-menu.spec.ts`).
+2. **Contextmenu herintroduceren** – ✅ Custom contextmenu beschikbaar vanuit de chatberichten met acties voor bookmarken, prompt opslaan, kopiëren en pinnen (rendered via `CompanionSidebarRoot`). Laatste updates:
+   - ✅ Guard toegevoegd die het menu sluit bij unmount van `CompanionSidebarRoot` en bij het verbergen van de sidebar.
+   - ✅ Toetscombinaties en toegankelijkheidslabels vastgelegd in `docs/accessibility/context-menu.md` + Playwright-scenarioplan vastgelegd in `tests/e2e/context-menu.spec.ts`.
 3. **Promptketens en variabelen** –
    - Werk `src/core/models/records.ts` bij met `variables: string[]` en een `lastExecutedAt` veld zodat UX flow de meest recente keten bovenaan plaatst.
    - Schrijf formulierlogica in `src/options/features/prompts/PromptsSection.tsx` met pill-componenten voor variabelen. Voeg validatie toe via Zod (`promptVariablesSchema`).
@@ -176,5 +176,6 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-06 | _pending_ | Composer uitbreidingen | Placeholder helper + settings promptHint sync; lint/test/build uitgevoerd |
 | 2025-10-06 | _pending_ | Bladwijzers & contextmenu | Contextmenu met bookmark/prompt/pin/copy-acties + toastfeedback toegevoegd; lint/test/build gepland |
 | 2025-10-06 | _pending_ | Composer uitbreidingen | Launcher-instructiepopover + teller in settings; lint/test/build uitgevoerd |
+| 2025-10-07 | _pending_ | Bladwijzers & contextmenu | Contextmenu sluit bij unmount; accessibiliteitsnotitie + E2E-plan toegevoegd; lint/test/build gepland |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
