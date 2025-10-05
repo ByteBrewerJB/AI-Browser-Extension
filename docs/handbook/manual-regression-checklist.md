@@ -1,6 +1,6 @@
 # Manual regression checklist
 
-_Last reviewed: 2024-10-20_
+_Last reviewed: 2025-02-18_
 
 Use this guide for every release candidate that touches the popup, dashboard/options experience, content sidebar, or storage logic. Log each run (browser, domain, commit) in the retrofit log at [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) so we preserve traceability.
 
@@ -109,8 +109,12 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 
 ## 5. Composer counters & prompt launcher
 1. Start drafting a message. Word/character counters update live and reset after sending.
-2. Open the prompt launcher and insert a saved prompt and a prompt chain; confirm the composer fills with the correct content and `Cancel run` stops an in-progress chain.
-3. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
+2. Open the prompt launcher via `Ctrl+Space`/`⌘+K`; verify focus lands in the search field and the shortcut legend reflects the current platform.
+3. Navigate the results list using only the keyboard (`ArrowUp/Down`, `Ctrl+/` scope cycling) and insert a prompt with `Enter`; confirm highlighted tokens reflect the fuzzy search match.
+4. Type `//` in the composer to trigger the inline launcher. Confirm it anchors near the caret, honours the same keyboard controls, and restores focus to the composer after closing with `Esc`.
+5. Select a prompt chain, supply variable values in the confirmation modal, start the run, then cancel with `Esc` to ensure rollback messaging appears.
+6. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
+7. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
 
 ## 6. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.
