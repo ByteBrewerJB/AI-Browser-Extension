@@ -169,20 +169,27 @@ export class CompanionDatabase extends Dexie {
         const bookmarks = await bookmarksTable.toArray();
 
         for (const bookmark of bookmarks) {
-          let preview = createBookmarkPreview(bookmark.messagePreview);
+          try {
+            let preview = createBookmarkPreview(bookmark.messagePreview);
 
-          if (!preview && bookmark.messageId) {
-            const message = await messagesTable.get(bookmark.messageId);
-            if (message?.content) {
-              preview = createBookmarkPreview(message.content);
-            } else {
-              const conversation = await conversationsTable.get(bookmark.conversationId);
-              preview = createBookmarkPreview(conversation?.title);
+            if (!preview && bookmark.messageId) {
+              const message = await messagesTable.get(bookmark.messageId);
+              if (message?.content) {
+                preview = createBookmarkPreview(message.content);
+              } else {
+                const conversation = await conversationsTable.get(bookmark.conversationId);
+                preview = createBookmarkPreview(conversation?.title);
+              }
             }
-          }
 
-          if (preview || typeof bookmark.messagePreview === 'string') {
-            await bookmarksTable.update(bookmark.id, { messagePreview: preview });
+            if (preview || typeof bookmark.messagePreview === 'string') {
+              await bookmarksTable.update(bookmark.id, { messagePreview: preview });
+            }
+          } catch (error) {
+            console.error(
+              `[ai-companion] QA item: Failed to migrate messagePreview for bookmark ${bookmark.id}. Skipping.`,
+              error
+            );
           }
         }
       });

@@ -27,6 +27,7 @@ import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
+import { useBubbleLauncherStore } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 
@@ -1402,6 +1403,50 @@ function ActionToastView({ toast }: ActionToastViewProps): ReactElement | null {
   );
 }
 
+interface BubbleProps {
+  bubble: 'history' | 'bookmarks' | 'prompts';
+  children: ReactNode;
+  label: string;
+}
+
+function Bubble({ bubble, children, label }: BubbleProps): ReactElement {
+  const { activeBubble, toggleBubble } = useBubbleLauncherStore();
+  const isActive = activeBubble === bubble;
+
+  return (
+    <button
+      type="button"
+      className={`flex h-12 w-12 items-center justify-center rounded-full border text-slate-300 transition ${
+        isActive
+          ? 'border-emerald-400 bg-emerald-900/80'
+          : 'border-white/10 bg-slate-900/80 hover:border-emerald-400'
+      }`}
+      onClick={() => toggleBubble(bubble)}
+      aria-label={label}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BubbleDock(): ReactElement {
+  const { t } = useTranslation();
+
+  return (
+    <div className="pointer-events-auto flex flex-col gap-2">
+      <Bubble bubble="history" label={t('content.sidebar.tabs.history', { defaultValue: 'History' })}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4s2-2 5-2 5 2 8 2 5-2 5-2v11s-2 2-5 2-5-2-8-2-5 2-5 2V4z"></path><line x1="1" y1="4" x2="1" y2="22"></line></svg>
+      </Bubble>
+      <Bubble bubble="bookmarks" label={t('content.sidebar.tabs.bookmarks', { defaultValue: 'Bookmarks' })}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+      </Bubble>
+      <Bubble bubble="prompts" label={t('content.sidebar.tabs.prompts', { defaultValue: 'Prompts' })}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+      </Bubble>
+    </div>
+  );
+}
+
 interface CompanionSidebarRootProps {
   host: HTMLElement;
 }
@@ -1410,6 +1455,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   const hydrated = useSettingsStore((state) => state.hydrated);
   const showSidebar = useSettingsStore((state) => state.showSidebar);
   const { t } = useTranslation();
+  const { activeBubble, setActiveBubble } = useBubbleLauncherStore();
 
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const [bookmarkDialogTarget, setBookmarkDialogTarget] = useState<BookmarkTarget | null>(null);
@@ -1421,10 +1467,15 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   useEffect(() => {
     const shouldShow = hydrated && showSidebar;
     host.style.display = shouldShow ? '' : 'none';
+
+    if (!shouldShow) {
+      setActiveBubble(null);
+    }
+
     return () => {
       host.style.display = '';
     };
-  }, [host, hydrated, showSidebar]);
+  }, [host, hydrated, showSidebar, setActiveBubble]);
 
   useEffect(() => {
     return () => {
@@ -1700,9 +1751,37 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     return null;
   }
 
+  const BookmarksPanel = () => {
+    const bookmarks = useRecentBookmarks(20);
+    return (
+      <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+        <BookmarkList bookmarks={bookmarks} onAddBookmark={handleOpenBookmarkDialog} t={t} />
+      </div>
+    );
+  };
+
+  const HistoryPanel = () => (
+    <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+      <HistoryTab onAddBookmark={handleOpenBookmarkDialog} />
+    </div>
+  );
+
+  const PromptsPanel = () => (
+    <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+      <PromptsTab />
+    </div>
+  );
+
   return (
     <>
-      <CompanionSidebar onAddBookmark={handleOpenBookmarkDialog} />
+      <div className="pointer-events-auto flex items-start gap-3">
+        <BubbleDock />
+        <div className="w-full max-w-md">
+          {activeBubble === 'history' && <HistoryPanel />}
+          {activeBubble === 'bookmarks' && <BookmarksPanel />}
+          {activeBubble === 'prompts' && <PromptsPanel />}
+        </div>
+      </div>
       <BookmarkDialog
         open={bookmarkDialogOpen}
         onClose={handleCloseBookmarkDialog}
@@ -1722,112 +1801,6 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
       />
       <ActionToastView toast={toast} />
     </>
-  );
-}
-
-
-interface CompanionSidebarProps {
-  onAddBookmark: (target?: BookmarkTarget) => void;
-}
-
-function CompanionSidebar({ onAddBookmark }: CompanionSidebarProps): ReactElement {
-  const { t } = useTranslation();
-  const modalHeadingId = useId();
-  const [activeToolbar, setActiveToolbar] = useState<ToolbarKey>('history');
-  const [isModalOpen, setModalOpen] = useState(false);
-
-  const toolbarLabel = useMemo(
-    () => t(`content.sidebar.toolbars.${activeToolbar}` as const),
-    [activeToolbar, t]
-  );
-
-  const modalPoints = useMemo(() => {
-    const points = t('content.sidebar.modal.points', { returnObjects: true });
-    return Array.isArray(points) ? (points as string[]) : [];
-  }, [t]);
-
-  return (
-    <div className="pointer-events-auto w-full rounded-lg border border-white/10 bg-slate-900/70 p-3 text-slate-100 shadow-sm">
-      <header className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium text-slate-300">{t('content.sidebar.title')}</p>
-          <h2 className="mt-1 text-base font-semibold text-slate-100">{toolbarLabel}</h2>
-        </div>
-        <button
-          className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-          aria-label={t('content.sidebar.patternButtonAria')}
-          onClick={() => setModalOpen(true)}
-          type="button"
-        >
-          {t('content.sidebar.patternButton')}
-        </button>
-      </header>
-      <Tabs
-        defaultValue="history"
-        onChange={(value) => {
-          if (value === 'history' || value === 'prompts' || value === 'media') {
-            setActiveToolbar(value);
-          }
-        }}
-      >
-        <TabList className="mb-3 flex flex-nowrap gap-1 rounded-lg bg-white/5 p-1 text-sm text-slate-200">
-          <Tab
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 aria-selected:bg-white/10 aria-selected:text-slate-100"
-            value="history"
-          >
-            {t('content.sidebar.tabs.history')}
-          </Tab>
-          <Tab
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 aria-selected:bg-white/10 aria-selected:text-slate-100"
-            value="prompts"
-          >
-            {t('content.sidebar.tabs.prompts')}
-          </Tab>
-          <Tab
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 aria-selected:bg-white/10 aria-selected:text-slate-100"
-            value="media"
-          >
-            {t('content.sidebar.tabs.media')}
-          </Tab>
-        </TabList>
-          <TabPanels className="rounded-lg border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200">
-          <TabPanel value="history">
-            <HistoryTab onAddBookmark={onAddBookmark} />
-          </TabPanel>
-          <TabPanel value="prompts">
-            <PromptsTab />
-          </TabPanel>
-          <TabPanel value="media">
-            <MediaTab />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-      <Modal labelledBy={modalHeadingId} onClose={() => setModalOpen(false)} open={isModalOpen}>
-        <ModalHeader className="space-y-2">
-          <h3 id={modalHeadingId} className="text-lg font-semibold text-slate-100">
-            {t('content.sidebar.modal.title')}
-          </h3>
-          <p className="text-sm text-slate-300">{t('content.sidebar.modal.description')}</p>
-        </ModalHeader>
-        <ModalBody>
-          <ul className="list-disc space-y-2 pl-6 text-sm text-slate-200">
-            {modalPoints.map((item, index) => (
-              <li key={`${item}-${index}`}>{item}</li>
-            ))}
-          </ul>
-        </ModalBody>
-        <ModalFooter>
-          <button
-            className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-            aria-label={t('content.sidebar.modal.closeAria')}
-            onClick={() => setModalOpen(false)}
-            type="button"
-          >
-            {t('content.sidebar.modal.close')}
-          </button>
-        </ModalFooter>
-      </Modal>
-    </div>
   );
 }
 
