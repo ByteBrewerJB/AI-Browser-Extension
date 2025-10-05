@@ -26,6 +26,7 @@ import { usePrompts } from '@/shared/hooks/usePrompts';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { useBubbleLauncherStore } from '@/shared/state/bubbleLauncherStore';
+import type { Bubble } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 
@@ -1426,6 +1427,82 @@ function ActionToastView({ toast }: ActionToastViewProps): ReactElement | null {
       <div className={`rounded-md px-4 py-2 text-sm font-medium shadow-lg ${toneClass}`}>
         {toast.message}
       </div>
+    </div>
+  );
+}
+
+interface BubbleDockProps {
+  onShowPatterns: () => void;
+}
+
+function BubbleDock({ onShowPatterns }: BubbleDockProps): ReactElement {
+  const { t } = useTranslation();
+  const activeBubble = useBubbleLauncherStore((state) => state.activeBubble);
+  const toggleBubble = useBubbleLauncherStore((state) => state.toggleBubble);
+  const setActiveBubble = useBubbleLauncherStore((state) => state.setActiveBubble);
+
+  const options: Array<{
+    key: Bubble;
+    label: string;
+    description: string;
+  }> = [
+    {
+      key: 'history',
+      label: t('content.sidebar.tabs.history', { defaultValue: 'History' }),
+      description: t('content.sidebar.toolbars.history', { defaultValue: 'Conversation tools' })
+    },
+    {
+      key: 'prompts',
+      label: t('content.sidebar.tabs.prompts', { defaultValue: 'Prompts' }),
+      description: t('content.sidebar.toolbars.prompts', { defaultValue: 'Prompt toolbox' })
+    },
+    {
+      key: 'media',
+      label: t('content.sidebar.tabs.media', { defaultValue: 'Media' }),
+      description: t('content.sidebar.toolbars.media', { defaultValue: 'Voice controls' })
+    }
+  ];
+
+  return (
+    <div className="w-64 space-y-3 text-left">
+      <div className="space-y-2">
+        {options.map((option) => {
+          const isActive = option.key === activeBubble;
+          const baseClassName =
+            'w-full rounded-md border border-white/10 bg-slate-900/70 p-3 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400';
+          const activeClassName = isActive ? ' border-emerald-400 bg-emerald-500/10 text-emerald-200' : '';
+
+          return (
+            <button
+              key={option.key}
+              aria-pressed={isActive}
+              className={`${baseClassName}${activeClassName}`}
+              onClick={() => toggleBubble(option.key)}
+              type="button"
+            >
+              <span className="block text-sm font-semibold text-inherit">{option.label}</span>
+              <span className="mt-1 block text-[11px] text-slate-300">{option.description}</span>
+            </button>
+          );
+        })}
+      </div>
+      {activeBubble ? (
+        <button
+          className="w-full rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+          onClick={() => setActiveBubble(null)}
+          type="button"
+        >
+          {t('content.dock.closePanelAria', { defaultValue: 'Close bubble panel' })}
+        </button>
+      ) : null}
+      <button
+        className="w-full rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+        onClick={onShowPatterns}
+        type="button"
+        aria-label={t('content.sidebar.patternButtonAria', { defaultValue: 'Open pattern references' })}
+      >
+        {t('content.sidebar.patternButton', { defaultValue: 'Patterns' })}
+      </button>
     </div>
   );
 }
