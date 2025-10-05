@@ -106,6 +106,16 @@
       "failed": "Mislukt na {{attempts}}/{{max}} pogingen",
       "completed": "Voltooid na {{attempts}} pogingen"
     },
+    "exportJobsTypeHeading": "Type",
+    "exportJobsFilterStatusLabel": "Status",
+    "exportJobsFilterTypeLabel": "Type",
+    "exportJobsFilterStatusAll": "Alle statussen",
+    "exportJobsFilterTypeAll": "Alle jobtypes",
+    "exportJobsFilterNoResults": "Geen jobs voldoen aan de gekozen filters.",
+    "exportJobsTypes": {
+      "export": "Export"
+    },
+    "exportJobsTypeFallback": "Job",
     "guideResources": {
       "heading": "Gidsen & updates",
       "description": "Ontdek snelstartgidsen om nieuwe workflows en instellingen te leren.",

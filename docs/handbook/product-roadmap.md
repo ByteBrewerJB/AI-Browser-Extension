@@ -41,7 +41,7 @@ This living document combines the architectural snapshot, delivery status, and p
 
 ### Near-term backlog (Phase 3 focus)
 _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden wanneer scopes verschuiven._
-- Automatische jobs dashboard uitbreiden met filteropties (status/type) en retry hand-offs zichtbaar maken in de UI.
+- Automatische jobs dashboard vervolledigen: retry hand-offs zichtbaar maken in de UI (filterpaneel live per 2025-10-05).
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.
 - Contextmenu focusbeheer verbeteren (focus trap + refocus van het origineel) en documenteren in de accessibility playbook.
