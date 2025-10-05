@@ -20,6 +20,7 @@ Guidelines for agents contributing to the AI ChatGPT Companion extension.
 - Storage interactions go through a central service (add in `src/shared` or a dedicated `core/` namespace).
 - Background service worker handles downloads, alarms, cross-surface messaging.
 - Keep localization keys in `src/shared/i18n/locales/{lang}/common.json`; update both EN and NL.
+- Whenever functionality changes, update `retrofit.md`—at minimum refresh the status tables and logbook, and capture QA notes—to keep traceability intact.
 
 ## 4. Testing & QA
 - Minimum: run `npm run lint`, `npm run test`, and `npm run build` before submitting changes.
