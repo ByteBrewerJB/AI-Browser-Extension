@@ -95,7 +95,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 4. **Pinned folders:** breid `folders.ts` uit met een boolean `favorite` om snelkoppelingen naar mappen direct in de bubbel te tonen. Voeg migratie toe in `db.version(6)` met `favorite` index. Exposeer helpers `toggleFavoriteFolder` en zorg dat `useBubbleLauncherStore` deze indices cachet voor snelle rendering.
 
 ### 3. Bladwijzers in de conversatie (`scripts/bookmarkMessage`, `scripts/chatMenu`)
-1. **Bubbelgestuurde acties:** koppel `collectMessageElements()` aan een contextuele actie-trigger die vanuit de "Actions"-bubbel wordt geopend in plaats van inline knoppen. De gebruiker selecteert berichten waarna het bubbelpaneel relevante opties toont.
+1. **Bubbelgestuurde acties:** ✅ Actions-bubbel in het rechterdock toont nu een berichtenlijst op basis van `collectMessageElements()`, laat een doel selecteren en biedt bookmark-, prompt-, kopieer- en pin-acties inclusief "Refresh" voor nieuwe DOM-updates. QA: regressiegids aangevuld met een stappenblok voor de Actions-bubbel.
 2. **Bookmark API-koppeling:** gebruik `toggleBookmark(conversationId, messageId, note)` om bladwijzers te beheren. Voorzie een modaal (shadow-root) om notities toe te voegen. Hergebruik `Modal` component (render via portal naar shadow-root) en open het via de bubbel "Bookmarks".
 3. **Context menu (`chatMenu`):** implementeer een rechtsklik-menu (custom contextmenu) dat acties bevat als "Opslaan als prompt", "Pin gesprek", "Open in dashboard" en deze via `useBubbleLauncherStore` koppelt aan de corresponderende bubbels.
 4. **Synchronisatie naar popup/options:** zorg dat `useRecentBookmarks` de nieuwe metadata (notities, messagePreview) kan tonen; breid `db.bookmarks` uit met `messagePreview` door bij het opslaan eerste 200 chars op te nemen en surface dit in zowel de bubbel als popup/options.
@@ -124,9 +124,9 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 4. **Textarea prompts audio cues:** uitbreid `textareaPrompts` met een "Play" knop als een prompt audio-referenties bevat (metadata veld `audioUrl`).
 
 ### 8. Richting (RTL) en instellingen (`scripts/direction`, `scripts/settings`, `html/direction`)
-1. **Taalwissel on-the-fly:** luister in content script naar `chrome.storage.onChanged` voor `settings:language` en wissel `document.documentElement.dir` en `mountPromptLauncher` labels.
-2. **Direction toggles:** voeg in popup een switch die `useSettingsStore.toggleDirection()` aanroept. Content script moet op `messageRouter` kanaal `settings/direction` luisteren en inline UI spiegelen.
-3. **Instellingenpagina:** bouw in options een nieuw tabblad "Instellingen" dat alle toggles (auto download, show dock, direction) groepeert en storage service gebruikt voor persistente schrijf/lees.
+- ✅ **Taalwissel on-the-fly:** `mountPromptLauncher` synchroniseert i18n en direction zodra `chrome.storage` updates binnenkomen; labels en placeholders vernieuwen direct.
+- ✅ **Direction toggles:** popup en dashboard-switches sturen nu `settings/direction` runtime-berichten waardoor content, popup en options realtime in sync blijven.
+- ✅ **Instellingenpagina:** nieuw "Settings"-tabblad in options bundelt dock-, direction- en audio-toggles met persistente opslag via `useSettingsStore`.
 
 ### 9. Info & betalingen (`scripts/infoAndUpdates`, `scripts/payments`)
 1. **Release notes surface:** voeg in popup een collapsible kaart die markdown release notes laadt uit `public/updates.json`. Maak een Dexie tabel `announcements` om gezien-status te bewaren.
@@ -200,5 +200,7 @@ Dit document is het leidende werkdossier om de `example/example/1`-mockups in li
 | 2025-10-11 | _pending_ | Pin- & bulkbeheer | MoveDialog in options-geschiedenis + statusnotitie en regressiestap; npm run lint/test/build uitgevoerd |
 | 2025-10-12 | _pending_ | Pin- & bulkbeheer | Bulkverplaatsing voor selectie + regressiestap bijgewerkt; npm run lint/test/build uitgevoerd |
 | 2025-10-13 | _pending_ | Pin- & bulkbeheer | Dock-favorieten toggle + caching; npm run lint/test/build uitgevoerd |
+| 2025-10-14 | _pending_ | Richting & instellingen | RTL-synchronisatie + dashboard-instellingen; npm run lint/test/build |
+| 2025-10-15 | _pending_ | Bladwijzers & contextmenu | Actions-bubbel activeert selecties + snelle acties; npm run lint/test/build uitgevoerd |
 | _vul in_ | _vul in_ | _vul in_ | _korte notitie over tests, regressies, follow-up_ |
 
