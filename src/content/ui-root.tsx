@@ -1,8 +1,7 @@
-﻿import React, { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, ReactElement, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-
 import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
@@ -19,7 +18,6 @@ import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/co
 import type { BookmarkRecord, PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
-import { Tab, TabList, TabPanel, TabPanels, Tabs } from '@/ui/components/Tabs';
 import { EmptyState } from '@/shared/components';
 import { useFolders } from '@/shared/hooks/useFolders';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
@@ -82,8 +80,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short'
 });
-
-type ToolbarKey = 'history' | 'prompts' | 'media';
 
 function formatNumber(value: number) {
   return numberFormatter.format(value);
@@ -1403,50 +1399,6 @@ function ActionToastView({ toast }: ActionToastViewProps): ReactElement | null {
   );
 }
 
-interface BubbleProps {
-  bubble: 'history' | 'bookmarks' | 'prompts';
-  children: ReactNode;
-  label: string;
-}
-
-function Bubble({ bubble, children, label }: BubbleProps): ReactElement {
-  const { activeBubble, toggleBubble } = useBubbleLauncherStore();
-  const isActive = activeBubble === bubble;
-
-  return (
-    <button
-      type="button"
-      className={`flex h-12 w-12 items-center justify-center rounded-full border text-slate-300 transition ${
-        isActive
-          ? 'border-emerald-400 bg-emerald-900/80'
-          : 'border-white/10 bg-slate-900/80 hover:border-emerald-400'
-      }`}
-      onClick={() => toggleBubble(bubble)}
-      aria-label={label}
-    >
-      {children}
-    </button>
-  );
-}
-
-function BubbleDock(): ReactElement {
-  const { t } = useTranslation();
-
-  return (
-    <div className="pointer-events-auto flex flex-col gap-2">
-      <Bubble bubble="history" label={t('content.sidebar.tabs.history', { defaultValue: 'History' })}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4s2-2 5-2 5 2 8 2 5-2 5-2v11s-2 2-5 2-5-2-8-2-5 2-5 2V4z"></path><line x1="1" y1="4" x2="1" y2="22"></line></svg>
-      </Bubble>
-      <Bubble bubble="bookmarks" label={t('content.sidebar.tabs.bookmarks', { defaultValue: 'Bookmarks' })}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
-      </Bubble>
-      <Bubble bubble="prompts" label={t('content.sidebar.tabs.prompts', { defaultValue: 'Prompts' })}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-      </Bubble>
-    </div>
-  );
-}
-
 interface CompanionSidebarRootProps {
   host: HTMLElement;
 }
@@ -1463,6 +1415,8 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   const [contextMenuPending, setContextMenuPending] = useState<ContextMenuAction | null>(null);
   const [toast, setToast] = useState<ActionToast | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const [isPatternModalOpen, setPatternModalOpen] = useState(false);
+  const modalHeadingId = useId();
 
   useEffect(() => {
     const shouldShow = hydrated && showSidebar;
@@ -1747,40 +1701,40 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     closeContextMenu();
   }, [closeContextMenu]);
 
-  if (!hydrated || !showSidebar) {
+  const modalPoints = useMemo(() => {
+    const points = t('content.sidebar.modal.points', { returnObjects: true });
+    return Array.isArray(points) ? (points as string[]) : [];
+  }, [t]);
+
+  if (!hydrated) {
     return null;
   }
 
-  const BookmarksPanel = () => {
-    const bookmarks = useRecentBookmarks(20);
-    return (
-      <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
-        <BookmarkList bookmarks={bookmarks} onAddBookmark={handleOpenBookmarkDialog} t={t} />
-      </div>
-    );
-  };
-
   const HistoryPanel = () => (
-    <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
       <HistoryTab onAddBookmark={handleOpenBookmarkDialog} />
     </div>
   );
 
   const PromptsPanel = () => (
-    <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
       <PromptsTab />
+    </div>
+  );
+
+  const MediaPanel = () => (
+    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+      <MediaTab />
     </div>
   );
 
   return (
     <>
       <div className="pointer-events-auto flex items-start gap-3">
-        <BubbleDock />
-        <div className="w-full max-w-md">
-          {activeBubble === 'history' && <HistoryPanel />}
-          {activeBubble === 'bookmarks' && <BookmarksPanel />}
-          {activeBubble === 'prompts' && <PromptsPanel />}
-        </div>
+        <BubbleDock onShowPatterns={() => setPatternModalOpen(true)} />
+        {activeBubble === 'history' && <HistoryPanel />}
+        {activeBubble === 'prompts' && <PromptsPanel />}
+        {activeBubble === 'media' && <MediaPanel />}
       </div>
       <BookmarkDialog
         open={bookmarkDialogOpen}
@@ -1800,6 +1754,31 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
         t={t}
       />
       <ActionToastView toast={toast} />
+      <Modal labelledBy={modalHeadingId} onClose={() => setPatternModalOpen(false)} open={isPatternModalOpen}>
+        <ModalHeader className="space-y-2">
+          <h3 id={modalHeadingId} className="text-lg font-semibold text-slate-100">
+            {t('content.sidebar.modal.title')}
+          </h3>
+          <p className="text-sm text-slate-300">{t('content.sidebar.modal.description')}</p>
+        </ModalHeader>
+        <ModalBody>
+          <ul className="list-disc space-y-2 pl-6 text-sm text-slate-200">
+            {modalPoints.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        </ModalBody>
+        <ModalFooter>
+          <button
+            className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            aria-label={t('content.sidebar.modal.closeAria')}
+            onClick={() => setPatternModalOpen(false)}
+            type="button"
+          >
+            {t('content.sidebar.modal.close')}
+          </button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }
@@ -1823,10 +1802,4 @@ if (document.readyState === 'loading') {
 } else {
   void init();
 }
-
-
-
-
-
-
-
+>>>>>>> REPLACE

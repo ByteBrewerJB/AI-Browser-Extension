@@ -1,6 +1,5 @@
 async function runSequentially() {
   await import('./content/sidebarIntegration.spec');
-  await import('./content/bookmarks.test');
   await import('./promptChains.spec');
   await import('./conversationIngestion.spec');
   await import('./jobScheduler.spec');

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Bubble = 'history' | 'bookmarks' | 'prompts' | 'settings';
+export type Bubble = 'history' | 'prompts' | 'media';
 
 export interface BubbleLauncherState {
   activeBubble: Bubble | null;

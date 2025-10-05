@@ -160,8 +160,11 @@ export async function getPinnedConversations(limit = 10): Promise<ConversationOv
 }
 
 export async function toggleBookmark(conversationId: string, messageId?: string, note?: string) {
-  const allBookmarks = await db.bookmarks.where('conversationId').equals(conversationId).toArray();
-  const existing = allBookmarks.find((b) => (b.messageId ?? null) === (messageId ?? null));
+  const existing = await db.bookmarks
+    .where('conversationId')
+    .equals(conversationId)
+    .and((bookmark) => (bookmark.messageId ?? null) === (messageId ?? null))
+    .first();
 
   if (existing) {
     await db.bookmarks.delete(existing.id);
@@ -174,7 +177,9 @@ export async function toggleBookmark(conversationId: string, messageId?: string,
     if (message?.content) {
       messagePreview = createBookmarkPreview(message.content);
     }
-  } else {
+  }
+
+  if (!messagePreview) {
     const conversation = await db.conversations.get(conversationId);
     if (conversation?.title) {
       messagePreview = createBookmarkPreview(conversation.title);
