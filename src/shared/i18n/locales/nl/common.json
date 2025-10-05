@@ -214,6 +214,43 @@
     "promptChainBubbleHelper": "Selecteer een bestaande keten om te bewerken of tik op + om een nieuwe reeks te starten."
   },
   "content": {
+    "dock": {
+      "prompts": "Prompts ({{count}})",
+      "promptsAria": "Prompt-bubbel openen ({{count}} beschikbaar)",
+      "bookmarks": "Bladwijzers",
+      "bookmarksAria": "Bladwijzerbubbel openen",
+      "pinned": "Vastgezet",
+      "pinnedAria": "Vastgezette bubbel openen",
+      "actions": "Acties",
+      "actionsAria": "Actiebubbel openen",
+      "settings": "Instellingen",
+      "settingsAria": "Instellingenbubbel openen",
+      "dashboard": "Dashboard",
+      "dashboardAria": "Dashboard openen",
+      "closePanelAria": "Bubbelpaneel sluiten"
+    },
+    "bubblePanels": {
+      "bookmarks": {
+        "title": "Gespreksbladwijzers",
+        "placeholderTitle": "Bladwijzerhulpmiddelen zijn bijna klaar",
+        "placeholderSubtitle": "Binnenkort kun je hier berichten bewaren, notities toevoegen en synchroniseren met popup en dashboard."
+      },
+      "pinned": {
+        "title": "Vastgezette gesprekken",
+        "placeholderTitle": "Snel pinbeheer is onderweg",
+        "placeholderSubtitle": "Beheer straks pins en favoriete mappen rechtstreeks vanuit de chat zodra deze bubbel actief is."
+      },
+      "actions": {
+        "title": "Acties & snelkoppelingen",
+        "placeholderTitle": "Contextuele acties verschijnen snel",
+        "placeholderSubtitle": "Deze bubbel bundelt binnenkort snelle bewerkingen zoals bookmarken, exporteren en delen."
+      },
+      "settings": {
+        "title": "Instellingen",
+        "placeholderTitle": "Pas de Companion aan zonder de chat te verlaten",
+        "placeholderSubtitle": "Dock-weergave, richting en audio-instellingen komen binnenkort in deze bubbel beschikbaar."
+      }
+    },
     "sidebar": {
       "title": "AI Companion",
       "patternButton": "Patronen",
