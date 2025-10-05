@@ -1,5 +1,6 @@
 import { createAuthManager } from './auth';
 import { createExportJobHandler } from './jobs/exportHandler';
+import { createEventLoggerJobHandler } from './jobs/eventLogger';
 import { createJobScheduler } from './jobs/scheduler';
 import { initializeMessaging } from './messaging';
 import { sendTabMessage } from '@/shared/messaging/router';
@@ -16,6 +17,7 @@ authManager.initialize().catch((error) => {
 });
 
 jobScheduler.registerHandler('export', createExportJobHandler());
+jobScheduler.registerHandler('event', createEventLoggerJobHandler());
 
 jobScheduler.start();
 

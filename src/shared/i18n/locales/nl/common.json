@@ -56,6 +56,7 @@
   "options": {
     "heading": "AI Companion Dashboard",
     "description": "Beheer gesprekken, prompts, audio-voorkeuren en synchronisatie-instellingen op één plek.",
+    "loading": "Laden…",
     "comingSoon": "Uitgebreide beheerpagina's volgen in de komende iteraties.",
     "exportHeading": "Geplande exports",
     "exportDescription": "Plan gespreksback-ups via de achtergrondtakenwachtrij.",
@@ -82,6 +83,17 @@
       "running": "Actief",
       "completed": "Voltooid",
       "failed": "Mislukt"
+    },
+    "guideResources": {
+      "heading": "Gidsen & updates",
+      "description": "Ontdek snelstartgidsen om nieuwe workflows en instellingen te leren.",
+      "empty": "Gidsen verschijnen hier zodra ze gepubliceerd zijn.",
+      "error": "Gidsen konden niet worden geladen. Probeer het later opnieuw.",
+      "topics": "Onderwerpen",
+      "estimatedTime": "{{minutes}} min lezen",
+      "openCta": "Bekijken",
+      "openAria": "Open gids {{title}}",
+      "opening": "Bezig…"
     },
     "favoriteFolder": "Markeren als favoriet",
     "unfavoriteFolder": "Favoriet verwijderen",

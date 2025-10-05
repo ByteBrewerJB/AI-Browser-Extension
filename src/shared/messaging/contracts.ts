@@ -54,6 +54,16 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
     };
     response: { jobId: string; scheduledFor: string };
   };
+  'jobs/log-event': {
+    request: {
+      event: string;
+      guideId?: string;
+      metadata?: Record<string, unknown>;
+      runAt?: string;
+      surface?: Surface;
+    };
+    response: { jobId: string };
+  };
   'jobs/list': {
     request: { limit?: number; statuses?: JobStatus[] };
     response: { jobs: JobSnapshot[]; fetchedAt: string };

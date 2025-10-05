@@ -56,6 +56,7 @@
   "options": {
     "heading": "AI Companion Dashboard",
     "description": "Manage conversations, prompts, audio preferences, and sync settings in one place.",
+    "loading": "Loading…",
     "comingSoon": "Detailed management views arrive in upcoming iterations.",
     "exportHeading": "Scheduled exports",
     "exportDescription": "Plan conversation backups via the background job queue.",
@@ -82,6 +83,17 @@
       "running": "Running",
       "completed": "Completed",
       "failed": "Failed"
+    },
+    "guideResources": {
+      "heading": "Guides & updates",
+      "description": "Explore quickstart guides to learn new workflows and settings.",
+      "empty": "Guides will appear here once they are published.",
+      "error": "We could not load guide resources. Try again later.",
+      "topics": "Topics",
+      "estimatedTime": "{{minutes}} min read",
+      "openCta": "View",
+      "openAria": "Open guide {{title}}",
+      "opening": "Opening…"
     },
     "favoriteFolder": "Mark as favorite",
     "unfavoriteFolder": "Remove favorite",

@@ -3,6 +3,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
+import { GuideResourcesCard } from './features/infoAndUpdates/GuideResourcesCard';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import { useHistoryStore } from './features/history/historyStore';
 import type { JobSnapshot } from '@/core/models';
@@ -331,6 +332,7 @@ export function Options() {
           </div>
         </section>
 
+        <GuideResourcesCard />
         <HistorySection />
         <PromptsSection />
         <MediaSection />

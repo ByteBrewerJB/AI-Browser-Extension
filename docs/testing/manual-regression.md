@@ -41,16 +41,20 @@ Execute on `chat.openai.com`, then repeat on `chatgpt.com`.
 2. In the “Scheduled exports” card:
    - Click “Schedule export in 5 min” and confirm the card reports the planned run time without errors.
    - Reload the page and note that the timestamp clears (current implementation keeps this state in memory only). Log regressions if the behaviour changes.
-3. In the conversation section:
+3. In the “Guides & updates” kaart:
+   - Controleer dat de gidsen binnen twee seconden laden en dat de kaart geen foutmelding toont.
+   - Klik “Bekijken” bij een gids en verifieer dat er een nieuw tabblad opent op de Guideflow-URL.
+   - Open `chrome://extensions` → “Service worker” console en bevestig dat er een logregel `telemetry event` verschijnt met `event: "guide-opened"` en het juiste `guideId`.
+4. In de conversation section:
    - Verify the folder tree renders and the active conversations appear in the table with correct message/word/character counts.
    - Toggle the pinned filter to “Pinned only” and ensure only the pinned conversation remains. Switch back to “All”.
    - Change the sort order (e.g., sort by “Title” ascending) and confirm rows reorder immediately.
-4. Save a table preset, reload the page, and apply the preset to confirm it restores filters/sorts.
-5. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
-6. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
-7. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
-8. Select at least two conversations and click “Move selection”. Choose a destination folder, confirm the success notice reports the count, and ensure the selection clears after the move. Repeat once for moving back to the top level.
-9. Open the new “Settings” tab in the dashboard and verify the toggles:
+5. Save a table preset, reload the page, and apply the preset to confirm it restores filters/sorts.
+6. Open the prompts/GPT sections and ensure existing entries (if any) still render and CRUD controls appear. Record gaps if the dataset is empty.
+7. Select one or more conversations, click “Export selected”, choose a format, and schedule the job. Confirm the success message appears and that the export queue card lists the pending job.
+8. Use “Move” in the row actions for a conversation to place it in a different folder, then move it back to the top level. Verify the status notice updates for each move and the table reflects the new folder immediately.
+9. Select at least two conversations and click “Move selection”. Choose a destination folder, confirm the success notice reports the count, and ensure the selection clears after the move. Repeat once for moving back to the top level.
+10. Open the new “Settings” tab in the dashboard and verify the toggles:
    - Flip “Show conversation dock” off and on; the bubble dock should hide/show in an active chat tab within two seconds.
    - Switch “Composer direction” to RTL and back to LTR; confirm the content overlay and popup reflect the change immediately.
    - Toggle “Auto-download response audio”, refresh the options page, and confirm the setting persists.
