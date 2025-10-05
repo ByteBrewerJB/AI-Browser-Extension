@@ -11,7 +11,7 @@ Dit werkdocument houdt bij hoe de huidige extensie zich verhoudt tot de oorspron
 | Pin- & bulkbeheer | Pinned weergaves, bulk selectie, verplaatsdialogen, favoriete mappen cache | ✅ Gereed | 2024-10-20 – main branch |
 | Bladwijzers & contextmenu | Bubbelacties, inline notitiemodaal, custom contextmenu met toasts en popup-sync | ✅ Gereed | 2024-10-20 – main branch |
 | Promptbibliotheek & ketens | GPT- en promptbeheer, keten-editor met variabelen, launcher integratie, cancel flow | ✅ Gereed | 2024-10-20 – main branch |
-| Gespreksanalyse & export | MiniSearch index, export jobs (JSON/TXT), dashboard jobtable | 🚧 Iteratie | 2024-10-20 – backoff UI polish gepland |
+| Gespreksanalyse & export | MiniSearch index, export jobs (JSON/TXT), dashboard jobtable | 🚧 Iteratie | 2025-10-05 – status badges tonen retry/backoff |
 | Media & audio | Instellingenscherm met toggles, preview overlay, modal skeletons | 💤 Placeholder | 2024-10-20 – functionaliteit simulatie, geen echte audio |
 | Richting & instellingen | Taalwissel, RTL toggle, dock toggle synchronisatie | ✅ Gereed | 2024-10-20 – main branch |
 | Guides & onboarding | Guides dataset, popup/options kaart, content modal, telemetry logging | ✅ Gereed | 2024-10-20 – main branch |
@@ -37,7 +37,7 @@ Dit werkdocument houdt bij hoe de huidige extensie zich verhoudt tot de oorspron
 
 ## Actieve iteraties & opvolgers
 - **Export & jobs UI polish**
-  - [ ] Status-badges uitbreiden met retry count en volgende backoff tijd.
+  - [x] Status-badges uitbreiden met retry count en volgende backoff tijd.
   - [ ] Filterpaneel toevoegen aan het jobs-overzicht (status/type).
   - [ ] Toast naar popup sturen wanneer een geplande export voltooid is.
 - **Zoekindex worker**
@@ -82,5 +82,6 @@ Gebruik onderstaande checklists wanneer je aan de respectieve featuregroepen wer
 | Datum | Commit | Featuregroep(en) | Notities |
 | --- | --- | --- | --- |
 | 2024-10-20 | _pending_ | Documentatie | Mapstructuur geherorganiseerd naar `docs/handbook/`, roadmap/regressie/ADR’s geactualiseerd, contextmenu playbook bijgewerkt. |
+| 2025-10-05 | _pending_ | Export & jobs UI | Status-badges tonen retry/backoff details; `npm run lint`. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
