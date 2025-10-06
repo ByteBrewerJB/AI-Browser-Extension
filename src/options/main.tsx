@@ -4,16 +4,30 @@ import ReactDOM from 'react-dom/client';
 import { Options } from './Options';
 import '@/styles/global.css';
 import { initI18n } from '@/shared/i18n';
+import { bindLanguagePreferenceToI18n } from '@/shared/i18n/languageManager';
 import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
 import { initializeEncryptionNotifications } from '@/shared/state/encryptionNotificationsStore';
-import { initializeSettingsStore } from '@/shared/state/settingsStore';
+import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 
 async function bootstrap() {
   await initializeSettingsStore();
+
   const detachTheme = bindThemePreferenceToDocument();
-  window.addEventListener('unload', detachTheme, { once: true });
-  await initI18n();
+  const initialLanguage = useSettingsStore.getState().language;
+  await initI18n(initialLanguage);
+  const detachLanguage = bindLanguagePreferenceToI18n();
+
+  window.addEventListener(
+    'unload',
+    () => {
+      detachTheme();
+      detachLanguage();
+    },
+    { once: true }
+  );
+
   initializeEncryptionNotifications();
+
   const rootElement = document.getElementById('root');
   if (!rootElement) {
     throw new Error('Options root element not found');

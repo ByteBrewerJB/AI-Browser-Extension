@@ -950,7 +950,8 @@ function translate(key: string, fallback: string, options?: Record<string, unkno
 async function ensureI18n() {
   if (!i18nInstance) {
     try {
-      i18nInstance = await initI18n();
+      const language = useSettingsStore.getState().language;
+      i18nInstance = await initI18n(language);
     } catch (error) {
       console.error('[ai-companion] failed to initialize i18n for prompt launcher', error);
     }

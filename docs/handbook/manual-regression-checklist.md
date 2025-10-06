@@ -51,7 +51,7 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
    - “View” opens a new tab and logs a `telemetry event` row in the background worker console (check `chrome://extensions` → Service worker).
    - “Mark as viewed” toggles badges and persists after reopening the popup.
 4. Language/direction controls:
-   - Switching the language updates copy immediately and persists after closing/reopening the popup.
+   - Switching the language updates copy immediately, persists after closing/reopening the popup, and the dashboard/content surfaces adopt the new locale on refresh.
    - `Text direction` button toggles LTR/RTL and mirrors the layout without clipping content.
 5. **Recent conversations** list:
    - All seeded conversations appear with correct timestamps and metrics.
@@ -135,6 +135,8 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
    - Menu renders near the pointer with role + preview text.
    - Bookmark opens the inline modal; copy/prompt actions respect disabled state when there is no text.
    - Escape closes the menu and subsequent right-click uses the native browser menu once the sidebar is hidden.
+6. Locale persistence:
+   - Na het wisselen van taal in de popup, open het dashboard en de sidebar opnieuw (Chrome/Edge op beide domeinen) om te bevestigen dat alle labels/knoppen direct dezelfde taal tonen zonder herinitialisatieglitches.
 
 ## 5. Composer counters & prompt launcher
 1. Start drafting a message. Word/character counters update live and reset after sending.
