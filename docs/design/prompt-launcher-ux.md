@@ -32,8 +32,9 @@ step hangs.
 ## Invocation & layout
 - **Trigger shortcuts**
   - `Ctrl+Space` (Windows/Linux) / `⌘+K` (macOS) opens the launcher modal, focusing the search input.
-  - Typing `//` or `..` in the composer also opens the launcher inline; the inline mode shares the same list and keyboard
-    controls but anchors near the caret.
+  - Typing `//` or `..` in the composer also opens the launcher inline; de triggers verwijderen zichzelf uit de composer,
+    vullen het zoekveld met de getypte query en focussen respectievelijk het prompts- of chainpanel zonder de cursor te
+    verliezen.
 - **Structure**
   1. Header with title (`Prompt launcher`) and close button.
   2. Search input with pill showing the active scope (`Prompts`, `Chains`, `All`). Scope toggled via `Ctrl+/` cycling or

@@ -10,6 +10,7 @@ import { createPopover } from '@/ui/components/Popover';
 import type { i18n as I18nInstance } from 'i18next';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { usePromptChainsStore } from '@/shared/state/promptChainsStore';
+import { findInlineTrigger } from './inlineLauncherTriggers';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
 const MAX_PROMPTS = 100;
@@ -109,6 +110,7 @@ let composerCountersInitialized = false;
 let unsubscribeTokenLimit: (() => void) | null = null;
 let tokenLimit = DEFAULT_TOKEN_LIMIT;
 let lastComposerMetrics = { words: 0, characters: 0, tokens: 0 };
+let suppressInlineTriggerHandling = false;
 let composerPlaceholderText: string | null = null;
 let composerPlaceholderSignature: string | null = null;
 let composerPlaceholderUnsubscribe: (() => void) | null = null;
@@ -1276,6 +1278,179 @@ function readComposerText(target: HTMLTextAreaElement | HTMLElement | null): str
   return '';
 }
 
+function getComposerCaretOffset(target: HTMLTextAreaElement | HTMLElement): number | null {
+  if (isHtmlTextAreaElement(target)) {
+    return target.selectionStart ?? target.value.length;
+  }
+
+  if (isHtmlContentEditable(target)) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!target.contains(range.startContainer)) {
+      return null;
+    }
+
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(target);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    return preRange.toString().length;
+  }
+
+  return null;
+}
+
+function resolveContentEditablePosition(
+  root: HTMLElement,
+  offset: number
+): { node: Node; offset: number } | null {
+  const totalLength = root.textContent?.length ?? 0;
+  const clampedOffset = Math.max(0, Math.min(offset, totalLength));
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  let remaining = clampedOffset;
+  let lastText: Text | null = null;
+
+  while (true) {
+    const current = walker.nextNode() as Text | null;
+    if (!current) {
+      break;
+    }
+
+    lastText = current;
+    const length = current.textContent?.length ?? 0;
+    if (remaining <= length) {
+      return { node: current, offset: remaining };
+    }
+
+    remaining -= length;
+  }
+
+  if (lastText) {
+    const length = lastText.textContent?.length ?? 0;
+    return { node: lastText, offset: length };
+  }
+
+  return { node: root, offset: root.childNodes.length };
+}
+
+function dispatchComposerInputEvent(target: HTMLTextAreaElement | HTMLElement, data = '') {
+  const event =
+    typeof InputEvent === 'function'
+      ? new InputEvent('input', { bubbles: true, data })
+      : new Event('input', { bubbles: true });
+
+  target.dispatchEvent(event);
+}
+
+function replaceComposerRange(
+  target: HTMLTextAreaElement | HTMLElement,
+  start: number,
+  end: number,
+  replacement: string
+): boolean {
+  const text = readComposerText(target);
+  const boundedStart = Math.max(0, Math.min(start, end, text.length));
+  const boundedEnd = Math.max(boundedStart, Math.min(end, text.length));
+
+  if (isHtmlTextAreaElement(target)) {
+    target.setSelectionRange(boundedStart, boundedEnd);
+    target.setRangeText(replacement, boundedStart, boundedEnd, 'end');
+    const caret = boundedStart + replacement.length;
+    target.setSelectionRange(caret, caret);
+    dispatchComposerInputEvent(target, replacement);
+    return true;
+  }
+
+  if (isHtmlContentEditable(target)) {
+    const selection = window.getSelection();
+    if (!selection) {
+      return false;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch {
+      // Ignore focus errors for cross-origin elements.
+    }
+
+    const startPosition = resolveContentEditablePosition(target, boundedStart);
+    const endPosition = resolveContentEditablePosition(target, boundedEnd);
+    if (!startPosition || !endPosition) {
+      return false;
+    }
+
+    const range = document.createRange();
+    range.setStart(startPosition.node, startPosition.offset);
+    range.setEnd(endPosition.node, endPosition.offset);
+    range.deleteContents();
+
+    if (replacement.length > 0) {
+      range.insertNode(document.createTextNode(replacement));
+    }
+
+    const caretOffset = boundedStart + replacement.length;
+    const caretPosition = resolveContentEditablePosition(target, caretOffset);
+    if (caretPosition) {
+      selection.removeAllRanges();
+      const caretRange = document.createRange();
+      caretRange.setStart(caretPosition.node, caretPosition.offset);
+      caretRange.collapse(true);
+      selection.addRange(caretRange);
+    }
+
+    dispatchComposerInputEvent(target, replacement);
+    return true;
+  }
+
+  return false;
+}
+
+function maybeHandleInlineTrigger() {
+  if (!activeComposer || suppressInlineTriggerHandling) {
+    return;
+  }
+
+  const caret = getComposerCaretOffset(activeComposer);
+  if (caret === null) {
+    return;
+  }
+
+  const text = readComposerText(activeComposer);
+  const match = findInlineTrigger(text, caret);
+  if (!match) {
+    return;
+  }
+
+  suppressInlineTriggerHandling = true;
+  const removed = replaceComposerRange(activeComposer, match.start, match.end, '');
+  suppressInlineTriggerHandling = false;
+
+  if (!removed) {
+    return;
+  }
+
+  updateComposerCounterValues();
+
+  if (match.target === 'prompts') {
+    state.filter = match.query;
+  } else {
+    state.filter = '';
+  }
+
+  openPanel(match.target);
+
+  if (match.target === 'prompts') {
+    if (searchInput) {
+      searchInput.value = match.query;
+    }
+    renderPromptList();
+  }
+}
+
 function computeComposerMetrics(text: string) {
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
@@ -1302,8 +1477,11 @@ function attachToComposer(element: HTMLTextAreaElement | HTMLElement) {
   detachComposer();
   activeComposer = element;
 
-  const listener = () => {
+  const listener = (event: Event) => {
     updateComposerCounterValues();
+    if (event.type === 'input') {
+      maybeHandleInlineTrigger();
+    }
   };
   composerInputListener = listener;
 
