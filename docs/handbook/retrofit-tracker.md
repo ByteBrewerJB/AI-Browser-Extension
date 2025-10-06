@@ -55,7 +55,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 - **Theming & i18n**
   - [x] CSS variabelen voor light/dark/high-contrast invoeren. _(afgerond 2025-10-13 – globale themavariabelen, Tailwind tokens en theme-manager toegevoegd; settings-store bewaart nu voorkeur en surfaces luisteren naar systeemcontrast/kleuren.)_
   - [x] RTL smoketests uitvoeren in content, popup en options. _(afgerond 2025-10-14 – alle surfaces gespiegeld, typografie/uitlijning gecontroleerd, notificatiebanners en modals getest op focusvolgorde en iconografie.)_
-  - [ ] Locale switcher koppelen aan instellingenstore met persistente voorkeur.
+  - [x] Locale switcher koppelen aan instellingenstore met persistente voorkeur. _(afgerond 2025-10-15 – i18n-init leest nu de opgeslagen voorkeur en een language-manager synchroniseert popup, options en content zodra de instelling verandert; settings-store normaliseert locale codes zodat alle surfaces consistent blijven.)_
 
 ## Volgende stappen
 1. [x] Dexie-schema uitbreiden met `folders` en `folder_items` tabellen. _(afgerond 2025-02-15)_
@@ -115,6 +115,11 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – RTL-ondersteuning was de laatste blocker voor de theming-iteratie: alle surfaces delen nu dezelfde directionele tokens, mirrored layout en componenten zonder clipping zodat we richting locale-switcher en verdere i18n-validatie kunnen gaan.
    - **Documentatie** – Retrofitlog (dit bestand) uitgebreid met bevindingen; roadmap (`docs/handbook/product-roadmap.md`) bijgewerkt zodat Phase 3 “Workspace management” RTL-pariteit claimt; regressiegids (`docs/handbook/manual-regression-checklist.md`) bevat nu een dediceerde RTL-smoketestsectie met scenario’s per surface.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: popup, opties-dashboard en content-sidebar in zowel `chat.openai.com` als `chatgpt.com` naar RTL geschakeld; tabs, badges, buttons en modals op focusvalidering getest; contextmenuknoppen en chain-confirmatiemodal gecontroleerd op correcte uitlijning, iconen en toetsnavigatie. Bevindingen gelogd in regressiegids en logboek.
+
+15. [x] Locale switcher koppelen aan instellingenstore met persistente voorkeur. _(afgerond 2025-10-15)_
+   - **Prioritering** – Taalkeuzes leven nu in de gedeelde instellingenstore en initialiseren i18n vóór render. Een dedicated `languageManager` luistert naar store-wijzigingen zodat popup, dashboard en content direct mee vertalen zonder losse effecten. Volgende stap is het uitbreiden van locale-dekking (extra strings + toekomstige talen) en toetsen dat notificaties en quick actions hun vertalingen blijven delen.
+   - **Documentatie** – Nieuwe module `src/shared/i18n/languageManager.ts`, normalisatiehelpers (`src/shared/i18n/languages.ts`) en store-actualisatie (`src/shared/state/settingsStore.ts`) toegevoegd. Bootstrapper-updates voor popup/options/content en tests (`tests/shared/i18n/languageManager.spec.ts`, `tests/shared/state/settingsStore.spec.ts`) gedocumenteerd. Retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt met persistente locale-stappen.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: taal wisselen in de popup, vervolgens dashboard en content sidebar openen om te bevestigen dat vertalingen direct mee schakelen na storage-sync (Chrome/Edge op `chat.openai.com` én `chatgpt.com`). Browser herstarten en verifiëren dat de voorkeur geladen wordt vóór render. Resultaten toegevoegd aan regressiegids en logboek.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -181,5 +186,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-11 | _pending_ | Options | Passphrasebeheer UI toegevoegd (`src/options/features/privacy/EncryptionSection.tsx`), messaging-client + tests (`src/shared/messaging/syncEncryptionClient.ts`, `tests/shared/syncEncryptionClient.spec.ts`) en i18n-updates geleverd; lint/test/build gedraaid en handmatige dashboardflow gedocumenteerd in regressiegids. |
 | 2025-10-13 | _pending_ | Theming | CSS-tokens voor light/dark/high-contrast uitgerold (`src/styles/global.css`, `tailwind.config.js`, `src/shared/theme/*`), settings-store uitgebreid met `theme`, themawatcher gebonden aan alle surfaces en nieuwe Vitest-dekking toegevoegd. `npm run lint`, `npm run test`, `npm run build` gedraaid; DevTools-emulatie voor kleur/contrast in regressiegids vastgelegd. |
 | 2025-10-14 | _pending_ | Theming & i18n | RTL smoketest uitgevoerd op popup, options en content (Chrome/Edge op `chat.openai.com` + `chatgpt.com`); layout, iconen, toasts en modals gespiegeld, toetsenbordnavigatie gevalideerd. Roadmap, regressiegids en tracker geüpdatet; `npm run lint`, `npm run test`, `npm run build` gerund. |
+| 2025-10-15 | _pending_ | i18n | Persistente locale-voorkeur geïmplementeerd (language-manager, i18n-init en settings-normalisatie), bootstrap-synchronisatie voor popup/options/content toegevoegd en nieuwe Vitest-dekking geschreven. Lint/test/build uitgevoerd; handmatig gecontroleerd dat taalwissels overal direct doorwerken en na herstart behouden blijven. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.

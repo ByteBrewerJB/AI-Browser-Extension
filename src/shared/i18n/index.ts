@@ -1,16 +1,18 @@
-﻿import i18n from 'i18next';
+import i18n from 'i18next';
 
 import en from './locales/en/common.json' with { type: 'json' };
 import nl from './locales/nl/common.json' with { type: 'json' };
+import {
+  DEFAULT_LANGUAGE,
+  normalizeLanguage,
+  detectBrowserLanguage,
+  type SupportedLanguage
+} from './languages';
 
 let initialized = false;
 
-export async function initI18n(): Promise<typeof i18n> {
-  const languageCode =
-    typeof navigator !== 'undefined' && typeof navigator.language === 'string'
-      ? navigator.language
-      : 'en';
-  const targetLanguage = languageCode.startsWith('nl') ? 'nl' : 'en';
+export async function initI18n(preferredLanguage?: string): Promise<typeof i18n> {
+  const targetLanguage = normalizeLanguage(preferredLanguage) ?? detectBrowserLanguage();
 
   if (initialized) {
     if (i18n.language !== targetLanguage) {
@@ -25,7 +27,7 @@ export async function initI18n(): Promise<typeof i18n> {
       nl: { translation: nl }
     },
     lng: targetLanguage,
-    fallbackLng: 'en',
+    fallbackLng: DEFAULT_LANGUAGE,
     interpolation: {
       escapeValue: false
     }
@@ -35,13 +37,15 @@ export async function initI18n(): Promise<typeof i18n> {
   return i18n;
 }
 
-export function setLanguage(lng: string) {
-  i18n.changeLanguage(lng);
+export function setLanguage(lng: string | SupportedLanguage) {
+  const normalized = normalizeLanguage(lng) ?? DEFAULT_LANGUAGE;
+  return i18n.changeLanguage(normalized);
 }
 
 export function getCurrentLanguage() {
-  return i18n.language;
+  return (i18n.language ?? DEFAULT_LANGUAGE) as SupportedLanguage;
 }
 
 export { i18n };
-
+export { DEFAULT_LANGUAGE, normalizeLanguage };
+export type { SupportedLanguage };

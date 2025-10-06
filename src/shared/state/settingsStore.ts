@@ -1,12 +1,18 @@
 
 import { create } from 'zustand';
 
+import {
+  DEFAULT_LANGUAGE,
+  detectBrowserLanguage,
+  normalizeLanguage,
+  type SupportedLanguage
+} from '@/shared/i18n/languages';
 import { isThemePreference, type ThemePreference } from '@/shared/theme/themePreference';
 
 type TextDirection = 'ltr' | 'rtl';
 
 interface SettingsSnapshot {
-  language: string;
+  language: SupportedLanguage;
   direction: TextDirection;
   showSidebar: boolean;
   maxTokens: number;
@@ -32,16 +38,20 @@ const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
 
 export const DEFAULT_PROMPT_HINT = 'Use // to open saved prompts.';
 
-const DEFAULT_SNAPSHOT: SettingsSnapshot = {
-  language: 'en',
-  direction: 'ltr',
-  showSidebar: true,
-  maxTokens: 4096,
-  promptHint: DEFAULT_PROMPT_HINT,
-  dismissedLauncherTips: 0,
-  dismissedGuideIds: [],
-  theme: 'system'
-};
+function createDefaultSnapshot(): SettingsSnapshot {
+  return {
+    language: detectBrowserLanguage(),
+    direction: 'ltr',
+    showSidebar: true,
+    maxTokens: 4096,
+    promptHint: DEFAULT_PROMPT_HINT,
+    dismissedLauncherTips: 0,
+    dismissedGuideIds: [],
+    theme: 'system'
+  };
+}
+
+const DEFAULT_SNAPSHOT: SettingsSnapshot = createDefaultSnapshot();
 
 const MAX_DISMISSED_GUIDES = 200;
 
@@ -70,11 +80,15 @@ function normalizeGuideIds(input: unknown): string[] {
 
 function coerceSnapshot(input: unknown): SettingsSnapshot {
   if (!input || typeof input !== 'object') {
-    return { ...DEFAULT_SNAPSHOT };
+    return createDefaultSnapshot();
   }
 
-  const record = input as Partial<SettingsSnapshot>;
-  const language = typeof record.language === 'string' ? record.language : DEFAULT_SNAPSHOT.language;
+  const record = input as Partial<SettingsSnapshot> & { language?: unknown };
+  const rawLanguage = record.language;
+  const language =
+    rawLanguage === undefined
+      ? detectBrowserLanguage()
+      : normalizeLanguage(rawLanguage) ?? DEFAULT_LANGUAGE;
   const direction: TextDirection = record.direction === 'rtl' ? 'rtl' : 'ltr';
   const showSidebar = typeof record.showSidebar === 'boolean' ? record.showSidebar : DEFAULT_SNAPSHOT.showSidebar;
   const parsedMaxTokens = Number(record.maxTokens);
@@ -106,7 +120,7 @@ async function readStoredSnapshot(): Promise<SettingsSnapshot> {
   const area = getLocalStorageArea();
   if (!area) {
     const fallback = fallbackStore.get(SETTINGS_STORAGE_KEY);
-    return fallback ? coerceSnapshot(fallback) : { ...DEFAULT_SNAPSHOT };
+    return fallback ? coerceSnapshot(fallback) : createDefaultSnapshot();
   }
 
   try {
@@ -139,7 +153,7 @@ async function readStoredSnapshot(): Promise<SettingsSnapshot> {
   }
 
   const fallback = fallbackStore.get(SETTINGS_STORAGE_KEY);
-  return fallback ? coerceSnapshot(fallback) : { ...DEFAULT_SNAPSHOT };
+  return fallback ? coerceSnapshot(fallback) : createDefaultSnapshot();
 }
 
 async function writeStoredSnapshot(snapshot: SettingsSnapshot): Promise<void> {
@@ -210,12 +224,19 @@ let initializePromise: Promise<void> | null = null;
 let unsubscribePersist: (() => void) | null = null;
 let storageListenerRegistered = false;
 let hydrating = false;
-let lastSnapshot: SettingsSnapshot = { ...DEFAULT_SNAPSHOT };
+let lastSnapshot: SettingsSnapshot = createDefaultSnapshot();
 
 export const useSettingsStore = create<SettingsState>((set) => ({
   ...DEFAULT_SNAPSHOT,
   hydrated: false,
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) =>
+    set((state) => {
+      const normalized = normalizeLanguage(language) ?? state.language;
+      if (state.language === normalized) {
+        return state;
+      }
+      return { language: normalized };
+    }),
   toggleDirection: () =>
     set((state) => ({ direction: state.direction === 'ltr' ? 'rtl' : 'ltr' })),
   setShowSidebar: (value) => set({ showSidebar: value }),
@@ -295,7 +316,7 @@ export async function initializeSettingsStore(): Promise<void> {
   }
 
   initializePromise = (async () => {
-    let snapshot = { ...DEFAULT_SNAPSHOT };
+    let snapshot = createDefaultSnapshot();
     try {
       snapshot = await readStoredSnapshot();
     } catch (error) {
@@ -329,12 +350,12 @@ export async function initializeSettingsStore(): Promise<void> {
 
 export function __resetSettingsStoreForTests() {
   fallbackStore.clear();
-  lastSnapshot = { ...DEFAULT_SNAPSHOT };
+  lastSnapshot = createDefaultSnapshot();
   hydrating = false;
   initializePromise = null;
   if (unsubscribePersist) {
     unsubscribePersist();
     unsubscribePersist = null;
   }
-  useSettingsStore.setState({ ...DEFAULT_SNAPSHOT, hydrated: false });
+  useSettingsStore.setState({ ...createDefaultSnapshot(), hydrated: false });
 }

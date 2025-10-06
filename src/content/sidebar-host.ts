@@ -1,4 +1,5 @@
 import { initI18n } from '@/shared/i18n';
+import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 
 const HOST_ID = 'ai-companion-shadow-host';
 
@@ -221,7 +222,9 @@ function initializeSidebarWatchers(host: HTMLElement) {
 }
 
 export async function ensureShadowHost(): Promise<HTMLElement> {
-  const i18nInstance = await initI18n();
+  await initializeSettingsStore();
+  const language = useSettingsStore.getState().language;
+  const i18nInstance = await initI18n(language);
   const existing = document.getElementById(HOST_ID);
   const placeholder = i18nInstance.t('app.tagline');
 

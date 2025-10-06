@@ -1,17 +1,30 @@
-﻿import React, { StrictMode } from 'react';
+import React, { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 
 import { Popup } from './Popup';
 import '@/styles/global.css';
 import { initI18n } from '@/shared/i18n';
+import { bindLanguagePreferenceToI18n } from '@/shared/i18n/languageManager';
 import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
-import { initializeSettingsStore } from '@/shared/state/settingsStore';
+import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
 
 async function bootstrap() {
   await initializeSettingsStore();
+
   const detachTheme = bindThemePreferenceToDocument();
-  window.addEventListener('unload', detachTheme, { once: true });
-  await initI18n();
+  const initialLanguage = useSettingsStore.getState().language;
+  await initI18n(initialLanguage);
+  const detachLanguage = bindLanguagePreferenceToI18n();
+
+  window.addEventListener(
+    'unload',
+    () => {
+      detachTheme();
+      detachLanguage();
+    },
+    { once: true }
+  );
+
   const rootElement = document.getElementById('root');
   if (!rootElement) {
     throw new Error('Popup root element not found');
@@ -27,6 +40,3 @@ async function bootstrap() {
 bootstrap().catch((error) => {
   console.error('[popup] failed to bootstrap', error);
 });
-
-
-
