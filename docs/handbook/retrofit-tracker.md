@@ -46,7 +46,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 - **Launcher ervaring**
   - [ ] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen.
   - [x] Chain DSL parser (placeholders, [[step.output]]) prototypen. _(afgerond 2025-10-05 – parsermodule + evaluatiehooks toegevoegd.)_
-  - [ ] Inline triggers `//` en `..` integreren met bestaande composer store.
+  - [x] Inline triggers `//` en `..` integreren met bestaande composer store. _(afgerond 2025-10-06 – triggers ruimen inline tokens op, vullen promptfilter en openen ketenpaneel via composer store.)_
 - **Privacy & sync voorbereiding**
   - [ ] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
   - [ ] IndexedDB audit: bevestig geen network egress van chatinhoud.
@@ -76,7 +76,11 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 5. [x] Chain DSL parser (placeholders, `[[step.output]]`) prototypen. _(afgerond 2025-10-05)_
    - **Prioritering** – Parser levert nu een token-stream + evaluatiehooks zodat launcher-confirmaties variabelen en step-outputreferenties kunnen resolven. Volgende stap is integratie met de composer store en async step-runner zodat `[[step.output]]` automatisch live-data invult.
    - **Documentatie** – Nieuwe module `src/core/chains/chainDslParser.ts`, testsuite `tests/core/chainDslParser.spec.ts`, retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`), UX-spec (`docs/design/prompt-launcher-ux.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt.
-   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: scenario voor placeholder/step-output validatie beschreven in regressiegids; uitvoering volgt zodra launcher-confirmatie de parser consumeert.
+ - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: scenario voor placeholder/step-output validatie beschreven in regressiegids; uitvoering volgt zodra launcher-confirmatie de parser consumeert.
+6. [x] Inline triggers `//` en `..` integreren met bestaande composer store. _(afgerond 2025-10-06)_
+   - **Prioritering** – Composer-events openen nu het juiste launcherpanel zodra `//` of `..` wordt getypt; tokens worden direct uit het invoerveld verwijderd en promptfilters vullen automatisch. Dit ontsluit keyboard-first flows voor prompts én chains zonder muisklikken. Volgende stap is het aansluiten van de chain-confirmatie op de parser zodat variabelen meteen renderen.
+   - **Documentatie** – Nieuwe helpermodule `src/content/inlineLauncherTriggers.ts`, testsuite `tests/content/inlineLauncherTriggers.spec.ts`, retrofitlog (dit bestand), roadmap, UX-spec (`docs/design/prompt-launcher-ux.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) zijn bijgewerkt.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: op beide ChatGPT-domeinen `//plan` en `..handover` typen, bevestigen dat het launcherpanel opent, het zoekveld de query bevat en de composer geen triggertekens achterlaat; resultaat loggen in regressiegids.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -135,5 +139,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-02-17 | _pending_ | UX | Zijbalk pin/hide/collapse wireframes vastgelegd; QA-aanwijzingen toegevoegd en designnotitie gepubliceerd. |
 | 2025-02-18 | _pending_ | UX | Promptlauncher keyboard-first UX en fuzzy search gedrag gespecificeerd; roadmap + regressiegids gesynchroniseerd; heuristische toetsen uitgevoerd. |
 | 2025-10-05 | _pending_ | Core | Chain DSL-parser + renderer prototype toegevoegd (`src/core/chains/chainDslParser.ts`), nieuwe tests gedraaid en lint/test/build uitgevoerd; QA-checklist aangevuld met placeholder/step-output scenario. |
+| 2025-10-06 | _pending_ | Content | Inline launcher triggers koppelen aan composer store (`textareaPrompts.ts` + helpermodule), promptfilter auto-gevuld, tests toegevoegd en lint/test/build gedraaid; manual checklist uitgebreid met `//`/`..` scenario. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.

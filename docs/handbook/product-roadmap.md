@@ -41,7 +41,7 @@ This living document combines the architectural snapshot, delivery status, and p
 
 ### Near-term backlog (Phase 3 focus)
 _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden wanneer scopes verschuiven._
-- **Search & sidebar** – _Status: in uitvoering._ Dexie-schema uitgebreid met `folder_items` pivot en Minisearch verrijkt met tags/mappaden (10k benchmark gereed); zijbalk-wireframes en promptlauncher UX-spec zijn afgerond. De chain DSL-parser prototype (placeholders + `[[step.output]]`) staat klaar in `src/core/chains/chainDslParser.ts`. Volgende focus: accessibility review + Zustand-state implementatie voor pin/hide flows en het koppelen van de parser aan de launcherconfirmatie.
+- **Search & sidebar** – _Status: in uitvoering._ Dexie-schema uitgebreid met `folder_items` pivot en Minisearch verrijkt met tags/mappaden (10k benchmark gereed); zijbalk-wireframes en promptlauncher UX-spec zijn afgerond. Inline `//`/`..` triggers ruimen nu composerinput op, vullen promptfilters en openen het juiste panel. De chain DSL-parser prototype (placeholders + `[[step.output]]`) staat klaar in `src/core/chains/chainDslParser.ts`. Volgende focus: accessibility review + Zustand-state implementatie voor pin/hide flows en het koppelen van de parser aan de launcherconfirmatie.
 - Automatische jobs dashboard vervolledigen: retry hand-offs zichtbaar maken in de UI (filterpaneel live per 2025-10-05).
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.

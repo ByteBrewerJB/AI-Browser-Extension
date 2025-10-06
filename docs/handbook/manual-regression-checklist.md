@@ -111,7 +111,7 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 1. Start drafting a message. Word/character counters update live and reset after sending.
 2. Open the prompt launcher via `Ctrl+Space`/`⌘+K`; verify focus lands in the search field and the shortcut legend reflects the current platform.
 3. Navigate the results list using only the keyboard (`ArrowUp/Down`, `Ctrl+/` scope cycling) and insert a prompt with `Enter`; confirm highlighted tokens reflect the fuzzy search match.
-4. Type `//` in the composer to trigger the inline launcher. Confirm it anchors near the caret, honours the same keyboard controls, and restores focus to the composer after closing with `Esc`.
+4. Type `//plan` and `..handover` in the composer to trigger the inline launcher. Bevestig dat de getypte tokens direct uit het invoerveld verdwijnen, het prompts-panel `plan` als zoekterm toont, het chain-panel zichtbaar wordt voor `..` en dat het toetsenbordverkeer (`Esc`, pijlen, `Enter`) focus terugbrengt naar de composer na sluiten.
 5. Select a prompt chain, supply variable values in the confirmation modal, start the run, then cancel with `Esc` to ensure rollback messaging appears.
 6. Insert a prompt that references `{{variable}}` placeholders and `[[step.output]]` tokens; confirm the confirmation modal surfaces the variables, fills resolved step output text, and displays a warning when a referenced step output is missing.
 7. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
