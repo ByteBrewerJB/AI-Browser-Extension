@@ -4,10 +4,13 @@ import ReactDOM from 'react-dom/client';
 import { Popup } from './Popup';
 import '@/styles/global.css';
 import { initI18n } from '@/shared/i18n';
+import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
 
 async function bootstrap() {
   await initializeSettingsStore();
+  const detachTheme = bindThemePreferenceToDocument();
+  window.addEventListener('unload', detachTheme, { once: true });
   await initI18n();
   const rootElement = document.getElementById('root');
   if (!rootElement) {

@@ -3,11 +3,13 @@ import type { MessageRecord } from '@/core/models';
 import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
 import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messaging/router';
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
+import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import { mountPromptLauncher } from './textareaPrompts';
 import { runPromptChainById } from './chainRunner';
 
 void initializeSettingsStore();
+bindThemePreferenceToDocument();
 
 const processedMessageIds = new Set<string>();
 let scanTimeout: number | null = null;

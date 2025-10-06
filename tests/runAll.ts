@@ -12,6 +12,7 @@ async function runSequentially() {
   await import('./background/networkMonitor.spec');
   await import('./shared/bubbleLauncherStore.spec');
   await import('./shared/syncEncryptionClient.spec');
+  await import('./shared/theme/themePreference.spec');
 }
 
 runSequentially()

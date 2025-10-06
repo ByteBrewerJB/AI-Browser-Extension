@@ -1,6 +1,8 @@
 
 import { create } from 'zustand';
 
+import { isThemePreference, type ThemePreference } from '@/shared/theme/themePreference';
+
 type TextDirection = 'ltr' | 'rtl';
 
 interface SettingsSnapshot {
@@ -11,6 +13,7 @@ interface SettingsSnapshot {
   promptHint: string;
   dismissedLauncherTips: number;
   dismissedGuideIds: string[];
+  theme: ThemePreference;
 }
 
 interface SettingsState extends SettingsSnapshot {
@@ -22,6 +25,7 @@ interface SettingsState extends SettingsSnapshot {
   setPromptHint: (value: string) => void;
   incrementDismissedLauncherTips: () => void;
   setGuideDismissed: (guideId: string, dismissed: boolean) => void;
+  setTheme: (theme: ThemePreference) => void;
 }
 
 const SETTINGS_STORAGE_KEY = 'ai-companion:settings:v1';
@@ -35,7 +39,8 @@ const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   maxTokens: 4096,
   promptHint: DEFAULT_PROMPT_HINT,
   dismissedLauncherTips: 0,
-  dismissedGuideIds: []
+  dismissedGuideIds: [],
+  theme: 'system'
 };
 
 const MAX_DISMISSED_GUIDES = 200;
@@ -84,8 +89,10 @@ function coerceSnapshot(input: unknown): SettingsSnapshot {
     : DEFAULT_SNAPSHOT.dismissedLauncherTips;
 
   const dismissedGuideIds = normalizeGuideIds((record as { dismissedGuideIds?: unknown })?.dismissedGuideIds);
+  const themeValue = (record as { theme?: unknown })?.theme;
+  const theme = isThemePreference(themeValue) ? themeValue : DEFAULT_SNAPSHOT.theme;
 
-  return { language, direction, showSidebar, maxTokens, promptHint, dismissedLauncherTips, dismissedGuideIds };
+  return { language, direction, showSidebar, maxTokens, promptHint, dismissedLauncherTips, dismissedGuideIds, theme };
 }
 
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
@@ -179,7 +186,8 @@ function toSnapshot(state: SettingsState): SettingsSnapshot {
     maxTokens: state.maxTokens,
     promptHint: state.promptHint,
     dismissedLauncherTips: state.dismissedLauncherTips,
-    dismissedGuideIds: state.dismissedGuideIds
+    dismissedGuideIds: state.dismissedGuideIds,
+    theme: state.theme
   };
 }
 
@@ -192,7 +200,8 @@ function areSnapshotsEqual(a: SettingsSnapshot, b: SettingsSnapshot): boolean {
     a.promptHint === b.promptHint &&
     a.dismissedLauncherTips === b.dismissedLauncherTips &&
     a.dismissedGuideIds.length === b.dismissedGuideIds.length &&
-    a.dismissedGuideIds.every((value, index) => value === b.dismissedGuideIds[index])
+    a.dismissedGuideIds.every((value, index) => value === b.dismissedGuideIds[index]) &&
+    a.theme === b.theme
   );
 }
 
@@ -242,7 +251,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       }
 
       return { dismissedGuideIds: normalized };
-    })
+    }),
+  setTheme: (theme) =>
+    set((state) => ({ theme: isThemePreference(theme) ? theme : state.theme }))
 }));
 
 function registerStorageListener() {

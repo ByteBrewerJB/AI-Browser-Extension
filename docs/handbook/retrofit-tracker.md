@@ -53,7 +53,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [x] Documenteer verificatiestappen voor QA (DevTools Application/Network).
  - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
 - **Theming & i18n**
-  - [ ] CSS variabelen voor light/dark/high-contrast invoeren.
+  - [x] CSS variabelen voor light/dark/high-contrast invoeren. _(afgerond 2025-10-13 – globale themavariabelen, Tailwind tokens en theme-manager toegevoegd; settings-store bewaart nu voorkeur en surfaces luisteren naar systeemcontrast/kleuren.)_
   - [ ] RTL smoketests uitvoeren in content, popup en options.
   - [ ] Locale switcher koppelen aan instellingenstore met persistente voorkeur.
 
@@ -106,6 +106,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – De background service worker hangt nu een fetch-proxy (`createNetworkMonitor`) aan zodat egress naar niet-whitelisted hosts en payloads met `content`/`prompt` direct worden gelogd en via runtime messaging uitleesbaar zijn. Tegelijkertijd stuurt de encryptieservice statusmutaties naar alle surfaces, zodat QA tijdens bulkacties onmiddellijk ziet wanneer een sleutel vergrendeld raakt.
    - **Documentatie** – Nieuwe modules `src/background/monitoring/networkMonitor.ts` en `src/background/monitoring/encryptionNotifier.ts` toegevoegd, plus `src/shared/messaging/encryptionEvents.ts` en de Zustand-store `src/shared/state/encryptionNotificationsStore.ts` met UI (`EncryptionStatusNotifications`). Regressiegids (`docs/handbook/manual-regression-checklist.md`) bevat nu een geautomatiseerde netwerkmonitorsectie en een notificatiecheck; roadmapsectie "Privacy & sync" krijgt een update over de live monitor. Retrofitlog bijgewerkt met verwijzing naar test `tests/background/networkMonitor.spec.ts`.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Het testrun-script controleert nu ook dat de netwerkmonitor incidenten detecteert en terugrapporteert. Handmatig: in opties de wachtwoordzin vergrendelen/ontgrendelen en bevestigen dat de nieuwe notificatiebanner verschijnt en sluitbaar is; in de background console `chrome.runtime.sendMessage({ type: 'monitoring/network-incidents', payload: {} }, console.log)` draaien om incidenten te controleren en daarna de service worker herstarten voor een schone staat.
+13. [x] CSS variabelen voor light/dark/high-contrast invoeren. _(afgerond 2025-10-13)_
+   - **Prioritering** – Gemeenschappelijke thematokens zorgen dat popup, opties en content dezelfde kleuren, focusringen en contrasten delen en automatisch meebewegen met systeeminstellingen. Dit opent de weg voor een UI-selector en RTL smoketests zonder per surface afwijkende stijlen.
+   - **Documentatie** – Themalagen toegevoegd in `src/styles/global.css`, Tailwind uitgebreid (`tailwind.config.js`), theme-manager en voorkeurstypes toegevoegd (`src/shared/theme/*`), instellingenstore aangepast en testdekking opgezet (`tests/shared/theme/themePreference.spec.ts`). Dit retrofitlog, de roadmap en de regressiegids beschrijven nu thema-coverage en QA-stappen.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in Chrome DevTools → Rendering `Emulate CSS prefers-color-scheme` (Light/Dark) én `Emulate CSS prefers-contrast: more` activeren; verifiëren dat `<html data-theme>` meewisselt, achtergronden/tekstcontrast aanpassen en focusringen zichtbaar blijven. Bevindingen loggen in de regressiegids.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -170,5 +174,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-09 | _pending_ | Storage | Dexie sync-snapshot encryptie gedelegeerd naar passphrase-service (`src/core/storage/service.ts`, `syncBridge.ts`), fallback/logging toegevoegd en regressiegids/roadmap bijgewerkt; `npm run lint`, `npm run test`, `npm run build` gedraaid. |
 | 2025-10-10 | _pending_ | Privacy | IndexedDB audit uitgevoerd (codebase gescand op netwerkoproepen, DevTools Network/Application gecontroleerd), regressiegids aangevuld met stappen voor egress-monitoring en roadmap geactualiseerd; automatische scans (`rg`) gelogd en handmatige resultaten vastgelegd. |
 | 2025-10-11 | _pending_ | Options | Passphrasebeheer UI toegevoegd (`src/options/features/privacy/EncryptionSection.tsx`), messaging-client + tests (`src/shared/messaging/syncEncryptionClient.ts`, `tests/shared/syncEncryptionClient.spec.ts`) en i18n-updates geleverd; lint/test/build gedraaid en handmatige dashboardflow gedocumenteerd in regressiegids. |
+| 2025-10-13 | _pending_ | Theming | CSS-tokens voor light/dark/high-contrast uitgerold (`src/styles/global.css`, `tailwind.config.js`, `src/shared/theme/*`), settings-store uitgebreid met `theme`, themawatcher gebonden aan alle surfaces en nieuwe Vitest-dekking toegevoegd. `npm run lint`, `npm run test`, `npm run build` gedraaid; DevTools-emulatie voor kleur/contrast in regressiegids vastgelegd. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.

@@ -22,6 +22,13 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
    - Pin the first conversation and bookmark the second via the popup.
    - Open the dashboard once so guides, job lists, and stores hydrate.
 
+## 1.1 Theme tokens (light/dark/high-contrast)
+1. Open de popup en het dashboard met Chrome DevTools → Rendering zichtbaar.
+   - Zet **Emulate CSS prefers-color-scheme** op `dark` en bevestig dat `<html data-theme>` naar `dark` wisselt, achtergronden verduisteren en primaire tekst leesbaar blijft.
+   - Schakel terug naar `light` en controleer dat de oorspronkelijke kleuren terugkeren.
+   - Zet **Emulate CSS prefers-contrast** op `more`; verwacht `data-theme="high-contrast"`, zwarte achtergronden, witte tekst en een cyaan focusring. Doorloop met `Tab` een paar knoppen/links om de focusring te verifiëren.
+2. Reset beide emulatie-instellingen naar `No emulation` voordat je doorgaat met de volgende secties.
+
 ## 2. Popup regression (repeat on both domains)
 1. Confirm the extension icon is active when a chat tab is focused.
 2. Open the popup and verify the header shows the product title, tagline, and auth status (`Premium features unlocked`, `Signed in (free tier)`, or `Offline mode`).
