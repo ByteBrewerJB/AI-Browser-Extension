@@ -47,7 +47,7 @@ _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.
 - Contextmenu focusbeheer verbeteren (focus trap + refocus van het origineel) en documenteren in de accessibility playbook.
-- **Privacy & sync** – _Status: delegatie in uitvoering._ AES-GCM/PBKDF2 encryptieservice draait in de background worker en Dexie sync-snapshots gebruiken dezelfde passphrase (fallback naar lokale sleutel wanneer uitgeschakeld). Dashboard bevat nu passphrasebeheer (statusbadges, lock/unlock). Volgende iteratie automatiseert netwerkbewaking in het testrunbook en onderzoekt UI-notificaties voor statuswijzigingen + onboarding-flows.
+- **Privacy & sync** – _Status: delegatie in uitvoering._ AES-GCM/PBKDF2 encryptieservice draait in de background worker en Dexie sync-snapshots gebruiken dezelfde passphrase (fallback naar lokale sleutel wanneer uitgeschakeld). Dashboard bevat passphrasebeheer en surface-brede notificaties; de service worker monitort fetch-egress via `createNetworkMonitor` en exposeert incidenten via messaging/tests. Volgende stap: onboarding-flow voor passphrase keuze + automatische alerts richting popup bij langdurig vergrendelde sleutels.
 
 ### Toekomstige thema’s (Phases 4–8)
 Documenteer outstanding design/ADR links voordat ontwikkeling start. Maak nieuwe ADR’s alleen aan wanneer implementatie committers klaarstaan, zodat contributors scope kunnen traceren zonder te gissen.

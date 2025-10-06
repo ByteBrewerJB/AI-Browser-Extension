@@ -99,6 +99,7 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 3. Klik op **Nu vergrendelen** en bevestig via de badge dat de status naar “Ingesteld · Vergrendeld” wisselt. Controleer in de background console dat snapshot-mutaties een lock-fout loggen zolang de sleutel niet is ontgrendeld.
 4. Vul dezelfde wachtwoordzin in het ontgrendelformulier in en klik op **Ontgrendelen**. Controleer dat de badge terugkeert naar “Ingesteld · Ontgrendeld” en dat je Dexie-acties weer zonder foutmeldingen kunt uitvoeren.
 5. Test een foutscenario door een verkeerde wachtwoordzin in te voeren; er moet een rode foutmelding verschijnen zonder statuswijziging. Reset daarna eventueel met de juiste wachtwoordzin.
+6. Vergrendel en ontgrendel nogmaals en controleer dat er een notificatiebanner bovenaan de sectie verschijnt met de juiste status (Configuratie, Vergrendeld, Ontgrendeld) en dat je deze handmatig kunt sluiten.
 
 ## 4. Content sidebar & context workflows
 1. Open an active conversation and toggle the dock with `Alt+Shift+K`; verify the chosen bubble stays active.
@@ -142,6 +143,10 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 3. Voer de volgende acties uit terwijl je het netwerk observeert: stuur een nieuw bericht, verplaats een gesprek naar een andere map via de sidebar en start de promptlauncher met `//` gevolgd door het inserten van een prompt. Controleer dat er geen requests naar externe hosts verschijnen met payloads die de volledige chatinhoud bevatten; de enige requests mogen first-party ChatGPT API’s of `chrome-extension://` protocollen zijn.
 4. Inspecteer willekeurige verzoeken uit de lijst door op **Headers** → **Request payload** te klikken. Valideer dat teksten uit het gesprek niet naar niet-OpenAI hosts worden verzonden en dat extension-requests enkel metadata (bijv. ids, flags) bevatten.
 5. Ga naar het **Application**-paneel → **IndexedDB** en bevestig dat de tabellen `conversations`, `messages`, `folders` en `folder_items` data bevatten. Controleer onder **Storage** → **chrome.storage.sync** dat snapshotdata versleuteld (`mode: 'delegated'` + base64 `data`) of leeg is. Documenteer eventuele afwijkingen in het retrofitlog.
+
+### 6.3 Geautomatiseerde netwerkmonitor
+1. Voer `npm run test` uit en controleer dat de output `✓ network monitor incidents captured` vermeldt. Dit script simuleert egress naar een onbekende host en een payload met conversatie-inhoud.
+2. Open de background service workerconsole en voer `chrome.runtime.sendMessage({ type: 'monitoring/network-incidents', payload: {} }, console.log)` uit. Controleer dat het antwoord dezelfde incidenten bevat en dat `timestamp` en `reason` kloppen. Stop/Start de service worker na de review om het log te legen.
 
 ## 7. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.

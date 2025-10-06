@@ -177,7 +177,27 @@
       "lockCta": "Nu vergrendelen",
       "noticeLocked": "Encryptie vergrendeld. Snapshots blijven beschermd tot je opnieuw ontgrendelt.",
       "errorLockFailed": "Vergrendelen mislukt. Raadpleeg de achtergrondconsole voor meer details.",
-      "footerNote": "De extensie verzendt je wachtwoordzin nooit. Als je hem verliest, kan gesynchroniseerde data niet worden hersteld."
+      "footerNote": "De extensie verzendt je wachtwoordzin nooit. Als je hem verliest, kan gesynchroniseerde data niet worden hersteld.",
+      "notifications": {
+        "configured": {
+          "title": "Encryptie ingesteld",
+          "description": "Sync-snapshots vereisen nu de bijgewerkte wachtwoordzin."
+        },
+        "unlocked": {
+          "title": "Encryptie ontgrendeld",
+          "description": "Versleutelde snapshots ontsleutelen automatisch totdat je opnieuw vergrendelt."
+        },
+        "locked": {
+          "title": "Encryptie vergrendeld",
+          "description": "Snapshots pauzeren totdat je de wachtwoordzin ontgrendelt."
+        },
+        "cleared": {
+          "title": "Encryptie gewist",
+          "description": "Snapshots vallen terug op de lokale sleutel. Stel een wachtwoordzin in om sync-beveiliging opnieuw te activeren."
+        },
+        "timestamp": "Gelogd op {{time}}",
+        "dismiss": "Sluiten"
+      }
     },
     "favoriteFolder": "Markeren als favoriet",
     "unfavoriteFolder": "Favoriet verwijderen",
