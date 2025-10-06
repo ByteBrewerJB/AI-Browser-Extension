@@ -24,7 +24,7 @@ This living document combines the architectural snapshot, delivery status, and p
 - **Zoekservice** – MiniSearch-index wordt naar IndexedDB weggeschreven en bij opstart hersteld; documenten bevatten nu titels, tag-tokens en volledige mappaden. Verwijderingen houden conversatie- en berichtdocumenten in sync en een 10k-berichtencoldbuild klokt ~1,5 s met zoeklatency rond 3 ms.
 - **Export pipeline** – TXT/JSON exports gebruiken client-side helpers; de background handler maakt bestanden aan en start automatisch een `chrome.downloads.download` zodra de job slaagt.
 - **Authenticatie** – `AuthManager` decodeert JWT’s lokaal, deriveert premiumstatus en ondersteunt optionele JWKS caching. Signatuurvalidatie en refreshflows zijn nog niet geïmplementeerd.
-- **Sync encryptie** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en verzorgt encrypt/decrypt messaging. Dexie sync-snapshots delegeren naar deze service en vallen terug op lokale opslag wanneer passphrase-sync uitstaat; IndexedDB-audit (2025-10-10) bevestigde dat conversaties enkel lokaal opgeslagen worden en geen netwerkegress hebben. Volgende stap is UI voor passphrasebeheer + geautomatiseerde netwerkmonitoring.
+- **Sync encryptie** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en verzorgt encrypt/decrypt messaging. Dexie sync-snapshots delegeren naar deze service en vallen terug op lokale opslag wanneer passphrase-sync uitstaat. Dashboard bevat nu een passphrasepaneel (2025-10-11) met statusbadges en PBKDF2-iteraties; IndexedDB-audit (2025-10-10) bevestigde dat conversaties enkel lokaal opgeslagen worden en geen netwerkegress hebben. Volgende stap is geautomatiseerde netwerkmonitoring + notificaties bij statuswijzigingen.
 
 ## Delivery phases
 
@@ -35,7 +35,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 2 | Workspace management | ✅ Delivered | Popup cards, dashboard filters, folders, prompt/GPT CRUD, i18n/RTL. |
 | 3 | Productivity automation | 🚧 In progress | Job queue + export handlers live; search durability en extra UI polish volgen. |
 | 4 | Audio tooling | 💤 Planned | Geen echte audio-opname of playback pipelines; media-instellingen zijn placeholders. |
-| 5 | Sync & collaboration | 🚧 In progress | AES-GCM/PBKDF2 service worker actief; Dexie sync-snapshots gebruiken nu dezelfde passphrase (met lock-fallback). IndexedDB-audit afgerond (geen chat-egress); volgende stap: passphrasebeheer UI + netwerkmonitor automatiseren. |
+| 5 | Sync & collaboration | 🚧 In progress | AES-GCM/PBKDF2 service worker actief; Dexie sync-snapshots gebruiken dezelfde passphrase (met lock-fallback) en het dashboard biedt een passphrasebeheer UI. IndexedDB-audit afgerond (geen chat-egress); volgende stap: netwerkmonitoring automatiseren en statusnotificaties toevoegen. |
 | 6 | Intelligence & insights | 💤 Planned | Geen automatische analyses of aanbevelingen buiten huidige datacaptatie. |
 | 7 | Platform extensibility | 💤 Planned | Side-panel integraties en externe API hooks nog niet gespecificeerd. |
 | 8 | Quality & growth | 💤 Planned | Telemetry storage, observability en lokalisatie scorecards moeten nog worden opgezet. |
@@ -47,7 +47,7 @@ _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.
 - Contextmenu focusbeheer verbeteren (focus trap + refocus van het origineel) en documenteren in de accessibility playbook.
-- **Privacy & sync** – _Status: delegatie in uitvoering._ AES-GCM/PBKDF2 encryptieservice draait in de background worker en Dexie sync-snapshots gebruiken dezelfde passphrase (fallback naar lokale sleutel wanneer uitgeschakeld). IndexedDB-audit (DevTools Network/Application + code-scan) afgerond; komende iteratie levert passphrasebeheer in opties/onboarding en onderzoekt automatisering van netwerkbewaking.
+- **Privacy & sync** – _Status: delegatie in uitvoering._ AES-GCM/PBKDF2 encryptieservice draait in de background worker en Dexie sync-snapshots gebruiken dezelfde passphrase (fallback naar lokale sleutel wanneer uitgeschakeld). Dashboard bevat nu passphrasebeheer (statusbadges, lock/unlock). Volgende iteratie automatiseert netwerkbewaking in het testrunbook en onderzoekt UI-notificaties voor statuswijzigingen + onboarding-flows.
 
 ### Toekomstige thema’s (Phases 4–8)
 Documenteer outstanding design/ADR links voordat ontwikkeling start. Maak nieuwe ADR’s alleen aan wanneer implementatie committers klaarstaan, zodat contributors scope kunnen traceren zonder te gissen.

@@ -93,6 +93,13 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 3. Open the **Preview voice overlay**, check that focus stays trapped inside, and close it with both the confirm button and `Escape`.
 4. Launch the **Learn about modals** dialog and confirm focus returns to the trigger after closing.
 
+### 3.6 Passphrase & sync encryptie
+1. Open de sectie **Wachtwoordzin & sync-encryptie** in het dashboard. Controleer dat de statusbadge “Nog niet ingesteld” toont bij een schone installatie en dat PBKDF2-iteraties zichtbaar worden zodra een passphrase is opgeslagen.
+2. Vul een nieuwe wachtwoordzin van minimaal 8 tekens in, bevestig deze en klik op **Wachtwoordzin opslaan**. Verwacht een groene bevestigingstekst, een badge “Ingesteld · Ontgrendeld” en een iteratiewaarde.
+3. Klik op **Nu vergrendelen** en bevestig via de badge dat de status naar “Ingesteld · Vergrendeld” wisselt. Controleer in de background console dat snapshot-mutaties een lock-fout loggen zolang de sleutel niet is ontgrendeld.
+4. Vul dezelfde wachtwoordzin in het ontgrendelformulier in en klik op **Ontgrendelen**. Controleer dat de badge terugkeert naar “Ingesteld · Ontgrendeld” en dat je Dexie-acties weer zonder foutmeldingen kunt uitvoeren.
+5. Test een foutscenario door een verkeerde wachtwoordzin in te voeren; er moet een rode foutmelding verschijnen zonder statuswijziging. Reset daarna eventueel met de juiste wachtwoordzin.
+
 ## 4. Content sidebar & context workflows
 1. Open an active conversation and toggle the dock with `Alt+Shift+K`; verify the chosen bubble stays active.
 2. In the **History** bubble:

@@ -4,6 +4,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
 import { GuideResourcesCard } from './features/infoAndUpdates/GuideResourcesCard';
+import { EncryptionSection } from './features/privacy/EncryptionSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import { useHistoryStore } from './features/history/historyStore';
 import type { JobSnapshot } from '@/core/models';
@@ -34,7 +35,7 @@ const featureColumns = [
   },
   {
     title: 'Audio & Sync',
-    items: ['Audio download', 'Advanced voice mode', 'Voice options', 'Cross-device sync']
+    items: ['Audio download', 'Advanced voice mode', 'Voice options', 'Cross-device sync', 'Passphrase lock']
   }
 ];
 
@@ -497,6 +498,7 @@ export function Options() {
         </section>
 
         <GuideResourcesCard />
+        <EncryptionSection />
         <HistorySection />
         <PromptsSection />
         <MediaSection />
