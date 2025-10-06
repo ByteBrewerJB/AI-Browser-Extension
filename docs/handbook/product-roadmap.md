@@ -25,6 +25,7 @@ This living document combines the architectural snapshot, delivery status, and p
 - **Export pipeline** – TXT/JSON exports gebruiken client-side helpers; de background handler maakt bestanden aan en start automatisch een `chrome.downloads.download` zodra de job slaagt.
 - **Authenticatie** – `AuthManager` decodeert JWT’s lokaal, deriveert premiumstatus en ondersteunt optionele JWKS caching. Signatuurvalidatie en refreshflows zijn nog niet geïmplementeerd.
 - **Sync encryptie** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en verzorgt encrypt/decrypt messaging. Dexie sync-snapshots delegeren naar deze service en vallen terug op lokale opslag wanneer passphrase-sync uitstaat. Dashboard bevat nu een passphrasepaneel (2025-10-11) met statusbadges en PBKDF2-iteraties; IndexedDB-audit (2025-10-10) bevestigde dat conversaties enkel lokaal opgeslagen worden en geen netwerkegress hebben. Volgende stap is geautomatiseerde netwerkmonitoring + notificaties bij statuswijzigingen.
+- **Themasysteem** – Gemeenschappelijke CSS-variabelen voor light/dark/high-contrast sturen popup, options en content aan. Settings-store bewaart een `theme`-voorkeur (incl. systeemmodus) en een theme-manager luistert naar `prefers-color-scheme`/`prefers-contrast` zodat surfaces automatisch omschakelen. Tailwind gebruikt dezelfde tokens voor verdere componentmigraties.
 
 ## Delivery phases
 
