@@ -1,6 +1,6 @@
 # AI Browser Extension — Architecture & Delivery Roadmap
 
-_Last updated: 2025-10-09_
+_Last updated: 2025-10-14_
 
 This living document combines the architectural snapshot, delivery status, and premium launch planning for the AI Browser Extension. Update it whenever shipped functionality or priorities change so contributors have a single source of truth.
 
@@ -25,7 +25,7 @@ This living document combines the architectural snapshot, delivery status, and p
 - **Export pipeline** – TXT/JSON exports gebruiken client-side helpers; de background handler maakt bestanden aan en start automatisch een `chrome.downloads.download` zodra de job slaagt.
 - **Authenticatie** – `AuthManager` decodeert JWT’s lokaal, deriveert premiumstatus en ondersteunt optionele JWKS caching. Signatuurvalidatie en refreshflows zijn nog niet geïmplementeerd.
 - **Sync encryptie** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en verzorgt encrypt/decrypt messaging. Dexie sync-snapshots delegeren naar deze service en vallen terug op lokale opslag wanneer passphrase-sync uitstaat. Dashboard bevat nu een passphrasepaneel (2025-10-11) met statusbadges en PBKDF2-iteraties; IndexedDB-audit (2025-10-10) bevestigde dat conversaties enkel lokaal opgeslagen worden en geen netwerkegress hebben. Volgende stap is geautomatiseerde netwerkmonitoring + notificaties bij statuswijzigingen.
-- **Themasysteem** – Gemeenschappelijke CSS-variabelen voor light/dark/high-contrast sturen popup, options en content aan. Settings-store bewaart een `theme`-voorkeur (incl. systeemmodus) en een theme-manager luistert naar `prefers-color-scheme`/`prefers-contrast` zodat surfaces automatisch omschakelen. Tailwind gebruikt dezelfde tokens voor verdere componentmigraties.
+- **Themasysteem** – Gemeenschappelijke CSS-variabelen voor light/dark/high-contrast sturen popup, options en content aan. Settings-store bewaart een `theme`-voorkeur (incl. systeemmodus) en een theme-manager luistert naar `prefers-color-scheme`/`prefers-contrast` zodat surfaces automatisch omschakelen. Tailwind gebruikt dezelfde tokens voor verdere componentmigraties en per 2025-10-14 is RTL voor popup/options/content handmatig gesmoke-test (layout gespiegeld, focusvolgorde intact); volgende stap is de persistente locale-switcher afronden.
 
 ## Delivery phases
 
@@ -34,7 +34,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 0 | MV3 foundation | ✅ Delivered | Manifest, Vite/CRX build, shared Tailwind tokens, lint/build automation. |
 | 1 | Conversation capture | ✅ Delivered | DOM scanner, Dexie schema, live counters. |
 | 2 | Workspace management | ✅ Delivered | Popup cards, dashboard filters, folders, prompt/GPT CRUD, i18n/RTL. |
-| 3 | Productivity automation | 🚧 In progress | Job queue + export handlers live; search durability en extra UI polish volgen. |
+| 3 | Productivity automation | 🚧 In progress | Job queue + export handlers live; search durability en extra UI polish volgen. RTL-smoketests voor popup/options/content zijn voltooid – i18n-roadmap kan doorgaan met locale-switcher implementatie. |
 | 4 | Audio tooling | 💤 Planned | Geen echte audio-opname of playback pipelines; media-instellingen zijn placeholders. |
 | 5 | Sync & collaboration | 🚧 In progress | AES-GCM/PBKDF2 service worker actief; Dexie sync-snapshots gebruiken dezelfde passphrase (met lock-fallback) en het dashboard biedt een passphrasebeheer UI. IndexedDB-audit afgerond (geen chat-egress); volgende stap: netwerkmonitoring automatiseren en statusnotificaties toevoegen. |
 | 6 | Intelligence & insights | 💤 Planned | Geen automatische analyses of aanbevelingen buiten huidige datacaptatie. |

@@ -54,7 +54,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
  - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
 - **Theming & i18n**
   - [x] CSS variabelen voor light/dark/high-contrast invoeren. _(afgerond 2025-10-13 – globale themavariabelen, Tailwind tokens en theme-manager toegevoegd; settings-store bewaart nu voorkeur en surfaces luisteren naar systeemcontrast/kleuren.)_
-  - [ ] RTL smoketests uitvoeren in content, popup en options.
+  - [x] RTL smoketests uitvoeren in content, popup en options. _(afgerond 2025-10-14 – alle surfaces gespiegeld, typografie/uitlijning gecontroleerd, notificatiebanners en modals getest op focusvolgorde en iconografie.)_
   - [ ] Locale switcher koppelen aan instellingenstore met persistente voorkeur.
 
 ## Volgende stappen
@@ -110,6 +110,11 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Gemeenschappelijke thematokens zorgen dat popup, opties en content dezelfde kleuren, focusringen en contrasten delen en automatisch meebewegen met systeeminstellingen. Dit opent de weg voor een UI-selector en RTL smoketests zonder per surface afwijkende stijlen.
    - **Documentatie** – Themalagen toegevoegd in `src/styles/global.css`, Tailwind uitgebreid (`tailwind.config.js`), theme-manager en voorkeurstypes toegevoegd (`src/shared/theme/*`), instellingenstore aangepast en testdekking opgezet (`tests/shared/theme/themePreference.spec.ts`). Dit retrofitlog, de roadmap en de regressiegids beschrijven nu thema-coverage en QA-stappen.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in Chrome DevTools → Rendering `Emulate CSS prefers-color-scheme` (Light/Dark) én `Emulate CSS prefers-contrast: more` activeren; verifiëren dat `<html data-theme>` meewisselt, achtergronden/tekstcontrast aanpassen en focusringen zichtbaar blijven. Bevindingen loggen in de regressiegids.
+
+14. [x] RTL smoketests uitvoeren in content, popup en options. _(afgerond 2025-10-14)_
+   - **Prioritering** – RTL-ondersteuning was de laatste blocker voor de theming-iteratie: alle surfaces delen nu dezelfde directionele tokens, mirrored layout en componenten zonder clipping zodat we richting locale-switcher en verdere i18n-validatie kunnen gaan.
+   - **Documentatie** – Retrofitlog (dit bestand) uitgebreid met bevindingen; roadmap (`docs/handbook/product-roadmap.md`) bijgewerkt zodat Phase 3 “Workspace management” RTL-pariteit claimt; regressiegids (`docs/handbook/manual-regression-checklist.md`) bevat nu een dediceerde RTL-smoketestsectie met scenario’s per surface.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: popup, opties-dashboard en content-sidebar in zowel `chat.openai.com` als `chatgpt.com` naar RTL geschakeld; tabs, badges, buttons en modals op focusvalidering getest; contextmenuknoppen en chain-confirmatiemodal gecontroleerd op correcte uitlijning, iconen en toetsnavigatie. Bevindingen gelogd in regressiegids en logboek.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -175,5 +180,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-10 | _pending_ | Privacy | IndexedDB audit uitgevoerd (codebase gescand op netwerkoproepen, DevTools Network/Application gecontroleerd), regressiegids aangevuld met stappen voor egress-monitoring en roadmap geactualiseerd; automatische scans (`rg`) gelogd en handmatige resultaten vastgelegd. |
 | 2025-10-11 | _pending_ | Options | Passphrasebeheer UI toegevoegd (`src/options/features/privacy/EncryptionSection.tsx`), messaging-client + tests (`src/shared/messaging/syncEncryptionClient.ts`, `tests/shared/syncEncryptionClient.spec.ts`) en i18n-updates geleverd; lint/test/build gedraaid en handmatige dashboardflow gedocumenteerd in regressiegids. |
 | 2025-10-13 | _pending_ | Theming | CSS-tokens voor light/dark/high-contrast uitgerold (`src/styles/global.css`, `tailwind.config.js`, `src/shared/theme/*`), settings-store uitgebreid met `theme`, themawatcher gebonden aan alle surfaces en nieuwe Vitest-dekking toegevoegd. `npm run lint`, `npm run test`, `npm run build` gedraaid; DevTools-emulatie voor kleur/contrast in regressiegids vastgelegd. |
+| 2025-10-14 | _pending_ | Theming & i18n | RTL smoketest uitgevoerd op popup, options en content (Chrome/Edge op `chat.openai.com` + `chatgpt.com`); layout, iconen, toasts en modals gespiegeld, toetsenbordnavigatie gevalideerd. Roadmap, regressiegids en tracker geüpdatet; `npm run lint`, `npm run test`, `npm run build` gerund. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
