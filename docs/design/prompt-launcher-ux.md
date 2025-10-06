@@ -1,12 +1,12 @@
 # Prompt launcher — keyboard-first UX spec
 
-_Last updated: 2025-02-18_
+_Last updated: 2025-10-05_
 
 ## Context
 The launcher currently exposes saved prompts and prompt chains inside the composer. The retrofit roadmap promotes it to the
 primary entry point for reusable workflows, which means the interaction model must be extremely quick, reliable, and
-accessible. This document captures the keyboard-first experience, fuzzy search behaviours, and instrumentation required before
-we wire the flows into the shared composer store.
+accessible. This document captures the keyboard-first experience, fuzzy search behaviours, the new chain DSL tokeniser located
+in `src/core/chains/chainDslParser.ts`, and instrumentation required before we wire the flows into the shared composer store.
 
 ## Goals
 - Reduce time-to-insert for prompts/chains to <50 ms after invocation.
@@ -17,7 +17,9 @@ we wire the flows into the shared composer store.
 ## Non-goals
 - Implementing the Dexie persistence layer (already covered by existing prompt/chains storage).
 - Surfacing marketplace/community prompts (handled in a later plus roadmap phase).
-- Shipping the chain DSL interpreter (separate spike; launcher only references the registered chains).
+- Shipping the chain DSL interpreter (separate spike; launcher only references the registered chains). The initial parser now
+  normalises placeholders (`{{variable}}`) and step-output tokens (`[[step.output]]`), enabling the confirmation modal to
+  request the right inputs while renderer logic remains stubbed.
 
 ## Personas & user stories
 1. **Power user** drafting dozens of messages per hour. They expect `Ctrl+Space` (or `⌘+K` on macOS) to open a launcher, type

@@ -1,6 +1,6 @@
 # Retrofit tracker
 
-_Last reviewed: 2025-02-17_
+_Last reviewed: 2025-10-05_
 
 Dit dossier koppelt de bestaande extensie aan de nieuwe **privacy-first, local-first** roadmap. Gebruik het om pariteit met ChatGPT Toolbox te meten, plus-features te plannen en QA/retrofit-besluiten te loggen. Synchroniseer wijzigingen steeds met [`docs/handbook/product-roadmap.md`](./product-roadmap.md), de regressiegids en relevante ADR's.
 
@@ -45,7 +45,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [x] UI-wireframes voor zijbalk pin/hide/collapse flows uitwerken.
 - **Launcher ervaring**
   - [ ] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen.
-  - [ ] Chain DSL parser (placeholders, [[step.output]]) prototypen.
+  - [x] Chain DSL parser (placeholders, [[step.output]]) prototypen. _(afgerond 2025-10-05 – parsermodule + evaluatiehooks toegevoegd.)_
   - [ ] Inline triggers `//` en `..` integreren met bestaande composer store.
 - **Privacy & sync voorbereiding**
   - [ ] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
@@ -72,7 +72,11 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 4. [x] Promptlauncher UX (keyboard-first) definiëren; fuzzy search testen. _(afgerond 2025-02-18)_
    - **Prioritering** – Launcher wordt primaire toegang tot prompts/chains; keyboard-first specificatie borgt <50 ms inserties en maakt de weg vrij voor DSL-integratie. Volgende stap is chain-parserprototype koppelen aan deze UX en shortcuts configureerbaar maken via settings.
    - **Documentatie** – Nieuwe UX-notitie `docs/design/prompt-launcher-ux.md`; roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) geüpdatet met nieuwe scope en QA-stappen.
-   - **QA-notes** – Geautomatiseerd: te plannen Vitest-suite voor searchpipeline en keyboardreducer. Handmatig: heuristische toetsing uitgevoerd (keyboard-only flow, inline `//` trigger, RTL layout) en QA-checklist aangevuld met verificatiestappen voor Chrome/Firefox.
+ - **QA-notes** – Geautomatiseerd: te plannen Vitest-suite voor searchpipeline en keyboardreducer. Handmatig: heuristische toetsing uitgevoerd (keyboard-only flow, inline `//` trigger, RTL layout) en QA-checklist aangevuld met verificatiestappen voor Chrome/Firefox.
+5. [x] Chain DSL parser (placeholders, `[[step.output]]`) prototypen. _(afgerond 2025-10-05)_
+   - **Prioritering** – Parser levert nu een token-stream + evaluatiehooks zodat launcher-confirmaties variabelen en step-outputreferenties kunnen resolven. Volgende stap is integratie met de composer store en async step-runner zodat `[[step.output]]` automatisch live-data invult.
+   - **Documentatie** – Nieuwe module `src/core/chains/chainDslParser.ts`, testsuite `tests/core/chainDslParser.spec.ts`, retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`), UX-spec (`docs/design/prompt-launcher-ux.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: scenario voor placeholder/step-output validatie beschreven in regressiegids; uitvoering volgt zodra launcher-confirmatie de parser consumeert.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -130,5 +134,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-02-16 | _pending_ | Search | MiniSearch verrijkt met tags en mappaden; nieuwe tests + 10k benchmark (build 1.495 s, query 3.067 ms) gedraaid naast lint/test. |
 | 2025-02-17 | _pending_ | UX | Zijbalk pin/hide/collapse wireframes vastgelegd; QA-aanwijzingen toegevoegd en designnotitie gepubliceerd. |
 | 2025-02-18 | _pending_ | UX | Promptlauncher keyboard-first UX en fuzzy search gedrag gespecificeerd; roadmap + regressiegids gesynchroniseerd; heuristische toetsen uitgevoerd. |
+| 2025-10-05 | _pending_ | Core | Chain DSL-parser + renderer prototype toegevoegd (`src/core/chains/chainDslParser.ts`), nieuwe tests gedraaid en lint/test/build uitgevoerd; QA-checklist aangevuld met placeholder/step-output scenario. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
