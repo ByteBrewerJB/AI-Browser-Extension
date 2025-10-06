@@ -1,6 +1,6 @@
 # Manual regression checklist
 
-_Last reviewed: 2025-02-18_
+_Last reviewed: 2025-10-05_
 
 Use this guide for every release candidate that touches the popup, dashboard/options experience, content sidebar, or storage logic. Log each run (browser, domain, commit) in the retrofit log at [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) so we preserve traceability.
 
@@ -113,8 +113,9 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 3. Navigate the results list using only the keyboard (`ArrowUp/Down`, `Ctrl+/` scope cycling) and insert a prompt with `Enter`; confirm highlighted tokens reflect the fuzzy search match.
 4. Type `//` in the composer to trigger the inline launcher. Confirm it anchors near the caret, honours the same keyboard controls, and restores focus to the composer after closing with `Esc`.
 5. Select a prompt chain, supply variable values in the confirmation modal, start the run, then cancel with `Esc` to ensure rollback messaging appears.
-6. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
-7. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
+6. Insert a prompt that references `{{variable}}` placeholders and `[[step.output]]` tokens; confirm the confirmation modal surfaces the variables, fills resolved step output text, and displays a warning when a referenced step output is missing.
+7. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
+8. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
 
 ## 6. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.
