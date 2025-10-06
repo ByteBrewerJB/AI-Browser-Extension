@@ -117,7 +117,9 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 7. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
 8. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
 
-## 6. Privacy & sync encryptieproof-of-concept
+## 6. Privacy & sync verificatie
+
+### 6.1 Encryptieservice
 1. Open `chrome://extensions` → background service worker console en voer `chrome.runtime.sendMessage({ type: 'sync/encryption-configure', payload: { passphrase: 'Manual QA secret 01' } })` uit. Verwacht `{ status: 'configured' }` en een bevestigde status via `chrome.runtime.sendMessage({ type: 'sync/encryption-status', payload: {} })` met `configured: true` en `unlocked: true`.
 2. Vraag een encryptie aan met `chrome.runtime.sendMessage({ type: 'sync/encryption-encrypt', payload: { plaintext: 'QA roundtrip' } })`. Noteer het ontvangen `envelope` object en valideer dat `status: 'ok'` is.
 3. Voer `chrome.runtime.sendMessage({ type: 'sync/encryption-lock', payload: {} })` uit en bevestig via `sync/encryption-status` dat `unlocked: false`.
@@ -126,6 +128,13 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 6. Test een foutscenario door `sync/encryption-unlock` met een fout wachtwoord aan te roepen; verwacht `{ status: 'invalid' }`. Sluit af met `sync/encryption-lock` en log de console-uitvoer in het retrofitlog.
 7. Ontgrendel opnieuw en laat de extensie een snapshot schrijven (bijv. verplaats een gesprek); voer daarna `await chrome.storage.sync.get('ai-companion:snapshot:v2')` uit in de background console. Controleer dat het object `mode: 'delegated'` bevat en dat de `data`-payload base64-gecodeerd is.
 8. Activeer `sync/encryption-lock` en herhaal dezelfde Dexie-actie. Verwacht een `SyncSnapshotLockedError` in de background console en noteer de melding in het retrofitlog voordat je opnieuw ontgrendelt.
+
+### 6.2 IndexedDB egress-audit
+1. Open een ChatGPT-tab met de extensie actief en start Chrome DevTools (`Ctrl+Shift+I`). Ga naar het **Network**-paneel, selecteer `Fetch/XHR` en schakel **Preserve log** in.
+2. Klik op het filterveld en voer `conversation` in. Wis de huidige log (`⟲` icoon) voordat je acties uitvoert.
+3. Voer de volgende acties uit terwijl je het netwerk observeert: stuur een nieuw bericht, verplaats een gesprek naar een andere map via de sidebar en start de promptlauncher met `//` gevolgd door het inserten van een prompt. Controleer dat er geen requests naar externe hosts verschijnen met payloads die de volledige chatinhoud bevatten; de enige requests mogen first-party ChatGPT API’s of `chrome-extension://` protocollen zijn.
+4. Inspecteer willekeurige verzoeken uit de lijst door op **Headers** → **Request payload** te klikken. Valideer dat teksten uit het gesprek niet naar niet-OpenAI hosts worden verzonden en dat extension-requests enkel metadata (bijv. ids, flags) bevatten.
+5. Ga naar het **Application**-paneel → **IndexedDB** en bevestig dat de tabellen `conversations`, `messages`, `folders` en `folder_items` data bevatten. Controleer onder **Storage** → **chrome.storage.sync** dat snapshotdata versleuteld (`mode: 'delegated'` + base64 `data`) of leeg is. Documenteer eventuele afwijkingen in het retrofitlog.
 
 ## 7. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.

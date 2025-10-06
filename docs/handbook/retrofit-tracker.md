@@ -49,7 +49,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [x] Inline triggers `//` en `..` integreren met bestaande composer store. _(afgerond 2025-10-06 – triggers ruimen inline tokens op, vullen promptfilter en openen ketenpaneel via composer store.)_
 - **Privacy & sync voorbereiding**
   - [x] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
-  - [ ] IndexedDB audit: bevestig geen network egress van chatinhoud.
+  - [x] IndexedDB audit: bevestig geen network egress van chatinhoud. _(afgerond 2025-10-10 – codebase gescand op fetch/beacon calls met chatpayloads; DevTools-netwerkstappen gedocumenteerd en regressiegids aangevuld.)_
   - [x] Documenteer verificatiestappen voor QA (DevTools Application/Network).
   - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
 - **Theming & i18n**
@@ -94,6 +94,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Storage-service detecteert nu of de passphrase geconfigureerd en ontgrendeld is; snapshots worden gedelegeerd naar de background encryptieservice en vallen terug op de lokale sleutel wanneer sync uit staat. Een lock blokkeert mutaties met een expliciete fout zodat passphrasebeheer in UI de volgende prioriteit is.
    - **Documentatie** – `src/core/storage/service.ts`, `src/core/storage/syncBridge.ts`, roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt met de delegatieflow en QA-stappen. Retrofitlog (dit bestand) en logboek aangevuld.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in de background console `chrome.storage.sync.get('ai-companion:snapshot:v2')` controleren op `mode: 'delegated'`, encryptie locken en bevestigen dat snapshot-updates een `SyncSnapshotLockedError` loggen; bevindingen vastleggen in regressiegids/logboek.
+10. [x] IndexedDB audit afronden en netwerkegress controleren. _(afgerond 2025-10-10)_
+   - **Prioritering** – Bevestigt het privacy-principe dat chats lokaal blijven; door code-audit + DevTools validatie weten we zeker dat komende sync-functies niet vertrekken van een onveilige basis. Volgende stap is UI voor passphrasebeheer en het automatiseren van netwerkmonitoring in de testharnas.
+   - **Documentatie** – Retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`), regressiegids (`docs/handbook/manual-regression-checklist.md`) en privacy-notities in `docs/handbook/product-roadmap.md` bijgewerkt met auditbevindingen en expliciete QA-stappen.
+   - **QA-notes** – Geautomatiseerd: statische scan via `rg` op `fetch(`, `XMLHttpRequest` en `sendBeacon` (geen nieuwe oproepen buiten de guides-asset). Handmatig: DevTools Network-tab met `Fetch/XHR`-filter en zoekterm `conversation`/`prompt`; tijdens CRUD en launcherflows verschenen geen POST/PUT requests met chatinhoud, enkel `chrome`-extensieroutes en ChatGPT-first-party calls. Application-tab bevestigde dat `AICompanionDB` alle conversatiegegevens bevat en dat `chrome.storage.sync` geen platte tekst opslaat.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -156,5 +160,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-07 | _pending_ | Content | Chain-confirmatiemodal toegevoegd met parserbinding en run-plan export (`textareaPrompts.ts`, `shared/types/promptChains.ts`, `chainRunner.ts`); roadmap en regressiegids geüpdatet; lint/test/build uitgevoerd en handmatig modal-flow geverifieerd. |
 | 2025-10-08 | _pending_ | Background | AES-GCM encryptie POC toegevoegd (`src/background/crypto/syncEncryption.ts`) met messaging-routes en tests (`tests/background/syncEncryptionService.spec.ts`); lint/test/build gedraaid en handmatige consoleflow beschreven in regressiegids. |
 | 2025-10-09 | _pending_ | Storage | Dexie sync-snapshot encryptie gedelegeerd naar passphrase-service (`src/core/storage/service.ts`, `syncBridge.ts`), fallback/logging toegevoegd en regressiegids/roadmap bijgewerkt; `npm run lint`, `npm run test`, `npm run build` gedraaid. |
+| 2025-10-10 | _pending_ | Privacy | IndexedDB audit uitgevoerd (codebase gescand op netwerkoproepen, DevTools Network/Application gecontroleerd), regressiegids aangevuld met stappen voor egress-monitoring en roadmap geactualiseerd; automatische scans (`rg`) gelogd en handmatige resultaten vastgelegd. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
