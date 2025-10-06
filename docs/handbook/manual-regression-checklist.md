@@ -29,6 +29,20 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
    - Zet **Emulate CSS prefers-contrast** op `more`; verwacht `data-theme="high-contrast"`, zwarte achtergronden, witte tekst en een cyaan focusring. Doorloop met `Tab` een paar knoppen/links om de focusring te verifiëren.
 2. Reset beide emulatie-instellingen naar `No emulation` voordat je doorgaat met de volgende secties.
 
+## 1.2 RTL smoketests (popup, dashboard, content)
+1. **Popup**
+   - Open de popup op zowel `https://chat.openai.com` als `https://chatgpt.com`.
+   - Gebruik de taal-/richtingstoggle om naar RTL te schakelen en controleer dat header, kaarten en lijsten spiegelen zonder overlappende tekst of afgeknotte badges.
+   - Loop met `Tab` door de interactieve elementen; focusvolgorde moet logisch blijven en toasts/notificaties moeten rechts uitlijnen met iconen links gespiegeld.
+2. **Dashboard/options**
+   - Navigeer naar `chrome-extension://<id>/options.html`, activeer RTL en vernieuw de pagina.
+   - Controleer dat navigatietabs, tabelkolommen en formulierelementen rechts uitlijnen en dat modals (bijv. prompt chain confirmatie, voice preview) spiegeling + focustrap behouden.
+   - Verifieer dat melding banners en statusbadges de juiste hoek afronden en dat buttons nog steeds leesbare iconen hebben.
+3. **Content sidebar**
+   - Open een gesprek, schakel de sidebar in en activeer de richtingstoggle tot RTL.
+   - Inspecteer History/Actions/Guides bubbels: boomstructuren moeten van rechts naar links openen en contextmenu’s naast de selectie verschijnen zonder het bericht te overlappen.
+   - Start de chain-confirmatiemodal via `..` en controleer dat invoervelden rechts uitlijnen, validatieteksten op de juiste kant staan en dat `Esc` focus teruggeeft aan de composer.
+
 ## 2. Popup regression (repeat on both domains)
 1. Confirm the extension icon is active when a chat tab is focused.
 2. Open the popup and verify the header shows the product title, tagline, and auth status (`Premium features unlocked`, `Signed in (free tier)`, or `Offline mode`).
