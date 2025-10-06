@@ -1,4 +1,10 @@
 import type { AuthManager } from './auth';
+import type { SyncEncryptionService } from './crypto/syncEncryption';
+import {
+  SyncEncryptionInvalidPassphraseError,
+  SyncEncryptionLockedError,
+  SyncEncryptionNotConfiguredError
+} from './crypto/syncEncryption';
 import type { JobScheduler } from './jobs/scheduler';
 import { listJobs } from './jobs/queue';
 import type { JobRecord, JobSnapshot, JobStatus } from '@/core/models';
@@ -8,6 +14,7 @@ import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
 export interface MessagingDependencies {
   auth: AuthManager;
   scheduler: JobScheduler;
+  encryption: SyncEncryptionService;
 }
 
 export function initializeMessaging(deps: MessagingDependencies) {
@@ -75,6 +82,66 @@ export function initializeMessaging(deps: MessagingDependencies) {
       jobs: trimmed.map((job) => toSnapshot(job)),
       fetchedAt: new Date().toISOString()
     };
+  });
+
+  router.register('sync/encryption-status', async () => deps.encryption.getStatus());
+
+  router.register('sync/encryption-configure', async ({ passphrase }) => {
+    await deps.encryption.configure({ passphrase });
+    return { status: 'configured' } as const;
+  });
+
+  router.register('sync/encryption-unlock', async ({ passphrase }) => {
+    try {
+      await deps.encryption.unlock({ passphrase });
+      return { status: 'unlocked' } as const;
+    } catch (error) {
+      if (error instanceof SyncEncryptionNotConfiguredError) {
+        return { status: 'not_configured' } as const;
+      }
+      if (error instanceof SyncEncryptionInvalidPassphraseError) {
+        return { status: 'invalid' } as const;
+      }
+      throw error;
+    }
+  });
+
+  router.register('sync/encryption-lock', async () => {
+    deps.encryption.lock();
+    return { status: 'locked' } as const;
+  });
+
+  router.register('sync/encryption-encrypt', async ({ plaintext }) => {
+    try {
+      const envelope = await deps.encryption.encryptString({ plaintext });
+      return { status: 'ok', envelope } as const;
+    } catch (error) {
+      if (error instanceof SyncEncryptionLockedError) {
+        return { status: 'locked' } as const;
+      }
+      if (error instanceof SyncEncryptionNotConfiguredError) {
+        return { status: 'not_configured' } as const;
+      }
+      throw error;
+    }
+  });
+
+  router.register('sync/encryption-decrypt', async ({ envelope }) => {
+    try {
+      const plaintext = await deps.encryption.decryptToString(envelope);
+      return { status: 'ok', plaintext } as const;
+    } catch (error) {
+      if (error instanceof SyncEncryptionLockedError) {
+        return { status: 'locked' } as const;
+      }
+      if (error instanceof SyncEncryptionInvalidPassphraseError) {
+        return { status: 'invalid' } as const;
+      }
+      if (error instanceof SyncEncryptionNotConfiguredError) {
+        return { status: 'not_configured' } as const;
+      }
+      throw error;
+    }
   });
 
   router.attach();

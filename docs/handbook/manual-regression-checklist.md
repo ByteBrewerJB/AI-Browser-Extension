@@ -1,6 +1,6 @@
 # Manual regression checklist
 
-_Last reviewed: 2025-10-05_
+_Last reviewed: 2025-10-08_
 
 Use this guide for every release candidate that touches the popup, dashboard/options experience, content sidebar, or storage logic. Log each run (browser, domain, commit) in the retrofit log at [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) so we preserve traceability.
 
@@ -117,7 +117,15 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 7. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
 8. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
 
-## 6. Completion & logging
+## 6. Privacy & sync encryptieproof-of-concept
+1. Open `chrome://extensions` → background service worker console en voer `chrome.runtime.sendMessage({ type: 'sync/encryption-configure', payload: { passphrase: 'Manual QA secret 01' } })` uit. Verwacht `{ status: 'configured' }` en een bevestigde status via `chrome.runtime.sendMessage({ type: 'sync/encryption-status', payload: {} })` met `configured: true` en `unlocked: true`.
+2. Vraag een encryptie aan met `chrome.runtime.sendMessage({ type: 'sync/encryption-encrypt', payload: { plaintext: 'QA roundtrip' } })`. Noteer het ontvangen `envelope` object en valideer dat `status: 'ok'` is.
+3. Voer `chrome.runtime.sendMessage({ type: 'sync/encryption-lock', payload: {} })` uit en bevestig via `sync/encryption-status` dat `unlocked: false`.
+4. Probeer het opgeslagen `envelope` te decrypten terwijl het slot actief is (`sync/encryption-decrypt`). Verwacht een `{ status: 'locked' }` antwoord.
+5. Ontgrendel met dezelfde passphrase (`sync/encryption-unlock`) en herhaal de decryptie. Het resultaat moet `{ status: 'ok', plaintext: 'QA roundtrip' }` opleveren.
+6. Test een foutscenario door `sync/encryption-unlock` met een fout wachtwoord aan te roepen; verwacht `{ status: 'invalid' }`. Sluit af met `sync/encryption-lock` en log de console-uitvoer in het retrofitlog.
+
+## 7. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.
 2. Attach relevant console logs or screenshots to the shared QA archive, referencing them from the log entry.
 
