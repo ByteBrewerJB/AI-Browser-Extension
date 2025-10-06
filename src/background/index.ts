@@ -4,6 +4,8 @@ import { createSyncEncryptionService } from './crypto/syncEncryption';
 import { createEventLoggerJobHandler } from './jobs/eventLogger';
 import { createJobScheduler } from './jobs/scheduler';
 import { initializeMessaging } from './messaging';
+import { createEncryptionStatusNotifier } from './monitoring/encryptionNotifier';
+import { createNetworkMonitor } from './monitoring/networkMonitor';
 import { sendTabMessage } from '@/shared/messaging/router';
 
 const authManager = createAuthManager();
@@ -13,6 +15,20 @@ const jobScheduler = createJobScheduler({
   }
 });
 const syncEncryption = createSyncEncryptionService();
+const networkMonitor = createNetworkMonitor({
+  allowedHosts: ['chat.openai.com', 'chatgpt.com'],
+  onIncident(incident) {
+    console.warn('[ai-companion] network monitor detected incident', incident);
+  }
+});
+
+networkMonitor.install();
+
+createEncryptionStatusNotifier(syncEncryption, {
+  onChange(change) {
+    console.info('[ai-companion] sync encryption status changed', change.reason, change.status);
+  }
+});
 
 authManager.initialize().catch((error) => {
   console.warn('[ai-companion] failed to initialize auth manager', error);
@@ -23,7 +39,7 @@ jobScheduler.registerHandler('event', createEventLoggerJobHandler());
 
 jobScheduler.start();
 
-initializeMessaging({ auth: authManager, scheduler: jobScheduler, encryption: syncEncryption });
+initializeMessaging({ auth: authManager, scheduler: jobScheduler, encryption: syncEncryption, monitor: networkMonitor });
 
 function setupContextMenus() {
   chrome.contextMenus.create({

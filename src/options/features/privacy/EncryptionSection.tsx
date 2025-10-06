@@ -8,6 +8,7 @@ import {
   unlockSyncEncryption
 } from '@/shared/messaging/syncEncryptionClient';
 import type { SyncEncryptionStatus } from '@/shared/types/syncEncryption';
+import { EncryptionStatusNotifications } from './EncryptionStatusNotifications';
 
 type StatusBadge = {
   label: string;
@@ -298,6 +299,8 @@ export function EncryptionSection() {
           ) : null}
         </div>
       </header>
+
+      <EncryptionStatusNotifications />
 
       {statusError ? <p className="mb-3 text-xs text-rose-400">{statusError}</p> : null}
 

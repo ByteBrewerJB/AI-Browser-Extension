@@ -9,6 +9,7 @@ async function runSequentially() {
   await import('./core/chainDslParser.spec');
   await import('./backgroundMessaging.spec');
   await import('./background/syncEncryptionService.spec');
+  await import('./background/networkMonitor.spec');
   await import('./shared/bubbleLauncherStore.spec');
   await import('./shared/syncEncryptionClient.spec');
 }

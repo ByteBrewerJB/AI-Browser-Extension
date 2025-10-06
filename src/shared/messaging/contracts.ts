@@ -1,5 +1,6 @@
 import type { JobSnapshot, JobStatus } from '@/core/models';
 import type { ChainRunPlan } from '@/shared/types/promptChains';
+import type { NetworkMonitorIncident } from '@/shared/types/monitoring';
 import type { SyncEncryptionEnvelope, SyncEncryptionStatus } from '@/shared/types/syncEncryption';
 
 export interface MessageSchema {
@@ -100,6 +101,10 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
       | { status: 'locked' }
       | { status: 'invalid' }
       | { status: 'not_configured' };
+  };
+  'monitoring/network-incidents': {
+    request: Record<string, never>;
+    response: { incidents: NetworkMonitorIncident[]; fetchedAt: string };
   };
 }
 

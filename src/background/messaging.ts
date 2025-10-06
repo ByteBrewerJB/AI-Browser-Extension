@@ -1,5 +1,6 @@
 import type { AuthManager } from './auth';
 import type { SyncEncryptionService } from './crypto/syncEncryption';
+import type { NetworkMonitor } from './monitoring/networkMonitor';
 import {
   SyncEncryptionInvalidPassphraseError,
   SyncEncryptionLockedError,
@@ -15,6 +16,7 @@ export interface MessagingDependencies {
   auth: AuthManager;
   scheduler: JobScheduler;
   encryption: SyncEncryptionService;
+  monitor?: NetworkMonitor;
 }
 
 export function initializeMessaging(deps: MessagingDependencies) {
@@ -107,7 +109,7 @@ export function initializeMessaging(deps: MessagingDependencies) {
   });
 
   router.register('sync/encryption-lock', async () => {
-    deps.encryption.lock();
+    await deps.encryption.lock();
     return { status: 'locked' } as const;
   });
 
@@ -142,6 +144,14 @@ export function initializeMessaging(deps: MessagingDependencies) {
       }
       throw error;
     }
+  });
+
+  router.register('monitoring/network-incidents', async () => {
+    const incidents = deps.monitor?.getIncidents() ?? [];
+    return {
+      incidents,
+      fetchedAt: new Date().toISOString()
+    };
   });
 
   router.attach();

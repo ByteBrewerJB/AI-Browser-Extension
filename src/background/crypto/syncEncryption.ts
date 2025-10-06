@@ -1,4 +1,9 @@
-import { SyncEncryptionEnvelope, type SyncEncryptionStatus } from '@/shared/types/syncEncryption';
+import {
+  SyncEncryptionEnvelope,
+  type SyncEncryptionStatus,
+  type SyncEncryptionStatusChange,
+  type SyncEncryptionStatusChangeReason
+} from '@/shared/types/syncEncryption';
 
 const METADATA_STORAGE_KEY = 'ai-companion:sync-encryption:metadata';
 const ENVELOPE_VERSION = 1;
@@ -183,6 +188,7 @@ export class SyncEncryptionService {
   private readonly iterations: number;
   private key: CryptoKey | null = null;
   private metadataPromise: Promise<SyncEncryptionMetadata | null> | null = null;
+  private readonly listeners = new Set<(change: SyncEncryptionStatusChange) => void>();
 
   constructor(options: SyncEncryptionServiceOptions = {}) {
     this.fallback = options.fallbackStore ?? new Map();
@@ -195,6 +201,13 @@ export class SyncEncryptionService {
       configured: Boolean(metadata),
       unlocked: this.key !== null,
       iterations: metadata?.iterations ?? null
+    };
+  }
+
+  onStatusChange(listener: (change: SyncEncryptionStatusChange) => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
     };
   }
 
@@ -214,6 +227,7 @@ export class SyncEncryptionService {
     await storageSet(METADATA_STORAGE_KEY, metadata, this.fallback);
     this.metadataPromise = Promise.resolve(metadata);
     this.key = key;
+    await this.emitStatusChange('configured');
   }
 
   async unlock(options: SyncEncryptionUnlockOptions): Promise<void> {
@@ -226,16 +240,19 @@ export class SyncEncryptionService {
     const key = await this.deriveKey(options.passphrase, salt, metadata.iterations);
     await this.verifyKey(key, metadata.verification);
     this.key = key;
+    await this.emitStatusChange('unlocked');
   }
 
-  lock(): void {
+  async lock(): Promise<void> {
     this.key = null;
+    await this.emitStatusChange('locked');
   }
 
   async clear(): Promise<void> {
     this.key = null;
     this.metadataPromise = null;
     await storageRemove(METADATA_STORAGE_KEY, this.fallback);
+    await this.emitStatusChange('cleared');
   }
 
   async encryptString(options: SyncEncryptionEncryptOptions): Promise<SyncEncryptionEnvelope> {
@@ -334,6 +351,22 @@ export class SyncEncryptionService {
       }
     } catch (error) {
       throw new SyncEncryptionInvalidPassphraseError();
+    }
+  }
+
+  private async emitStatusChange(reason: SyncEncryptionStatusChangeReason): Promise<void> {
+    const status = await this.getStatus();
+    const change: SyncEncryptionStatusChange = {
+      status,
+      reason,
+      occurredAt: new Date().toISOString()
+    };
+    for (const listener of this.listeners) {
+      try {
+        listener(change);
+      } catch (error) {
+        console.warn('[ai-companion] sync encryption listener failed', error);
+      }
     }
   }
 }

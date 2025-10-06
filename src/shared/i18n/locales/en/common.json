@@ -177,7 +177,27 @@
       "lockCta": "Lock now",
       "noticeLocked": "Encryption locked. Snapshots remain protected until you unlock again.",
       "errorLockFailed": "Locking failed. Inspect the background console for more details.",
-      "footerNote": "The extension never transmits your passphrase. If you lose it, synced data cannot be recovered."
+      "footerNote": "The extension never transmits your passphrase. If you lose it, synced data cannot be recovered.",
+      "notifications": {
+        "configured": {
+          "title": "Encryption configured",
+          "description": "Sync snapshots now require the updated passphrase."
+        },
+        "unlocked": {
+          "title": "Encryption unlocked",
+          "description": "Encrypted snapshots can decrypt automatically until you lock again."
+        },
+        "locked": {
+          "title": "Encryption locked",
+          "description": "Snapshots will pause until you unlock the passphrase."
+        },
+        "cleared": {
+          "title": "Encryption cleared",
+          "description": "Snapshots fall back to the local key. Configure a passphrase to re-enable sync protection."
+        },
+        "timestamp": "Recorded at {{time}}",
+        "dismiss": "Dismiss"
+      }
     },
     "favoriteFolder": "Mark as favorite",
     "unfavoriteFolder": "Remove favorite",
