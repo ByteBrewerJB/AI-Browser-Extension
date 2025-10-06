@@ -1,5 +1,6 @@
 import { createAuthManager } from './auth';
 import { createExportJobHandler } from './jobs/exportHandler';
+import { createSyncEncryptionService } from './crypto/syncEncryption';
 import { createEventLoggerJobHandler } from './jobs/eventLogger';
 import { createJobScheduler } from './jobs/scheduler';
 import { initializeMessaging } from './messaging';
@@ -11,6 +12,7 @@ const jobScheduler = createJobScheduler({
     console.error('[ai-companion] job failed', job.id, error);
   }
 });
+const syncEncryption = createSyncEncryptionService();
 
 authManager.initialize().catch((error) => {
   console.warn('[ai-companion] failed to initialize auth manager', error);
@@ -21,7 +23,7 @@ jobScheduler.registerHandler('event', createEventLoggerJobHandler());
 
 jobScheduler.start();
 
-initializeMessaging({ auth: authManager, scheduler: jobScheduler });
+initializeMessaging({ auth: authManager, scheduler: jobScheduler, encryption: syncEncryption });
 
 function setupContextMenus() {
   chrome.contextMenus.create({

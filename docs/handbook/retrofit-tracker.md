@@ -1,6 +1,6 @@
 # Retrofit tracker
 
-_Last reviewed: 2025-10-05_
+_Last reviewed: 2025-10-08_
 
 Dit dossier koppelt de bestaande extensie aan de nieuwe **privacy-first, local-first** roadmap. Gebruik het om pariteit met ChatGPT Toolbox te meten, plus-features te plannen en QA/retrofit-besluiten te loggen. Synchroniseer wijzigingen steeds met [`docs/handbook/product-roadmap.md`](./product-roadmap.md), de regressiegids en relevante ADR's.
 
@@ -85,6 +85,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Confirmatiemodal leest nu prompttemplates via de DSL-parser, toont variabelen met live-preview en levert een `ChainRunPlan` aan de content-runner. Daarmee worden inline `//`/`..` flows fouttolerant en staat het fundament voor de asynchrone step-runner (cancel/resume & step-output streaming).
    - **Documentatie** – Roadmap (`docs/handbook/product-roadmap.md`) bijgewerkt met de nieuwe run-plan architectuur; regressiegids (`docs/handbook/manual-regression-checklist.md`) uitgebreid met de modal-verificatie; retrofitlog en logboek aangevuld. Nieuwe types gedocumenteerd in `src/shared/types/promptChains.ts`.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: via `//` en `..` een chain met `{{variable}}` en `[[step.output]]` starten, controleren dat de modal waarden verplicht stelt, placeholders realtime rendert en na annuleren opnieuw lege invoer biedt; resultaten vastleggen in regressiegids.
+8. [x] AES-GCM encryptieproof-of-concept in service worker met PBKDF2. _(afgerond 2025-10-08)_
+   - **Prioritering** – Sync-roadmap vereist een verifieerbare sleutelafleiding voordat opt-in promptsync kan landen. Dit POC levert een backgroundservice die passphrases via PBKDF2 → AES-GCM sleutels deriveert, verificatieciphertext bewaakt en encrypt/decrypt messaging routes aanbiedt. Volgende stap is het verbinden met Dexie sync-snapshots en UI voor passphrasebeheer.
+   - **Documentatie** – Nieuwe module `src/background/crypto/syncEncryption.ts`, type `src/shared/types/syncEncryption.ts`, messaging-contract (`src/shared/messaging/contracts.ts`) en tests `tests/background/syncEncryptionService.spec.ts` toegevoegd. Retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) zijn bijgewerkt met de encryptiestroom en QA-instructies.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in service-worker console `chrome.runtime.sendMessage({ type: 'sync/encryption-configure', payload: { passphrase: 'demo passphrase' } })` uitvoeren, status controleren via `sync/encryption-status`, daarna encrypt/decrypt rondtrip testen en `sync/encryption-lock` + `sync/encryption-unlock` doorlopen; resultaten documenteren in regressiegids.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -145,5 +149,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-05 | _pending_ | Core | Chain DSL-parser + renderer prototype toegevoegd (`src/core/chains/chainDslParser.ts`), nieuwe tests gedraaid en lint/test/build uitgevoerd; QA-checklist aangevuld met placeholder/step-output scenario. |
 | 2025-10-06 | _pending_ | Content | Inline launcher triggers koppelen aan composer store (`textareaPrompts.ts` + helpermodule), promptfilter auto-gevuld, tests toegevoegd en lint/test/build gedraaid; manual checklist uitgebreid met `//`/`..` scenario. |
 | 2025-10-07 | _pending_ | Content | Chain-confirmatiemodal toegevoegd met parserbinding en run-plan export (`textareaPrompts.ts`, `shared/types/promptChains.ts`, `chainRunner.ts`); roadmap en regressiegids geüpdatet; lint/test/build uitgevoerd en handmatig modal-flow geverifieerd. |
+| 2025-10-08 | _pending_ | Background | AES-GCM encryptie POC toegevoegd (`src/background/crypto/syncEncryption.ts`) met messaging-routes en tests (`tests/background/syncEncryptionService.spec.ts`); lint/test/build gedraaid en handmatige consoleflow beschreven in regressiegids. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
