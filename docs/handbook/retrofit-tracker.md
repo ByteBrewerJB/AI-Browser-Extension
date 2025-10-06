@@ -51,7 +51,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [x] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
   - [x] IndexedDB audit: bevestig geen network egress van chatinhoud. _(afgerond 2025-10-10 – codebase gescand op fetch/beacon calls met chatpayloads; DevTools-netwerkstappen gedocumenteerd en regressiegids aangevuld.)_
   - [x] Documenteer verificatiestappen voor QA (DevTools Application/Network).
-  - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
+ - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
 - **Theming & i18n**
   - [ ] CSS variabelen voor light/dark/high-contrast invoeren.
   - [ ] RTL smoketests uitvoeren in content, popup en options.
@@ -102,6 +102,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Met een dedicated passphrasepaneel in het dashboard kunnen QA en gebruikers de encryptieservice zonder console-scripts bedienen. Dit borgt dat sync-snapshots geblokkeerd blijven bij een vergrendelde sleutel en geeft inzicht in PBKDF2-iteraties. Volgende stap is het automatiseren van netwerkbewaking in het testrunbook en het toevoegen van notificaties wanneer de encryptiestatus wijzigt.
    - **Documentatie** – Nieuwe UI-sectie `src/options/features/privacy/EncryptionSection.tsx`, messaging-client `src/shared/messaging/syncEncryptionClient.ts`, vertalingen (`src/shared/i18n/locales/{en,nl}/common.json`) en testrun `tests/shared/syncEncryptionClient.spec.ts` toegevoegd. Retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt met de UI-flow en QA-stappen.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: opties-dashboard openen, passphrase instellen, ontgrendelen en vergrendelen via de UI, statusbadges en iteratiewaarde controleren, en bevestigen dat Dexie-snapshots bij een vergrendelde status foutmeldingen loggen. Resultaten vastleggen in regressiegids/logboek.
+12. [ ] Netwerkbewaking automatiseren in testrunbook en encryptiestatus-notificaties uitwerken.
+   - **Prioritering** – Automatisering van netwerkbewaking borgt het privacyprincipe uit de roadmap: zodra encryptieservices mutaties blokkeren, moeten regressies direct zichtbaar zijn. Door notificaties voor statuswijzigingen toe te voegen, blijven QA en gebruikers op de hoogte van locks/unlocks zonder DevTools. Dit verkleint de kans dat een vergrendelde sleutel onopgemerkt blijft tijdens bulkacties.
+   - **Documentatie** – Na implementatie roadmapsectie "Privacy & sync" en regressiegids uitbreiden met geautomatiseerde monitoringsstappen, plus een addendum in `docs/handbook/manual-regression-checklist.md` voor notificatieverificatie. Deze tracker (Volgende stappen + logboek) actualiseren met resultaten en verwijzingen naar scripts.
+   - **QA-notes** – Geautomatiseerd: Vitest-suite voor nieuwe monitoring utility (`tests/background/networkMonitor.spec.ts`) en bestaande lint/test/build-run. Handmatig: in beide ChatGPT-domeinen passphrase lock/unlock uitvoeren, bevestigen dat notificaties verschijnen en dat het testrunbook een waarschuwing logt wanneer netwerkverkeer met chatpayloads wordt gedetecteerd. Resultaten documenteren in regressiegids en QA-logboek.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
