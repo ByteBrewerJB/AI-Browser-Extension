@@ -48,9 +48,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
   - [x] Chain DSL parser (placeholders, [[step.output]]) prototypen. _(afgerond 2025-10-05 – parsermodule + evaluatiehooks toegevoegd.)_
   - [x] Inline triggers `//` en `..` integreren met bestaande composer store. _(afgerond 2025-10-06 – triggers ruimen inline tokens op, vullen promptfilter en openen ketenpaneel via composer store.)_
 - **Privacy & sync voorbereiding**
-  - [ ] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
+  - [x] AES-GCM encryptieproof-of-concept in service worker met PBKDF2.
   - [ ] IndexedDB audit: bevestig geen network egress van chatinhoud.
-  - [ ] Documenteer verificatiestappen voor QA (DevTools Application/Network).
+  - [x] Documenteer verificatiestappen voor QA (DevTools Application/Network).
+  - [x] Dexie sync-snapshots versleutelen via passphrase-service met lokale fallback en lock-signalen.
 - **Theming & i18n**
   - [ ] CSS variabelen voor light/dark/high-contrast invoeren.
   - [ ] RTL smoketests uitvoeren in content, popup en options.
@@ -89,6 +90,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
    - **Prioritering** – Sync-roadmap vereist een verifieerbare sleutelafleiding voordat opt-in promptsync kan landen. Dit POC levert een backgroundservice die passphrases via PBKDF2 → AES-GCM sleutels deriveert, verificatieciphertext bewaakt en encrypt/decrypt messaging routes aanbiedt. Volgende stap is het verbinden met Dexie sync-snapshots en UI voor passphrasebeheer.
    - **Documentatie** – Nieuwe module `src/background/crypto/syncEncryption.ts`, type `src/shared/types/syncEncryption.ts`, messaging-contract (`src/shared/messaging/contracts.ts`) en tests `tests/background/syncEncryptionService.spec.ts` toegevoegd. Retrofitlog (dit bestand), roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) zijn bijgewerkt met de encryptiestroom en QA-instructies.
    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in service-worker console `chrome.runtime.sendMessage({ type: 'sync/encryption-configure', payload: { passphrase: 'demo passphrase' } })` uitvoeren, status controleren via `sync/encryption-status`, daarna encrypt/decrypt rondtrip testen en `sync/encryption-lock` + `sync/encryption-unlock` doorlopen; resultaten documenteren in regressiegids.
+9. [x] Dexie sync-snapshots koppelen aan AES-GCM passphrase-service en fallback documenteren. _(afgerond 2025-10-09)_
+   - **Prioritering** – Storage-service detecteert nu of de passphrase geconfigureerd en ontgrendeld is; snapshots worden gedelegeerd naar de background encryptieservice en vallen terug op de lokale sleutel wanneer sync uit staat. Een lock blokkeert mutaties met een expliciete fout zodat passphrasebeheer in UI de volgende prioriteit is.
+   - **Documentatie** – `src/core/storage/service.ts`, `src/core/storage/syncBridge.ts`, roadmap (`docs/handbook/product-roadmap.md`) en regressiegids (`docs/handbook/manual-regression-checklist.md`) bijgewerkt met de delegatieflow en QA-stappen. Retrofitlog (dit bestand) en logboek aangevuld.
+   - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). Handmatig: in de background console `chrome.storage.sync.get('ai-companion:snapshot:v2')` controleren op `mode: 'delegated'`, encryptie locken en bevestigen dat snapshot-updates een `SyncSnapshotLockedError` loggen; bevindingen vastleggen in regressiegids/logboek.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -150,5 +155,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-06 | _pending_ | Content | Inline launcher triggers koppelen aan composer store (`textareaPrompts.ts` + helpermodule), promptfilter auto-gevuld, tests toegevoegd en lint/test/build gedraaid; manual checklist uitgebreid met `//`/`..` scenario. |
 | 2025-10-07 | _pending_ | Content | Chain-confirmatiemodal toegevoegd met parserbinding en run-plan export (`textareaPrompts.ts`, `shared/types/promptChains.ts`, `chainRunner.ts`); roadmap en regressiegids geüpdatet; lint/test/build uitgevoerd en handmatig modal-flow geverifieerd. |
 | 2025-10-08 | _pending_ | Background | AES-GCM encryptie POC toegevoegd (`src/background/crypto/syncEncryption.ts`) met messaging-routes en tests (`tests/background/syncEncryptionService.spec.ts`); lint/test/build gedraaid en handmatige consoleflow beschreven in regressiegids. |
+| 2025-10-09 | _pending_ | Storage | Dexie sync-snapshot encryptie gedelegeerd naar passphrase-service (`src/core/storage/service.ts`, `syncBridge.ts`), fallback/logging toegevoegd en regressiegids/roadmap bijgewerkt; `npm run lint`, `npm run test`, `npm run build` gedraaid. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
