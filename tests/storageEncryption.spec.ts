@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { db, ENCRYPTION_METADATA_KEY, ENCRYPTION_DATA_VERSION, resetDatabase } from '@/core/storage/db';
 import type { SyncSnapshot } from '@/core/storage/syncBridge';
 import { StorageService } from '@/core/storage/service';
+import { SyncEncryptionBridgeLockedError } from '@/core/storage/syncEncryptionBridge';
+import type { SyncEncryptionEnvelope, SyncEncryptionStatus } from '@/shared/types/syncEncryption';
 
 type AsyncTest = [name: string, execute: () => Promise<void>];
 
@@ -12,9 +14,47 @@ const baseSnapshot: SyncSnapshot = {
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
 
+interface EncryptionBridgeContract {
+  getStatus(): Promise<SyncEncryptionStatus>;
+  encrypt(plaintext: string): Promise<SyncEncryptionEnvelope>;
+  decrypt(envelope: SyncEncryptionEnvelope): Promise<string>;
+  reset(): void;
+}
+
+class StubEncryptionBridge implements EncryptionBridgeContract {
+  public readonly plaintexts: string[] = [];
+
+  constructor(private status: SyncEncryptionStatus) {}
+
+  setStatus(status: SyncEncryptionStatus) {
+    this.status = status;
+  }
+
+  async getStatus(): Promise<SyncEncryptionStatus> {
+    return this.status;
+  }
+
+  async encrypt(plaintext: string): Promise<SyncEncryptionEnvelope> {
+    this.plaintexts.push(plaintext);
+    return {
+      version: 1,
+      iv: Buffer.from('0123456789ab', 'utf8').toString('base64'),
+      data: Buffer.from(plaintext, 'utf8').toString('base64')
+    };
+  }
+
+  async decrypt(envelope: SyncEncryptionEnvelope): Promise<string> {
+    return Buffer.from(envelope.data, 'base64').toString('utf8');
+  }
+
+  reset() {
+    // no-op for tests
+  }
+}
+
 const tests: AsyncTest[] = [
   [
-    'encrypts and decrypts payloads symmetrically',
+    'encrypts and decrypts payloads symmetrically with local key fallback',
     async () => {
       await resetDatabase();
       const previousChrome = (globalThis as any).chrome;
@@ -46,6 +86,7 @@ const tests: AsyncTest[] = [
         assert.ok(storedEnvelope, 'ciphertext stored in sync fallback');
         assert.notDeepEqual(storedEnvelope, snapshot);
         assert.equal(storedEnvelope?.encryptionVersion, ENCRYPTION_DATA_VERSION);
+        assert.ok(storedEnvelope?.mode === 'local' || storedEnvelope?.mode === undefined);
 
         const result = await service.readEncrypted('test:key', {
           fallback: baseSnapshot,
@@ -62,6 +103,54 @@ const tests: AsyncTest[] = [
           delete (globalThis as any).chrome;
         }
       }
+    }
+  ],
+  [
+    'delegates encryption to sync bridge when unlocked',
+    async () => {
+      await resetDatabase();
+      const bridge = new StubEncryptionBridge({ configured: true, unlocked: true, iterations: 310_000 });
+      const syncFallback = new Map<string, unknown>();
+      const localFallback = new Map<string, unknown>();
+      const service = new StorageService(db, { syncFallback, localFallback, encryptionBridge: bridge });
+
+      const snapshot: SyncSnapshot = {
+        conversations: {},
+        version: 2,
+        updatedAt: '2024-02-01T00:00:00.000Z'
+      };
+
+      await service.writeEncrypted('test:key', snapshot, { payloadVersion: 2, quotaBytes: 2048 });
+
+      const storedEnvelope = syncFallback.get('test:key') as Record<string, unknown> | undefined;
+      assert.equal(storedEnvelope?.mode, 'delegated');
+      assert.equal(bridge.plaintexts.length, 1);
+      assert.ok(String(bridge.plaintexts[0]).includes('test:key'), 'context serialized in delegated payload');
+
+      const result = await service.readEncrypted('test:key', {
+        fallback: baseSnapshot,
+        expectedVersion: 2,
+        upgrade: (payload) => payload as SyncSnapshot
+      });
+
+      assert.deepEqual(result, snapshot);
+    }
+  ],
+  [
+    'throws when sync encryption is locked',
+    async () => {
+      await resetDatabase();
+      const bridge = new StubEncryptionBridge({ configured: true, unlocked: false, iterations: 310_000 });
+      const service = new StorageService(db, {
+        syncFallback: new Map(),
+        localFallback: new Map(),
+        encryptionBridge: bridge
+      });
+
+      await assert.rejects(
+        () => service.writeEncrypted('test:key', baseSnapshot, { payloadVersion: 2, quotaBytes: 2048 }),
+        SyncEncryptionBridgeLockedError
+      );
     }
   ],
   [

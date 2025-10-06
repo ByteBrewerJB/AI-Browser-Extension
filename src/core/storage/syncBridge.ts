@@ -1,4 +1,5 @@
 import { storageService } from './service';
+import { SyncEncryptionBridgeLockedError, SyncEncryptionBridgeUnavailableError } from './syncEncryptionBridge';
 import type { ConversationRecord } from '@/core/models';
 
 const STORAGE_KEY = 'ai-companion:snapshot:v2';
@@ -27,6 +28,20 @@ const emptySnapshot: SyncSnapshot = {
   version: SNAPSHOT_PAYLOAD_VERSION,
   updatedAt: '1970-01-01T00:00:00.000Z'
 };
+
+export class SyncSnapshotLockedError extends Error {
+  constructor() {
+    super('Sync snapshot encryption is locked.');
+    this.name = 'SyncSnapshotLockedError';
+  }
+}
+
+export class SyncSnapshotUnavailableError extends Error {
+  constructor() {
+    super('Sync snapshot encryption is unavailable.');
+    this.name = 'SyncSnapshotUnavailableError';
+  }
+}
 
 function getChromeApi() {
   return (globalThis as unknown as { chrome?: typeof chrome }).chrome;
@@ -106,11 +121,22 @@ function coerceSnapshot(raw: unknown): SyncSnapshot {
 }
 
 export async function readSyncSnapshot(): Promise<SyncSnapshot> {
-  const snapshot = await storageService.readEncrypted(STORAGE_KEY, {
-    fallback: { ...emptySnapshot },
-    expectedVersion: SNAPSHOT_PAYLOAD_VERSION,
-    upgrade: (payload) => coerceSnapshot(payload)
-  });
+  let snapshot: SyncSnapshot;
+  try {
+    snapshot = await storageService.readEncrypted(STORAGE_KEY, {
+      fallback: { ...emptySnapshot },
+      expectedVersion: SNAPSHOT_PAYLOAD_VERSION,
+      upgrade: (payload) => coerceSnapshot(payload)
+    });
+  } catch (error) {
+    if (error instanceof SyncEncryptionBridgeLockedError) {
+      throw new SyncSnapshotLockedError();
+    }
+    if (error instanceof SyncEncryptionBridgeUnavailableError) {
+      throw new SyncSnapshotUnavailableError();
+    }
+    throw error;
+  }
 
   if (Object.keys(snapshot.conversations).length === 0 && snapshot.updatedAt === emptySnapshot.updatedAt) {
     const legacy = await readLegacySnapshot();
@@ -126,32 +152,58 @@ export async function readSyncSnapshot(): Promise<SyncSnapshot> {
 }
 
 export async function writeSyncSnapshot(snapshot: SyncSnapshot): Promise<void> {
-  await storageService.writeEncrypted(STORAGE_KEY, snapshot, {
-    payloadVersion: SNAPSHOT_PAYLOAD_VERSION,
-    quotaBytes: SYNC_SNAPSHOT_QUOTA_BYTES
-  });
+  try {
+    await storageService.writeEncrypted(STORAGE_KEY, snapshot, {
+      payloadVersion: SNAPSHOT_PAYLOAD_VERSION,
+      quotaBytes: SYNC_SNAPSHOT_QUOTA_BYTES
+    });
+  } catch (error) {
+    if (error instanceof SyncEncryptionBridgeLockedError) {
+      throw new SyncSnapshotLockedError();
+    }
+    if (error instanceof SyncEncryptionBridgeUnavailableError) {
+      throw new SyncSnapshotUnavailableError();
+    }
+    throw error;
+  }
 }
 
 export async function syncConversationMetadata(conversation: ConversationRecord): Promise<void> {
-  const snapshot = await readSyncSnapshot();
-  snapshot.conversations[conversation.id] = {
-    id: conversation.id,
-    updatedAt: conversation.updatedAt,
-    wordCount: conversation.wordCount,
-    charCount: conversation.charCount,
-    folderId: conversation.folderId,
-    pinned: conversation.pinned,
-    archived: conversation.archived
-  };
-  snapshot.updatedAt = new Date().toISOString();
-  await writeSyncSnapshot(snapshot);
+  try {
+    const snapshot = await readSyncSnapshot();
+    snapshot.conversations[conversation.id] = {
+      id: conversation.id,
+      updatedAt: conversation.updatedAt,
+      wordCount: conversation.wordCount,
+      charCount: conversation.charCount,
+      folderId: conversation.folderId,
+      pinned: conversation.pinned,
+      archived: conversation.archived
+    };
+    snapshot.updatedAt = new Date().toISOString();
+    await writeSyncSnapshot(snapshot);
+  } catch (error) {
+    if (error instanceof SyncSnapshotLockedError || error instanceof SyncSnapshotUnavailableError) {
+      console.warn('[syncBridge] Skipping conversation metadata sync; encryption unavailable.', error);
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function removeConversationMetadata(conversationId: string): Promise<void> {
-  const snapshot = await readSyncSnapshot();
-  delete snapshot.conversations[conversationId];
-  snapshot.updatedAt = new Date().toISOString();
-  await writeSyncSnapshot(snapshot);
+  try {
+    const snapshot = await readSyncSnapshot();
+    delete snapshot.conversations[conversationId];
+    snapshot.updatedAt = new Date().toISOString();
+    await writeSyncSnapshot(snapshot);
+  } catch (error) {
+    if (error instanceof SyncSnapshotLockedError || error instanceof SyncSnapshotUnavailableError) {
+      console.warn('[syncBridge] Skipping conversation metadata removal; encryption unavailable.', error);
+      return;
+    }
+    throw error;
+  }
 }
 
 export type SyncChangeListener = (snapshot: SyncSnapshot) => void;

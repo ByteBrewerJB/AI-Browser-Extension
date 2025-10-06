@@ -124,6 +124,8 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 4. Probeer het opgeslagen `envelope` te decrypten terwijl het slot actief is (`sync/encryption-decrypt`). Verwacht een `{ status: 'locked' }` antwoord.
 5. Ontgrendel met dezelfde passphrase (`sync/encryption-unlock`) en herhaal de decryptie. Het resultaat moet `{ status: 'ok', plaintext: 'QA roundtrip' }` opleveren.
 6. Test een foutscenario door `sync/encryption-unlock` met een fout wachtwoord aan te roepen; verwacht `{ status: 'invalid' }`. Sluit af met `sync/encryption-lock` en log de console-uitvoer in het retrofitlog.
+7. Ontgrendel opnieuw en laat de extensie een snapshot schrijven (bijv. verplaats een gesprek); voer daarna `await chrome.storage.sync.get('ai-companion:snapshot:v2')` uit in de background console. Controleer dat het object `mode: 'delegated'` bevat en dat de `data`-payload base64-gecodeerd is.
+8. Activeer `sync/encryption-lock` en herhaal dezelfde Dexie-actie. Verwacht een `SyncSnapshotLockedError` in de background console en noteer de melding in het retrofitlog voordat je opnieuw ontgrendelt.
 
 ## 7. Completion & logging
 1. Record outcomes, browser versions, domains tested, and any bugs in [`docs/handbook/retrofit-tracker.md`](./retrofit-tracker.md) under the logbook section.

@@ -1,6 +1,6 @@
 # AI Browser Extension — Architecture & Delivery Roadmap
 
-_Last updated: 2025-10-08_
+_Last updated: 2025-10-09_
 
 This living document combines the architectural snapshot, delivery status, and premium launch planning for the AI Browser Extension. Update it whenever shipped functionality or priorities change so contributors have a single source of truth.
 
@@ -24,7 +24,7 @@ This living document combines the architectural snapshot, delivery status, and p
 - **Zoekservice** – MiniSearch-index wordt naar IndexedDB weggeschreven en bij opstart hersteld; documenten bevatten nu titels, tag-tokens en volledige mappaden. Verwijderingen houden conversatie- en berichtdocumenten in sync en een 10k-berichtencoldbuild klokt ~1,5 s met zoeklatency rond 3 ms.
 - **Export pipeline** – TXT/JSON exports gebruiken client-side helpers; de background handler maakt bestanden aan en start automatisch een `chrome.downloads.download` zodra de job slaagt.
 - **Authenticatie** – `AuthManager` decodeert JWT’s lokaal, deriveert premiumstatus en ondersteunt optionele JWKS caching. Signatuurvalidatie en refreshflows zijn nog niet geïmplementeerd.
-- **Sync encryptie POC** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en stelt messagingroutes beschikbaar voor encrypt/decrypt rondtrips. UI en Dexie-integratie volgen in de volgende iteratie.
+- **Sync encryptie** – Background service worker deriveert AES-GCM sleutels via PBKDF2, bewaart verificatieciphertexts en verzorgt encrypt/decrypt messaging. Dexie sync-snapshots delegeren nu naar deze service en vallen terug op lokale opslag wanneer passphrase-sync uitstaat; UI voor passphrasebeheer en IndexedDB-audit volgen.
 
 ## Delivery phases
 
@@ -35,7 +35,7 @@ This living document combines the architectural snapshot, delivery status, and p
 | 2 | Workspace management | ✅ Delivered | Popup cards, dashboard filters, folders, prompt/GPT CRUD, i18n/RTL. |
 | 3 | Productivity automation | 🚧 In progress | Job queue + export handlers live; search durability en extra UI polish volgen. |
 | 4 | Audio tooling | 💤 Planned | Geen echte audio-opname of playback pipelines; media-instellingen zijn placeholders. |
-| 5 | Sync & collaboration | 🚧 In progress | AES-GCM/PBKDF2 proof-of-concept actief in service worker; volgende stap is Dexie snapshot encryptie en passphrasebeheer UI. |
+| 5 | Sync & collaboration | 🚧 In progress | AES-GCM/PBKDF2 service worker actief; Dexie sync-snapshots gebruiken nu dezelfde passphrase (met lock-fallback). Volgende stap: passphrasebeheer UI en IndexedDB audit. |
 | 6 | Intelligence & insights | 💤 Planned | Geen automatische analyses of aanbevelingen buiten huidige datacaptatie. |
 | 7 | Platform extensibility | 💤 Planned | Side-panel integraties en externe API hooks nog niet gespecificeerd. |
 | 8 | Quality & growth | 💤 Planned | Telemetry storage, observability en lokalisatie scorecards moeten nog worden opgezet. |
@@ -47,7 +47,7 @@ _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.
 - Contextmenu focusbeheer verbeteren (focus trap + refocus van het origineel) en documenteren in de accessibility playbook.
-- **Privacy & sync** – _Status: POC gereed._ AES-GCM/PBKDF2 encryptieservice draait in de background worker. Volgende iteratie koppelt Dexie sync-snapshots aan de service en levert passphrasebeheer in opties + onboarding.
+- **Privacy & sync** – _Status: delegatie in uitvoering._ AES-GCM/PBKDF2 encryptieservice draait in de background worker en Dexie sync-snapshots gebruiken dezelfde passphrase (fallback naar lokale sleutel wanneer uitgeschakeld). Volgende iteratie levert passphrasebeheer in opties/onboarding en voert de IndexedDB audit uit.
 
 ### Toekomstige thema’s (Phases 4–8)
 Documenteer outstanding design/ADR links voordat ontwikkeling start. Maak nieuwe ADR’s alleen aan wanneer implementatie committers klaarstaan, zodat contributors scope kunnen traceren zonder te gissen.
