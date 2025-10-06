@@ -129,8 +129,8 @@ function registerMessageHandlers() {
     return { status: 'pending' } as const;
   });
 
-  messageRouter.register('content/run-chain', async ({ chainId }) => {
-    return runPromptChainById(chainId);
+  messageRouter.register('content/run-chain', async ({ chainId, plan }) => {
+    return runPromptChainById(chainId, plan);
   });
 
   messageRouter.attach();

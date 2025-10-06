@@ -1,4 +1,5 @@
 import type { JobSnapshot, JobStatus } from '@/core/models';
+import type { ChainRunPlan } from '@/shared/types/promptChains';
 
 export interface MessageSchema {
   request: unknown;
@@ -35,7 +36,7 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
     response: { status: 'pending' };
   };
   'content/run-chain': {
-    request: { chainId: string };
+    request: { chainId: string; plan?: ChainRunPlan };
     response:
       | { status: 'completed'; chainId: string; executedAt: string; steps: number }
       | { status: 'cancelled'; chainId: string; steps: number }

@@ -112,8 +112,8 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 2. Open the prompt launcher via `Ctrl+Space`/`⌘+K`; verify focus lands in the search field and the shortcut legend reflects the current platform.
 3. Navigate the results list using only the keyboard (`ArrowUp/Down`, `Ctrl+/` scope cycling) and insert a prompt with `Enter`; confirm highlighted tokens reflect the fuzzy search match.
 4. Type `//plan` and `..handover` in the composer to trigger the inline launcher. Bevestig dat de getypte tokens direct uit het invoerveld verdwijnen, het prompts-panel `plan` als zoekterm toont, het chain-panel zichtbaar wordt voor `..` en dat het toetsenbordverkeer (`Esc`, pijlen, `Enter`) focus terugbrengt naar de composer na sluiten.
-5. Select a prompt chain, supply variable values in the confirmation modal, start the run, then cancel with `Esc` to ensure rollback messaging appears.
-6. Insert a prompt that references `{{variable}}` placeholders and `[[step.output]]` tokens; zodra de parser aan de confirmatiemodal is gekoppeld (zie retrofitlog stap 7), bevestig dat de modal de variabelen toont, `[[step.output]]` realtime invult en een waarschuwing geeft wanneer een referenced step-output ontbreekt. Tot die oplevering: noteer het resultaat als "pending" met verwijzing naar retrofitlog stap 7.
+5. Selecteer een prompt chain (via inline trigger of launcher), controleer dat de confirmatiemodal verschijnt met alle `{{variable}}` velden leeg en dat `Esc` de modal sluit zonder eerder ingevoerde waarden te bewaren.
+6. Vul variabelen in, verifieer dat de preview realtime `{{variable}}` én `[[step.output]]` placeholders rendert, laat bewust een waarde leeg om de "Required" melding te zien, start de chain en controleer dat de composer de gegenereerde stappen ontvangt.
 7. Toggle the favourites filter (`Ctrl+F`) and confirm results narrow accordingly. Switch the interface to RTL and repeat the navigation once.
 8. Trigger the instruction overlay (open the launcher three times) and confirm the tip counter decrements until dismissed.
 
