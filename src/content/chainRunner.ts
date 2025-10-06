@@ -1,7 +1,9 @@
 import type { PromptRecord } from '@/core/models';
+import { parseChainTemplate, renderChainTemplate } from '@/core/chains/chainDslParser';
 import { getPromptChainById, updatePromptChain } from '@/core/storage';
 import { db } from '@/core/storage/db';
 import { usePromptChainsStore } from '@/shared/state/promptChainsStore';
+import type { ChainRunPlan } from '@/shared/types/promptChains';
 import { insertTextIntoComposer } from './textareaPrompts';
 
 const STEP_DELAY_MS = 250;
@@ -18,7 +20,10 @@ function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-export async function runPromptChainById(chainId: string): Promise<PromptChainRunResult> {
+export async function runPromptChainById(
+  chainId: string,
+  plan?: ChainRunPlan
+): Promise<PromptChainRunResult> {
   const runtime = usePromptChainsStore.getState();
   if (runtime.status === 'running') {
     return { status: 'busy' };
@@ -46,17 +51,44 @@ export async function runPromptChainById(chainId: string): Promise<PromptChainRu
     console.warn('[ai-companion] some prompt chain steps are missing prompts and will be skipped');
   }
 
-  usePromptChainsStore.getState().startRun(chainId, prompts.length);
+  const preparedSteps = plan?.steps ?? [];
+  const preparedMap = new Map(preparedSteps.map((step) => [step.promptId, step]));
+  const variables = plan?.variables ?? {};
+
+  const resolvedPrompts = prompts.map((prompt) => {
+    const prepared = preparedMap.get(prompt.id);
+    if (prepared) {
+      return prepared.resolvedContent;
+    }
+
+    const parsed = parseChainTemplate(prompt.content);
+    if (parsed.hasErrors) {
+      return prompt.content;
+    }
+
+    try {
+      return renderChainTemplate(parsed, {
+        variables,
+        onMissingVariable: (name) => variables[name] ?? `{{${name}}}`,
+        onMissingStepOutput: ({ stepId, property }) => `[[${stepId}.${property}]]`
+      });
+    } catch (error) {
+      console.error('[ai-companion] failed to resolve chain prompt content', error);
+      return prompt.content;
+    }
+  });
+
+  usePromptChainsStore.getState().startRun(chainId, resolvedPrompts.length);
 
   try {
-    for (let index = 0; index < prompts.length; index += 1) {
+    for (let index = 0; index < resolvedPrompts.length; index += 1) {
       const beforeStep = usePromptChainsStore.getState();
       if (beforeStep.status === 'cancelled' && beforeStep.activeChainId === chainId) {
         return { status: 'cancelled', chainId, steps: beforeStep.completedSteps };
       }
 
-      const prompt = prompts[index];
-      const text = index === 0 ? prompt.content : `\n\n${prompt.content}`;
+      const prompt = resolvedPrompts[index];
+      const text = index === 0 ? prompt : `\n\n${prompt}`;
       const inserted = insertTextIntoComposer(text);
       if (!inserted) {
         usePromptChainsStore.getState().failRun('Composer unavailable');
@@ -70,7 +102,7 @@ export async function runPromptChainById(chainId: string): Promise<PromptChainRu
         return { status: 'cancelled', chainId, steps: afterStep.completedSteps };
       }
 
-      if (index < prompts.length - 1) {
+      if (index < resolvedPrompts.length - 1) {
         await delay(STEP_DELAY_MS);
       }
     }
@@ -83,7 +115,7 @@ export async function runPromptChainById(chainId: string): Promise<PromptChainRu
     const executedAt = new Date().toISOString();
     await updatePromptChain({ id: chainId, lastExecutedAt: executedAt });
     usePromptChainsStore.getState().completeRun(executedAt);
-    return { status: 'completed', chainId, executedAt, steps: prompts.length };
+    return { status: 'completed', chainId, executedAt, steps: resolvedPrompts.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown_error';
     usePromptChainsStore.getState().failRun(message);
