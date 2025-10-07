@@ -44,6 +44,20 @@ async function run() {
     assert.ok(incidents[1]?.matchedPattern);
     assert.ok(incidents[1]?.payloadSnippet);
 
+    await fetch(
+      new Request('https://chat.openai.com/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          content:
+            'Using the Request constructor should still be monitored for sensitive payloads that include lengthy conversation content.'
+        })
+      })
+    );
+    assert.equal(incidents.length, 3);
+    assert.equal(incidents[2]?.reason, 'payload_match');
+    assert.ok(incidents[2]?.matchedPattern);
+    assert.ok(incidents[2]?.payloadSnippet);
+
     const snapshot = monitor.getIncidents();
     assert.equal(snapshot.length, incidents.length);
   } finally {

@@ -69,6 +69,41 @@ function extractBodyText(body: unknown): string | null {
   return null;
 }
 
+async function resolveBodyText(input: RequestInfo | URL, init?: RequestInit): Promise<string | null> {
+  const directBodyText = extractBodyText(init?.body);
+  if (directBodyText) {
+    return directBodyText;
+  }
+
+  if (typeof Request !== 'undefined' && input instanceof Request) {
+    try {
+      const textClone = input.clone();
+      if (typeof textClone.text === 'function') {
+        const text = await textClone.text();
+        if (text) {
+          return text;
+        }
+      }
+    } catch (_error) {
+      // Ignore body extraction failures for text based payloads.
+    }
+
+    if (typeof FormData !== 'undefined') {
+      try {
+        const formClone = input.clone();
+        if (typeof formClone.formData === 'function') {
+          const formData = await formClone.formData();
+          return extractBodyText(formData);
+        }
+      } catch (_error) {
+        // Ignore body extraction failures for form payloads.
+      }
+    }
+  }
+
+  return null;
+}
+
 function truncateSnippet(value: string, maxLength = 200): string {
   if (value.length <= maxLength) {
     return value;
@@ -111,13 +146,13 @@ export function createNetworkMonitor(options: NetworkMonitorOptions = {}): Netwo
     }
   }
 
-  function inspectRequest(input: RequestInfo | URL, init?: RequestInit) {
+  async function inspectRequest(input: RequestInfo | URL, init?: RequestInit) {
     const urlValue = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
     const parsedUrl = parseUrl(urlValue);
     const hostname = parsedUrl?.hostname ?? '';
     const protocol = parsedUrl?.protocol ?? '';
-    const bodyText = extractBodyText(init?.body);
+    const bodyText = await resolveBodyText(input, init);
 
     if (protocol && protocol !== 'https:' && protocol !== 'http:' && protocol !== 'chrome-extension:') {
       return;
@@ -156,7 +191,7 @@ export function createNetworkMonitor(options: NetworkMonitorOptions = {}): Netwo
 
   const proxiedFetch: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     try {
-      inspectRequest(input, init);
+      await inspectRequest(input, init);
     } catch (error) {
       logger.warn('[ai-companion][network-monitor] inspection failed', error);
     }
