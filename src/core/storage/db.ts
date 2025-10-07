@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 import type {
   BookmarkRecord,
   ConversationRecord,
+  FolderItemRecord,
   FolderRecord,
   GPTRecord,
   JobRecord,
@@ -49,6 +50,7 @@ export class CompanionDatabase extends Dexie {
   prompts!: Table<PromptRecord, string>;
   promptChains!: Table<PromptChainRecord, string>;
   folders!: Table<FolderRecord, string>;
+  folderItems!: Table<FolderItemRecord, string>;
   bookmarks!: Table<BookmarkRecord, string>;
   settings!: Table<SettingsRecord, string>;
   jobs!: Table<JobRecord, string>;
@@ -184,6 +186,82 @@ export class CompanionDatabase extends Dexie {
           if (preview || typeof bookmark.messagePreview === 'string') {
             await bookmarksTable.update(bookmark.id, { messagePreview: preview });
           }
+        }
+      });
+
+    this.version(8)
+      .stores({
+        conversations: 'id, updatedAt, folderId, pinned, archived',
+        messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+        gpts: 'id, folderId, updatedAt',
+        prompts: 'id, folderId, gptId, updatedAt',
+        promptChains: 'id, updatedAt',
+        folders: 'id, parentId, kind, favorite',
+        folderItems: 'id, folderId, itemType, itemId, &[itemType+itemId], [folderId+itemType], sortIndex',
+        bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+        settings: 'id',
+        jobs: 'id, status, runAt, updatedAt',
+        metadata: 'key'
+      })
+      .upgrade(async (transaction) => {
+        const now = new Date().toISOString();
+        const folderItemsTable = transaction.table<FolderItemRecord>('folderItems');
+
+        const [conversations, prompts, gpts] = await Promise.all([
+          transaction.table<ConversationRecord>('conversations').toArray(),
+          transaction.table<PromptRecord>('prompts').toArray(),
+          transaction.table<GPTRecord>('gpts').toArray()
+        ]);
+
+        const records: FolderItemRecord[] = [];
+
+        for (const conversation of conversations) {
+          const folderId = conversation.folderId?.trim();
+          if (!folderId) {
+            continue;
+          }
+          records.push({
+            id: crypto.randomUUID(),
+            folderId,
+            itemId: conversation.id,
+            itemType: 'conversation',
+            createdAt: conversation.createdAt ?? now,
+            updatedAt: now
+          });
+        }
+
+        for (const prompt of prompts) {
+          const folderId = prompt.folderId?.trim();
+          if (!folderId) {
+            continue;
+          }
+          records.push({
+            id: crypto.randomUUID(),
+            folderId,
+            itemId: prompt.id,
+            itemType: 'prompt',
+            createdAt: prompt.createdAt ?? now,
+            updatedAt: now
+          });
+        }
+
+        for (const gpt of gpts) {
+          const folderId = gpt.folderId?.trim();
+          if (!folderId) {
+            continue;
+          }
+          records.push({
+            id: crypto.randomUUID(),
+            folderId,
+            itemId: gpt.id,
+            itemType: 'gpt',
+            createdAt: gpt.createdAt ?? now,
+            updatedAt: now
+          });
+        }
+
+        if (records.length) {
+          await folderItemsTable.bulkAdd(records);
         }
       });
   }

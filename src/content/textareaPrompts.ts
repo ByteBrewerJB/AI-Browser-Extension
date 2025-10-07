@@ -1,4 +1,6 @@
 import { liveQuery } from 'dexie';
+import { parseChainTemplate, renderChainTemplate } from '@/core/chains/chainDslParser';
+import type { ChainTemplateParseResult } from '@/core/chains/chainDslParser';
 import type { FolderRecord, PromptChainRecord, PromptRecord } from '@/core/models';
 import type { BookmarkSummary } from '@/core/storage/insights';
 import { db } from '@/core/storage/db';
@@ -10,6 +12,8 @@ import { createPopover } from '@/ui/components/Popover';
 import type { i18n as I18nInstance } from 'i18next';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { usePromptChainsStore } from '@/shared/state/promptChainsStore';
+import type { ChainRunPlan } from '@/shared/types/promptChains';
+import { findInlineTrigger } from './inlineLauncherTriggers';
 
 const CONTAINER_ID = 'ai-companion-prompt-launcher';
 const MAX_PROMPTS = 100;
@@ -28,6 +32,27 @@ interface LauncherState {
   filter: string;
   open: boolean;
   activeBubble: PanelBubbleId | null;
+  chainConfirmation: ChainConfirmationState | null;
+}
+
+interface ChainConfirmationParseIssue {
+  promptId: string;
+  promptName: string;
+  message: string;
+  snippet: string;
+}
+
+interface ChainConfirmationState {
+  chain: PromptChainRecord;
+  prompts: PromptRecord[];
+  parseResults: ChainTemplateParseResult[];
+  variables: string[];
+  values: Map<string, string>;
+  missingVariables: Set<string>;
+  parseIssues: ChainConfirmationParseIssue[];
+  submitting: boolean;
+  generalError: string | null;
+  triggerButton: HTMLButtonElement | null;
 }
 
 interface BubbleConfigBase {
@@ -66,7 +91,8 @@ const state: LauncherState = {
   bookmarks: [],
   filter: '',
   open: false,
-  activeBubble: null
+  activeBubble: null,
+  chainConfirmation: null
 };
 
 let container: HTMLElement | null = null;
@@ -109,6 +135,7 @@ let composerCountersInitialized = false;
 let unsubscribeTokenLimit: (() => void) | null = null;
 let tokenLimit = DEFAULT_TOKEN_LIMIT;
 let lastComposerMetrics = { words: 0, characters: 0, tokens: 0 };
+let suppressInlineTriggerHandling = false;
 let composerPlaceholderText: string | null = null;
 let composerPlaceholderSignature: string | null = null;
 let composerPlaceholderUnsubscribe: (() => void) | null = null;
@@ -123,6 +150,22 @@ let launcherPopoverVisible = false;
 const launcherPopoverItemLabels = new Map<string, HTMLParagraphElement>();
 
 const MAX_LAUNCHER_TIP_DISPLAYS = 3;
+
+let chainConfirmationOverlay: HTMLDivElement | null = null;
+let chainConfirmationRenderedSignature: string | null = null;
+let chainConfirmationHeading: HTMLHeadingElement | null = null;
+let chainConfirmationDescription: HTMLParagraphElement | null = null;
+let chainConfirmationErrorsContainer: HTMLDivElement | null = null;
+let chainConfirmationErrorsList: HTMLUListElement | null = null;
+let chainConfirmationVariablesSection: HTMLDivElement | null = null;
+let chainConfirmationVariableEmptyMessage: HTMLParagraphElement | null = null;
+let chainConfirmationStepsList: HTMLUListElement | null = null;
+let chainConfirmationGeneralErrorEl: HTMLParagraphElement | null = null;
+let chainConfirmationSubmitButton: HTMLButtonElement | null = null;
+let chainConfirmationCancelButton: HTMLButtonElement | null = null;
+const chainConfirmationVariableInputs = new Map<string, HTMLInputElement>();
+const chainConfirmationVariableErrors = new Map<string, HTMLSpanElement>();
+const chainConfirmationStepPreviews = new Map<string, HTMLParagraphElement>();
 
 type PromptChainsRuntimeSnapshot = ReturnType<typeof usePromptChainsStore.getState>;
 
@@ -242,6 +285,7 @@ button {
   max-height: 360px;
   display: flex;
   flex-direction: column;
+  position: relative;
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -547,6 +591,221 @@ button {
   color: #a7f3d0;
   outline: none;
 }
+.chain-confirmation {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+}
+.chain-confirmation[hidden] {
+  display: none;
+}
+.chain-confirmation-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 22px 60px rgba(8, 15, 26, 0.55);
+  padding: 20px;
+  color: #f8fafc;
+}
+.chain-confirmation-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chain-confirmation-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.chain-confirmation-description {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.85);
+}
+.chain-confirmation-errors {
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(127, 29, 29, 0.25);
+  padding: 12px 14px;
+  color: #fecaca;
+  font-size: 12px;
+}
+.chain-confirmation-errors[hidden] {
+  display: none;
+}
+.chain-confirmation-error-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chain-confirmation-error-list code {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 11px;
+  color: #fecaca;
+}
+.chain-confirmation-section-title {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.82);
+}
+.chain-confirmation-variables {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chain-confirmation-variable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chain-confirmation-variable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.chain-confirmation-variable-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(226, 232, 240, 0.85);
+}
+.chain-confirmation-input {
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(30, 41, 59, 0.85);
+  padding: 8px 10px;
+  color: #f8fafc;
+  font-size: 13px;
+}
+.chain-confirmation-input:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.6);
+  outline-offset: 2px;
+}
+.chain-confirmation-variable[data-invalid="true"] .chain-confirmation-input {
+  border-color: rgba(248, 113, 113, 0.65);
+}
+.chain-confirmation-variable-error {
+  min-height: 14px;
+  font-size: 11px;
+  color: #fca5a5;
+}
+.chain-confirmation-variable-empty {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.78);
+}
+.chain-confirmation-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chain-confirmation-step-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chain-confirmation-step {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.75);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chain-confirmation-step-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.92);
+}
+.chain-confirmation-step-preview {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.82);
+  white-space: pre-wrap;
+}
+.chain-confirmation-general-error {
+  margin: 0;
+  font-size: 12px;
+  color: #fca5a5;
+}
+.chain-confirmation-general-error:empty {
+  display: none;
+}
+.chain-confirmation-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.chain-confirmation-cancel,
+.chain-confirmation-submit {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
+}
+.chain-confirmation-cancel {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.65);
+  color: rgba(226, 232, 240, 0.88);
+}
+.chain-confirmation-cancel:hover,
+.chain-confirmation-cancel:focus-visible {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(148, 163, 184, 0.65);
+  outline: none;
+}
+.chain-confirmation-submit {
+  border: 1px solid rgba(16, 185, 129, 0.75);
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+.chain-confirmation-submit:hover,
+.chain-confirmation-submit:focus-visible {
+  background: rgba(16, 185, 129, 0.32);
+  border-color: rgba(16, 185, 129, 0.95);
+  color: #a7f3d0;
+  outline: none;
+}
+.chain-confirmation-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.chain-confirmation[data-submitting="true"] {
+  pointer-events: none;
+}
 @media (max-width: 768px) {
   .launcher {
     bottom: 78px;
@@ -691,7 +950,8 @@ function translate(key: string, fallback: string, options?: Record<string, unkno
 async function ensureI18n() {
   if (!i18nInstance) {
     try {
-      i18nInstance = await initI18n();
+      const language = useSettingsStore.getState().language;
+      i18nInstance = await initI18n(language);
     } catch (error) {
       console.error('[ai-companion] failed to initialize i18n for prompt launcher', error);
     }
@@ -1276,6 +1536,179 @@ function readComposerText(target: HTMLTextAreaElement | HTMLElement | null): str
   return '';
 }
 
+function getComposerCaretOffset(target: HTMLTextAreaElement | HTMLElement): number | null {
+  if (isHtmlTextAreaElement(target)) {
+    return target.selectionStart ?? target.value.length;
+  }
+
+  if (isHtmlContentEditable(target)) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!target.contains(range.startContainer)) {
+      return null;
+    }
+
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(target);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    return preRange.toString().length;
+  }
+
+  return null;
+}
+
+function resolveContentEditablePosition(
+  root: HTMLElement,
+  offset: number
+): { node: Node; offset: number } | null {
+  const totalLength = root.textContent?.length ?? 0;
+  const clampedOffset = Math.max(0, Math.min(offset, totalLength));
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  let remaining = clampedOffset;
+  let lastText: Text | null = null;
+
+  while (true) {
+    const current = walker.nextNode() as Text | null;
+    if (!current) {
+      break;
+    }
+
+    lastText = current;
+    const length = current.textContent?.length ?? 0;
+    if (remaining <= length) {
+      return { node: current, offset: remaining };
+    }
+
+    remaining -= length;
+  }
+
+  if (lastText) {
+    const length = lastText.textContent?.length ?? 0;
+    return { node: lastText, offset: length };
+  }
+
+  return { node: root, offset: root.childNodes.length };
+}
+
+function dispatchComposerInputEvent(target: HTMLTextAreaElement | HTMLElement, data = '') {
+  const event =
+    typeof InputEvent === 'function'
+      ? new InputEvent('input', { bubbles: true, data })
+      : new Event('input', { bubbles: true });
+
+  target.dispatchEvent(event);
+}
+
+function replaceComposerRange(
+  target: HTMLTextAreaElement | HTMLElement,
+  start: number,
+  end: number,
+  replacement: string
+): boolean {
+  const text = readComposerText(target);
+  const boundedStart = Math.max(0, Math.min(start, end, text.length));
+  const boundedEnd = Math.max(boundedStart, Math.min(end, text.length));
+
+  if (isHtmlTextAreaElement(target)) {
+    target.setSelectionRange(boundedStart, boundedEnd);
+    target.setRangeText(replacement, boundedStart, boundedEnd, 'end');
+    const caret = boundedStart + replacement.length;
+    target.setSelectionRange(caret, caret);
+    dispatchComposerInputEvent(target, replacement);
+    return true;
+  }
+
+  if (isHtmlContentEditable(target)) {
+    const selection = window.getSelection();
+    if (!selection) {
+      return false;
+    }
+
+    try {
+      target.focus({ preventScroll: true });
+    } catch {
+      // Ignore focus errors for cross-origin elements.
+    }
+
+    const startPosition = resolveContentEditablePosition(target, boundedStart);
+    const endPosition = resolveContentEditablePosition(target, boundedEnd);
+    if (!startPosition || !endPosition) {
+      return false;
+    }
+
+    const range = document.createRange();
+    range.setStart(startPosition.node, startPosition.offset);
+    range.setEnd(endPosition.node, endPosition.offset);
+    range.deleteContents();
+
+    if (replacement.length > 0) {
+      range.insertNode(document.createTextNode(replacement));
+    }
+
+    const caretOffset = boundedStart + replacement.length;
+    const caretPosition = resolveContentEditablePosition(target, caretOffset);
+    if (caretPosition) {
+      selection.removeAllRanges();
+      const caretRange = document.createRange();
+      caretRange.setStart(caretPosition.node, caretPosition.offset);
+      caretRange.collapse(true);
+      selection.addRange(caretRange);
+    }
+
+    dispatchComposerInputEvent(target, replacement);
+    return true;
+  }
+
+  return false;
+}
+
+function maybeHandleInlineTrigger() {
+  if (!activeComposer || suppressInlineTriggerHandling) {
+    return;
+  }
+
+  const caret = getComposerCaretOffset(activeComposer);
+  if (caret === null) {
+    return;
+  }
+
+  const text = readComposerText(activeComposer);
+  const match = findInlineTrigger(text, caret);
+  if (!match) {
+    return;
+  }
+
+  suppressInlineTriggerHandling = true;
+  const removed = replaceComposerRange(activeComposer, match.start, match.end, '');
+  suppressInlineTriggerHandling = false;
+
+  if (!removed) {
+    return;
+  }
+
+  updateComposerCounterValues();
+
+  if (match.target === 'prompts') {
+    state.filter = match.query;
+  } else {
+    state.filter = '';
+  }
+
+  openPanel(match.target);
+
+  if (match.target === 'prompts') {
+    if (searchInput) {
+      searchInput.value = match.query;
+    }
+    renderPromptList();
+  }
+}
+
 function computeComposerMetrics(text: string) {
   const trimmed = text.trim();
   const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
@@ -1302,8 +1735,11 @@ function attachToComposer(element: HTMLTextAreaElement | HTMLElement) {
   detachComposer();
   activeComposer = element;
 
-  const listener = () => {
+  const listener = (event: Event) => {
     updateComposerCounterValues();
+    if (event.type === 'input') {
+      maybeHandleInlineTrigger();
+    }
   };
   composerInputListener = listener;
 
@@ -1456,6 +1892,9 @@ function refreshBubbleLabels() {
 }
 
 function openPanel(bubbleId: PanelBubbleId) {
+  if (state.chainConfirmation && bubbleId !== 'chains') {
+    closeChainConfirmation({ focusTrigger: false });
+  }
   state.activeBubble = bubbleId;
   state.open = true;
 
@@ -1494,6 +1933,10 @@ function closePanel(options: { focusTrigger?: boolean } = {}) {
     searchInput.value = '';
   }
 
+  if (state.chainConfirmation) {
+    closeChainConfirmation({ focusTrigger: false });
+  }
+
   renderActivePanel();
   refreshBubbleLabels();
 
@@ -1524,6 +1967,7 @@ function renderActivePanel() {
     promptList.hidden = true;
     emptyState.hidden = false;
     titleEl.textContent = translate('content.promptLauncher.title', 'Saved prompts');
+    renderChainConfirmation();
     return;
   }
 
@@ -1531,6 +1975,7 @@ function renderActivePanel() {
   if (!config) {
     panel.hidden = true;
     panel.removeAttribute('data-bubble');
+    renderChainConfirmation();
     return;
   }
 
@@ -1546,6 +1991,7 @@ function renderActivePanel() {
       searchInput.placeholder = translate('content.promptLauncher.searchPlaceholder', 'Search prompts...');
     }
     renderPromptList();
+    renderChainConfirmation();
     return;
   }
 
@@ -1553,11 +1999,13 @@ function renderActivePanel() {
 
   if (config.id === 'chains') {
     renderChainList();
+    renderChainConfirmation();
     return;
   }
 
   if (config.id === 'bookmarks') {
     renderBookmarkList();
+    renderChainConfirmation();
     return;
   }
 
@@ -1569,6 +2017,7 @@ function renderActivePanel() {
     config.placeholderSubtitleKey,
     config.placeholderSubtitleFallback
   );
+  renderChainConfirmation();
 }
 
 function subscribeToPrompts() {
@@ -1716,6 +2165,7 @@ function renderChainList() {
   const limited = chains.slice(0, MAX_CHAINS);
   const items = limited.map((chain) => createChainListItem(chain, runtime));
   promptList.append(...items);
+  renderChainConfirmation();
 }
 
 function renderBookmarkList() {
@@ -1747,6 +2197,634 @@ function renderBookmarkList() {
   const limited = bookmarks.slice(0, MAX_BOOKMARKS);
   const items = limited.map((bookmark) => createBookmarkListItem(bookmark));
   promptList.append(...items);
+}
+
+function resetChainConfirmationDom() {
+  if (!chainConfirmationOverlay) {
+    return;
+  }
+  chainConfirmationOverlay.innerHTML = '';
+  chainConfirmationHeading = null;
+  chainConfirmationDescription = null;
+  chainConfirmationErrorsContainer = null;
+  chainConfirmationErrorsList = null;
+  chainConfirmationVariablesSection = null;
+  chainConfirmationVariableEmptyMessage = null;
+  chainConfirmationStepsList = null;
+  chainConfirmationGeneralErrorEl = null;
+  chainConfirmationSubmitButton = null;
+  chainConfirmationCancelButton = null;
+  chainConfirmationVariableInputs.clear();
+  chainConfirmationVariableErrors.clear();
+  chainConfirmationStepPreviews.clear();
+}
+
+function renderChainConfirmation(options: { focusFirstInput?: boolean } = {}) {
+  if (!panel) {
+    return;
+  }
+
+  if (!chainConfirmationOverlay) {
+    chainConfirmationOverlay = document.createElement('div');
+    chainConfirmationOverlay.className = 'chain-confirmation';
+    chainConfirmationOverlay.hidden = true;
+    chainConfirmationOverlay.setAttribute('role', 'dialog');
+    chainConfirmationOverlay.setAttribute('aria-modal', 'true');
+    if (typeof chainConfirmationOverlay.addEventListener === 'function') {
+      chainConfirmationOverlay.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeChainConfirmation({ focusTrigger: true });
+        }
+      });
+    }
+    panel.appendChild(chainConfirmationOverlay);
+  }
+
+  const confirmation = state.chainConfirmation;
+  if (!confirmation || state.activeBubble !== 'chains') {
+    chainConfirmationOverlay.hidden = true;
+    chainConfirmationOverlay.setAttribute('aria-hidden', 'true');
+    chainConfirmationOverlay.removeAttribute('aria-labelledby');
+    chainConfirmationOverlay.removeAttribute('aria-describedby');
+    resetChainConfirmationDom();
+    chainConfirmationRenderedSignature = null;
+    return;
+  }
+
+  chainConfirmationOverlay.hidden = false;
+  chainConfirmationOverlay.setAttribute('aria-hidden', 'false');
+
+  const signature = `${confirmation.chain.id}::${confirmation.variables.join('|')}`;
+  if (signature !== chainConfirmationRenderedSignature) {
+    buildChainConfirmationDom(confirmation);
+    chainConfirmationRenderedSignature = signature;
+    if (options.focusFirstInput) {
+      focusChainConfirmation();
+    }
+  }
+
+  updateChainConfirmationUI();
+
+  if (options.focusFirstInput) {
+    focusChainConfirmation();
+  }
+}
+
+function buildChainConfirmationDom(confirmation: ChainConfirmationState) {
+  if (!chainConfirmationOverlay) {
+    return;
+  }
+
+  resetChainConfirmationDom();
+
+  const form = document.createElement('form');
+  form.className = 'chain-confirmation-card';
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void handleChainConfirmationSubmit();
+  });
+  chainConfirmationOverlay.appendChild(form);
+
+  const header = document.createElement('div');
+  header.className = 'chain-confirmation-header';
+  form.appendChild(header);
+
+  chainConfirmationHeading = document.createElement('h3');
+  chainConfirmationHeading.className = 'chain-confirmation-title';
+  chainConfirmationHeading.id = `chain-confirmation-title-${confirmation.chain.id}`;
+  header.appendChild(chainConfirmationHeading);
+
+  chainConfirmationDescription = document.createElement('p');
+  chainConfirmationDescription.className = 'chain-confirmation-description';
+  chainConfirmationDescription.id = `chain-confirmation-description-${confirmation.chain.id}`;
+  header.appendChild(chainConfirmationDescription);
+
+  chainConfirmationOverlay.setAttribute('aria-labelledby', chainConfirmationHeading.id);
+  chainConfirmationOverlay.setAttribute('aria-describedby', chainConfirmationDescription.id);
+
+  chainConfirmationErrorsContainer = document.createElement('div');
+  chainConfirmationErrorsContainer.className = 'chain-confirmation-errors';
+  chainConfirmationErrorsContainer.hidden = true;
+  form.appendChild(chainConfirmationErrorsContainer);
+
+  chainConfirmationErrorsList = document.createElement('ul');
+  chainConfirmationErrorsList.className = 'chain-confirmation-error-list';
+  chainConfirmationErrorsContainer.appendChild(chainConfirmationErrorsList);
+
+  chainConfirmationVariablesSection = document.createElement('div');
+  chainConfirmationVariablesSection.className = 'chain-confirmation-variables';
+  form.appendChild(chainConfirmationVariablesSection);
+
+  const variablesTitle = document.createElement('h4');
+  variablesTitle.className = 'chain-confirmation-section-title';
+  variablesTitle.textContent = translate('content.chainConfirmation.variablesHeading', 'Variables');
+  chainConfirmationVariablesSection.appendChild(variablesTitle);
+
+  const variableList = document.createElement('div');
+  variableList.className = 'chain-confirmation-variable-list';
+  chainConfirmationVariablesSection.appendChild(variableList);
+
+  if (confirmation.variables.length === 0) {
+    chainConfirmationVariableEmptyMessage = document.createElement('p');
+    chainConfirmationVariableEmptyMessage.className = 'chain-confirmation-variable-empty';
+    chainConfirmationVariablesSection.appendChild(chainConfirmationVariableEmptyMessage);
+  } else {
+    for (const variable of confirmation.variables) {
+      const field = document.createElement('label');
+      field.className = 'chain-confirmation-variable';
+      field.setAttribute('data-variable', variable);
+
+      const nameLabel = document.createElement('span');
+      nameLabel.className = 'chain-confirmation-variable-name';
+      nameLabel.textContent = variable;
+      field.appendChild(nameLabel);
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chain-confirmation-input';
+      input.setAttribute('data-variable', variable);
+      input.autocomplete = 'off';
+      input.addEventListener('input', (event) => {
+        const value = (event.target as HTMLInputElement).value;
+        updateChainConfirmationVariable(variable, value);
+      });
+      field.appendChild(input);
+      chainConfirmationVariableInputs.set(variable, input);
+
+      const error = document.createElement('span');
+      error.className = 'chain-confirmation-variable-error';
+      field.appendChild(error);
+      chainConfirmationVariableErrors.set(variable, error);
+
+      variableList.appendChild(field);
+    }
+  }
+
+  const stepsSection = document.createElement('div');
+  stepsSection.className = 'chain-confirmation-steps';
+  form.appendChild(stepsSection);
+
+  const stepsTitle = document.createElement('h4');
+  stepsTitle.className = 'chain-confirmation-section-title';
+  stepsTitle.textContent = translate('content.chainConfirmation.stepsHeading', 'Step preview');
+  stepsSection.appendChild(stepsTitle);
+
+  chainConfirmationStepsList = document.createElement('ul');
+  chainConfirmationStepsList.className = 'chain-confirmation-step-list';
+  stepsSection.appendChild(chainConfirmationStepsList);
+
+  confirmation.prompts.forEach((prompt, index) => {
+    const item = document.createElement('li');
+    item.className = 'chain-confirmation-step';
+
+    const title = document.createElement('p');
+    title.className = 'chain-confirmation-step-title';
+    title.setAttribute('data-step', prompt.id);
+    item.appendChild(title);
+
+    const preview = document.createElement('p');
+    preview.className = 'chain-confirmation-step-preview';
+    preview.setAttribute('data-step', prompt.id);
+    item.appendChild(preview);
+    chainConfirmationStepPreviews.set(prompt.id, preview);
+
+    chainConfirmationStepsList!.appendChild(item);
+  });
+
+  chainConfirmationGeneralErrorEl = document.createElement('p');
+  chainConfirmationGeneralErrorEl.className = 'chain-confirmation-general-error';
+  form.appendChild(chainConfirmationGeneralErrorEl);
+
+  const footer = document.createElement('div');
+  footer.className = 'chain-confirmation-footer';
+  form.appendChild(footer);
+
+  chainConfirmationCancelButton = document.createElement('button');
+  chainConfirmationCancelButton.type = 'button';
+  chainConfirmationCancelButton.className = 'chain-confirmation-cancel';
+  chainConfirmationCancelButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    closeChainConfirmation({ focusTrigger: true });
+  });
+  footer.appendChild(chainConfirmationCancelButton);
+
+  chainConfirmationSubmitButton = document.createElement('button');
+  chainConfirmationSubmitButton.type = 'submit';
+  chainConfirmationSubmitButton.className = 'chain-confirmation-submit';
+  footer.appendChild(chainConfirmationSubmitButton);
+}
+
+function focusChainConfirmation() {
+  const confirmation = state.chainConfirmation;
+  if (!confirmation) {
+    return;
+  }
+
+  if (confirmation.variables.length > 0) {
+    const firstVariable = confirmation.variables[0];
+    const input = chainConfirmationVariableInputs.get(firstVariable);
+    if (input) {
+      input.focus({ preventScroll: true });
+      input.select();
+      return;
+    }
+  }
+
+  chainConfirmationSubmitButton?.focus({ preventScroll: true });
+}
+
+function updateChainConfirmationUI() {
+  const confirmation = state.chainConfirmation;
+  if (!confirmation || !chainConfirmationOverlay) {
+    return;
+  }
+
+  const chainName = confirmation.chain.name;
+
+  if (chainConfirmationHeading) {
+    chainConfirmationHeading.textContent = translate('content.chainConfirmation.title', 'Confirm prompt chain');
+  }
+
+  if (chainConfirmationDescription) {
+    chainConfirmationDescription.textContent = translate(
+      'content.chainConfirmation.description',
+      'Provide variable values before running {{name}}.',
+      { name: chainName }
+    );
+  }
+
+  if (chainConfirmationCancelButton) {
+    chainConfirmationCancelButton.textContent = translate('content.chainConfirmation.cancel', 'Cancel');
+    chainConfirmationCancelButton.disabled = confirmation.submitting;
+  }
+
+  if (chainConfirmationVariableEmptyMessage) {
+    chainConfirmationVariableEmptyMessage.textContent = translate(
+      'content.chainConfirmation.noVariables',
+      'This chain does not require variables.'
+    );
+  }
+
+  for (const variable of confirmation.variables) {
+    const input = chainConfirmationVariableInputs.get(variable);
+    const errorLabel = chainConfirmationVariableErrors.get(variable);
+    const value = confirmation.values.get(variable) ?? '';
+    if (input && input.value !== value) {
+      input.value = value;
+    }
+    const missing = confirmation.missingVariables.has(variable);
+    if (input) {
+      input.parentElement?.setAttribute('data-invalid', missing ? 'true' : 'false');
+      input.disabled = confirmation.submitting;
+    }
+    if (errorLabel) {
+      errorLabel.textContent = missing
+        ? translate('content.chainConfirmation.variableRequired', 'Required')
+        : '';
+    }
+  }
+
+  if (chainConfirmationStepsList) {
+    confirmation.prompts.forEach((prompt, index) => {
+      const title = chainConfirmationStepsList!.querySelector<HTMLParagraphElement>(
+        `.chain-confirmation-step-title[data-step="${prompt.id}"]`
+      );
+      if (title) {
+        title.textContent = translate(
+          'content.chainConfirmation.stepLabel',
+          'Step {{index}} · {{name}}',
+          { index: index + 1, name: prompt.name }
+        );
+      }
+      const preview = chainConfirmationStepPreviews.get(prompt.id);
+      if (preview) {
+        preview.textContent = buildChainStepPreview(confirmation, index);
+      }
+    });
+  }
+
+  if (chainConfirmationErrorsContainer && chainConfirmationErrorsList) {
+    chainConfirmationErrorsList.innerHTML = '';
+    if (confirmation.parseIssues.length > 0) {
+      chainConfirmationErrorsContainer.hidden = false;
+      for (const issue of confirmation.parseIssues) {
+        const item = document.createElement('li');
+        item.textContent = translate(
+          'content.chainConfirmation.parseIssueItem',
+          '{{prompt}} — {{message}}',
+          { prompt: issue.promptName, message: issue.message }
+        );
+        if (issue.snippet) {
+          const snippet = document.createElement('code');
+          snippet.textContent = issue.snippet;
+          item.appendChild(document.createElement('br'));
+          item.appendChild(snippet);
+        }
+        chainConfirmationErrorsList.appendChild(item);
+      }
+    } else {
+      chainConfirmationErrorsContainer.hidden = true;
+    }
+  }
+
+  if (chainConfirmationGeneralErrorEl) {
+    chainConfirmationGeneralErrorEl.textContent = confirmation.generalError ?? '';
+  }
+
+  if (chainConfirmationSubmitButton) {
+    const disableSubmit =
+      confirmation.submitting ||
+      confirmation.missingVariables.size > 0 ||
+      confirmation.parseIssues.length > 0 ||
+      confirmation.prompts.length === 0;
+    chainConfirmationSubmitButton.disabled = disableSubmit;
+    chainConfirmationSubmitButton.textContent = confirmation.submitting
+      ? translate('content.chainConfirmation.starting', 'Starting…')
+      : translate('content.chainConfirmation.start', 'Start chain');
+  }
+
+  chainConfirmationOverlay.setAttribute('data-submitting', confirmation.submitting ? 'true' : 'false');
+}
+
+function buildChainStepPreview(confirmation: ChainConfirmationState, index: number): string {
+  const prompt = confirmation.prompts[index];
+  const parsed = confirmation.parseResults[index];
+  if (!prompt) {
+    return '';
+  }
+
+  if (!parsed || parsed.hasErrors) {
+    return translate(
+      'content.chainConfirmation.previewUnavailable',
+      'Preview unavailable — fix template errors to continue.'
+    );
+  }
+
+  try {
+    return renderChainTemplate(parsed, {
+      variables: getChainConfirmationVariablesObject(confirmation),
+      onMissingVariable: (name) => `{{${name}}}`,
+      onMissingStepOutput: ({ stepId, property }) =>
+        translate('content.chainConfirmation.previewStepOutput', '[[{{step}}.{{property}}]]', {
+          step: stepId,
+          property
+        })
+    });
+  } catch (error) {
+    console.error('[ai-companion] failed to render chain preview', error);
+    return prompt.content;
+  }
+}
+
+function updateChainConfirmationVariable(name: string, value: string) {
+  const confirmation = state.chainConfirmation;
+  if (!confirmation) {
+    return;
+  }
+  confirmation.values.set(name, value);
+  if (value.trim().length > 0) {
+    confirmation.missingVariables.delete(name);
+  } else {
+    confirmation.missingVariables.add(name);
+  }
+  if (confirmation.generalError) {
+    confirmation.generalError = null;
+  }
+  updateChainConfirmationUI();
+}
+
+async function openChainConfirmation(chain: PromptChainRecord, trigger?: HTMLButtonElement | null) {
+  if (state.activeBubble !== 'chains') {
+    openPanel('chains');
+  }
+  const previous = state.chainConfirmation;
+  const records = await db.prompts.bulkGet(chain.nodeIds);
+
+  const prompts: PromptRecord[] = [];
+  const parseResults: ChainTemplateParseResult[] = [];
+  const parseIssues: ChainConfirmationParseIssue[] = [];
+
+  chain.nodeIds.forEach((id, index) => {
+    const record = records[index];
+    if (!record) {
+      parseIssues.push({
+        promptId: id,
+        promptName: translate('content.chainConfirmation.missingPromptTitle', 'Missing prompt'),
+        message: translate(
+          'content.chainConfirmation.missingPromptMessage',
+          'This step was not found. Open the dashboard to repair the chain.'
+        ),
+        snippet: ''
+      });
+      return;
+    }
+
+    prompts.push(record);
+    const parsed = parseChainTemplate(record.content);
+    parseResults.push(parsed);
+
+    if (parsed.hasErrors) {
+      for (const error of parsed.errors) {
+        parseIssues.push({
+          promptId: record.id,
+          promptName: record.name,
+          message: error.message,
+          snippet: error.snippet
+        });
+      }
+    }
+  });
+
+  const uniqueVariables = new Set<string>(chain.variables ?? []);
+  for (const result of parseResults) {
+    for (const variable of result.variables) {
+      uniqueVariables.add(variable);
+    }
+  }
+
+  const variables = [...uniqueVariables].sort((a, b) => a.localeCompare(b));
+  const values = new Map<string, string>();
+  const missing = new Set<string>();
+
+  for (const variable of variables) {
+    const previousValue =
+      previous && previous.chain.id === chain.id ? previous.values.get(variable) ?? '' : '';
+    values.set(variable, previousValue);
+    if (!previousValue || previousValue.trim().length === 0) {
+      missing.add(variable);
+    }
+  }
+
+  state.chainConfirmation = {
+    chain,
+    prompts,
+    parseResults,
+    variables,
+    values,
+    missingVariables: missing,
+    parseIssues,
+    submitting: false,
+    generalError: null,
+    triggerButton: trigger ?? null
+  } satisfies ChainConfirmationState;
+
+  renderChainConfirmation({ focusFirstInput: true });
+  renderChainList();
+}
+
+function closeChainConfirmation(options: { focusTrigger?: boolean } = {}) {
+  const confirmation = state.chainConfirmation;
+  state.chainConfirmation = null;
+  renderChainConfirmation();
+  renderChainList();
+
+  if (options.focusTrigger && confirmation?.triggerButton) {
+    try {
+      confirmation.triggerButton.focus({ preventScroll: true });
+    } catch (error) {
+      console.warn('[ai-companion] failed to focus trigger button after closing confirmation', error);
+    }
+  }
+}
+
+function getChainConfirmationVariablesObject(confirmation: ChainConfirmationState) {
+  const variables: Record<string, string> = {};
+  for (const [name, value] of confirmation.values.entries()) {
+    variables[name] = value.trim();
+  }
+  return variables;
+}
+
+function buildChainRunPlan(confirmation: ChainConfirmationState): ChainRunPlan {
+  const variables = getChainConfirmationVariablesObject(confirmation);
+  return {
+    chainId: confirmation.chain.id,
+    variables,
+    steps: confirmation.prompts.map((prompt, index) => ({
+      promptId: prompt.id,
+      template: prompt.content,
+      parse: confirmation.parseResults[index],
+      resolvedContent: buildChainStepResolvedContent(confirmation, index, variables)
+    }))
+  } satisfies ChainRunPlan;
+}
+
+function buildChainStepResolvedContent(
+  confirmation: ChainConfirmationState,
+  index: number,
+  variables: Record<string, string>
+): string {
+  const prompt = confirmation.prompts[index];
+  const parsed = confirmation.parseResults[index];
+  if (!prompt) {
+    return '';
+  }
+
+  if (!parsed || parsed.hasErrors) {
+    return prompt.content;
+  }
+
+  try {
+    return renderChainTemplate(parsed, {
+      variables,
+      onMissingVariable: (name) => variables[name] ?? `{{${name}}}`,
+      onMissingStepOutput: ({ stepId, property }) =>
+        translate('content.chainConfirmation.previewStepOutput', '[[{{step}}.{{property}}]]', {
+          step: stepId,
+          property
+        })
+    });
+  } catch (error) {
+    console.error('[ai-companion] failed to resolve chain step', error);
+    return prompt.content;
+  }
+}
+
+async function handleChainConfirmationSubmit() {
+  const confirmation = state.chainConfirmation;
+  if (!confirmation || confirmation.submitting) {
+    return;
+  }
+
+  confirmation.missingVariables.clear();
+  for (const variable of confirmation.variables) {
+    const value = confirmation.values.get(variable);
+    if (!value || value.trim().length === 0) {
+      confirmation.missingVariables.add(variable);
+    }
+  }
+
+  if (confirmation.missingVariables.size > 0 || confirmation.parseIssues.length > 0) {
+    updateChainConfirmationUI();
+    const firstMissing = confirmation.variables.find((name) => confirmation.missingVariables.has(name));
+    if (firstMissing) {
+      const input = chainConfirmationVariableInputs.get(firstMissing);
+      input?.focus({ preventScroll: true });
+    }
+    return;
+  }
+
+  confirmation.submitting = true;
+  confirmation.generalError = null;
+  updateChainConfirmationUI();
+
+  try {
+    const plan = buildChainRunPlan(confirmation);
+    const response = await startChainRun(confirmation.chain.id, plan);
+
+    if (response.status === 'completed' || response.status === 'cancelled') {
+      closeChainConfirmation({ focusTrigger: false });
+      return;
+    }
+
+    if (response.status === 'busy') {
+      confirmation.generalError = translate(
+        'content.chainConfirmation.busyError',
+        'Another chain is already running. Try again when it completes.'
+      );
+    } else if (response.status === 'empty') {
+      confirmation.generalError = translate(
+        'content.chainConfirmation.emptyError',
+        'This chain has no prompts to run. Update it in the dashboard.'
+      );
+    } else if (response.status === 'not_found') {
+      confirmation.generalError = translate(
+        'content.chainConfirmation.notFoundError',
+        'We could not find this chain. Refresh and try again.'
+      );
+    } else if (response.status === 'error') {
+      confirmation.generalError = translate(
+        'content.chainConfirmation.genericError',
+        'Failed to start the chain. Please try again.'
+      );
+    }
+  } catch (error) {
+    console.error('[ai-companion] failed to start chain run', error);
+    confirmation.generalError = translate(
+      'content.chainConfirmation.genericError',
+      'Failed to start the chain. Please try again.'
+    );
+  } finally {
+    confirmation.submitting = false;
+    updateChainConfirmationUI();
+  }
+}
+
+async function startChainRun(chainId: string, plan?: ChainRunPlan) {
+  const response = await sendRuntimeMessage('content/run-chain', { chainId, plan });
+  if (response.status === 'busy') {
+    console.warn('[ai-companion] a prompt chain is already running');
+  } else if (response.status === 'empty') {
+    console.warn('[ai-companion] prompt chain has no steps to run');
+  } else if (response.status === 'not_found') {
+    console.warn('[ai-companion] prompt chain not found for execution');
+  } else if (response.status === 'error') {
+    console.error('[ai-companion] prompt chain run failed', response.message);
+  } else if (response.status === 'cancelled') {
+    console.info('[ai-companion] prompt chain run cancelled');
+  }
+  return response;
 }
 
 function openDashboard() {
@@ -1934,6 +3012,7 @@ function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRunt
   if (isRunning) {
     startButton.textContent = translate('content.bubblePanels.chains.runningButton', 'Running…');
     startButton.disabled = true;
+    startButton.setAttribute('aria-disabled', 'true');
     startButton.setAttribute(
       'aria-label',
       translate('content.bubblePanels.chains.runningAria', 'Prompt chain {{name}} is running', {
@@ -1943,10 +3022,24 @@ function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRunt
   } else {
     startButton.textContent = translate('content.bubblePanels.chains.startButton', 'Start chain');
     startButton.disabled = isBusy;
+    if (isBusy) {
+      startButton.setAttribute('aria-disabled', 'true');
+    } else {
+      startButton.removeAttribute('aria-disabled');
+    }
     const ariaLabel = isBusy
       ? translate('content.bubblePanels.chains.busyAria', 'Another chain is running')
       : translate('content.bubblePanels.chains.startAria', 'Start chain {{name}}', { name: chain.name });
     startButton.setAttribute('aria-label', ariaLabel);
+  }
+
+  const confirmation = state.chainConfirmation;
+  if (confirmation) {
+    if (confirmation.chain.id === chain.id) {
+      startButton.textContent = translate('content.bubblePanels.chains.confirmingButton', 'Confirm details');
+    }
+    startButton.disabled = true;
+    startButton.setAttribute('aria-disabled', 'true');
   }
 
   attachClickHandler(startButton, (event) => {
@@ -1955,7 +3048,7 @@ function createChainListItem(chain: PromptChainRecord, runtime: PromptChainsRunt
     if (startButton.disabled) {
       return;
     }
-    void handleRunChain(chain);
+    void handleRunChain(chain, startButton);
   });
 
   actions.appendChild(startButton);
@@ -2110,22 +3203,11 @@ function formatChainStatus(chain: PromptChainRecord, runtime: PromptChainsRuntim
   return translate('content.bubblePanels.chains.lastUsedNever', 'Not run yet');
 }
 
-async function handleRunChain(chain: PromptChainRecord) {
+async function handleRunChain(chain: PromptChainRecord, trigger?: HTMLButtonElement | null) {
   try {
-    const response = await sendRuntimeMessage('content/run-chain', { chainId: chain.id });
-    if (response.status === 'busy') {
-      console.warn('[ai-companion] a prompt chain is already running');
-    } else if (response.status === 'empty') {
-      console.warn('[ai-companion] prompt chain has no steps to run');
-    } else if (response.status === 'not_found') {
-      console.warn('[ai-companion] prompt chain not found for execution');
-    } else if (response.status === 'error') {
-      console.error('[ai-companion] prompt chain run failed', response.message);
-    } else if (response.status === 'cancelled') {
-      console.info('[ai-companion] prompt chain run cancelled');
-    }
+    await openChainConfirmation(chain, trigger);
   } catch (error) {
-    console.error('[ai-companion] failed to start prompt chain run', error);
+    console.error('[ai-companion] failed to prepare chain confirmation', error);
   }
 }
 

@@ -8,7 +8,6 @@ import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
 import { useRecentActivity } from '@/shared/hooks/useRecentActivity';
 import { useRecentBookmarks } from '@/shared/hooks/useRecentBookmarks';
 import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
-import { initI18n, setLanguage } from '@/shared/i18n';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 import { openGuideResource, useGuideResources } from '@/shared/hooks/useGuideResources';
@@ -289,7 +288,7 @@ function getActivityAccent(item: ActivityItem) {
 }
 
 export function Popup() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const language = useSettingsStore((state) => state.language);
   const direction = useSettingsStore((state) => state.direction);
   const setStoreLanguage = useSettingsStore((state) => state.setLanguage);
@@ -316,15 +315,8 @@ export function Popup() {
   }, []);
 
   useEffect(() => {
-    initI18n();
-  }, []);
-
-  useEffect(() => {
-    if (i18n.language !== language) {
-      setLanguage(language);
-    }
     document.documentElement.dir = direction;
-  }, [language, direction, i18n]);
+  }, [direction]);
 
   const untitledConversationLabel = t('popup.untitledConversation') || 'Untitled conversation';
   const bookmarkFallbackPreview = t('popup.bookmarkConversationOnly') || 'Conversation bookmark';
@@ -391,7 +383,6 @@ export function Popup() {
             onChange={(event) => {
               const newLanguage = event.target.value;
               setStoreLanguage(newLanguage);
-              setLanguage(newLanguage);
             }}
           >
             {languageOptions.map((option) => (

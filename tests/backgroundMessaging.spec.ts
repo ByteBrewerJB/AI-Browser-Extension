@@ -4,6 +4,9 @@ import type { AuthStatus } from '../src/background/auth';
 import { initializeMessaging } from '../src/background/messaging';
 import { enqueueJob, resetJobQueueForTests } from '../src/background/jobs/queue';
 import type { JobRecord } from '../src/core/models';
+import type { SyncEncryptionService } from '../src/background/crypto/syncEncryption';
+import type { NetworkMonitor } from '../src/background/monitoring/networkMonitor';
+import type { NetworkMonitorIncident } from '../src/shared/types/monitoring';
 
 type AsyncTest = [name: string, execute: () => Promise<void>];
 
@@ -21,6 +24,37 @@ const previousChrome = (globalThis as any).chrome;
     }
   }
 } as unknown as typeof chrome;
+
+function createEncryptionStub(overrides: Partial<SyncEncryptionService> = {}): SyncEncryptionService {
+  const base = {
+    async getStatus() {
+      return { configured: false, unlocked: false, iterations: null };
+    },
+    async configure() {
+      // noop
+    },
+    async unlock() {
+      // noop
+    },
+    async lock() {
+      // noop
+    },
+    async clear() {
+      // noop
+    },
+    async encryptString() {
+      return { version: 1, iv: '', data: '' };
+    },
+    async decryptToString() {
+      return '';
+    },
+    onStatusChange() {
+      return () => undefined;
+    }
+  } satisfies Partial<SyncEncryptionService>;
+
+  return { ...base, ...overrides } as SyncEncryptionService;
+}
 
 const tests: AsyncTest[] = [
   [
@@ -48,7 +82,7 @@ const tests: AsyncTest[] = [
         }
       } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
 
-      const { router } = initializeMessaging({ auth, scheduler });
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub() });
 
       const response = await router.handle({ type: 'runtime/ping', payload: { surface: 'content' } });
       assert.equal(response.type, 'pong');
@@ -82,7 +116,7 @@ const tests: AsyncTest[] = [
         }
       } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
 
-      const { router } = initializeMessaging({ auth, scheduler });
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub() });
 
       const status = await router.handle({ type: 'auth/status', payload: { includeToken: true } });
       assert.equal(status.authenticated, true);
@@ -116,7 +150,7 @@ const tests: AsyncTest[] = [
         }
       } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
 
-      const { router } = initializeMessaging({ auth, scheduler });
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub() });
 
       const scheduled = await router.handle({
         type: 'jobs/schedule-export',
@@ -153,7 +187,7 @@ const tests: AsyncTest[] = [
         }
       } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
 
-      const { router } = initializeMessaging({ auth, scheduler });
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub() });
 
       const seeded = await enqueueJob({
         type: 'export',
@@ -195,7 +229,7 @@ const tests: AsyncTest[] = [
         }
       } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
 
-      const { router } = initializeMessaging({ auth, scheduler });
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub() });
 
       const response = await router.handle({
         type: 'jobs/log-event',
@@ -208,6 +242,61 @@ const tests: AsyncTest[] = [
       assert.equal(input.type, 'event');
       assert.equal(input.payload?.event, 'guide-opened');
       assert.equal(input.payload?.guideId, 'bookmark-overlay');
+    }
+  ],
+  [
+    'returns network incidents via monitoring route',
+    async () => {
+      const auth = {
+        getStatus: () => ({ authenticated: true, premium: false })
+      } as unknown as import('../src/background/auth').AuthManager;
+
+      const scheduler = {
+        async schedule() {
+          return {
+            id: 'job-monitor',
+            type: 'export',
+            payload: {},
+            status: 'pending',
+            runAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            attempts: 0,
+            maxAttempts: 1
+          } satisfies JobRecord;
+        }
+      } as unknown as import('../src/background/jobs/scheduler').JobScheduler;
+
+      const incidents: NetworkMonitorIncident[] = [
+        {
+          id: 'incident-1',
+          url: 'https://malicious.example.com',
+          method: 'POST',
+          reason: 'disallowed_host',
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      const monitor: NetworkMonitor = {
+        install() {
+          // noop for tests
+        },
+        teardown() {
+          // noop for tests
+        },
+        getIncidents() {
+          return incidents;
+        },
+        clearIncidents() {
+          incidents.length = 0;
+        }
+      };
+
+      const { router } = initializeMessaging({ auth, scheduler, encryption: createEncryptionStub(), monitor });
+
+      const response = await router.handle({ type: 'monitoring/network-incidents', payload: {} });
+      assert.equal(response.incidents.length, 1);
+      assert.equal(response.incidents[0]?.id, 'incident-1');
     }
   ]
 ];

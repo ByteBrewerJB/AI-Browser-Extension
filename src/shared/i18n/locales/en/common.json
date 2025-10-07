@@ -99,6 +99,23 @@
       "completed": "Completed",
       "failed": "Failed"
     },
+    "exportJobsStatusDetails": {
+      "pendingInitial": "First run at {{time}}",
+      "pendingRetry": "Retry {{attempt}}/{{max}} at {{time}}",
+      "running": "Attempt {{attempt}}/{{max}} in progress",
+      "failed": "Failed after {{attempts}}/{{max}} attempts",
+      "completed": "Completed after {{attempts}} attempts"
+    },
+    "exportJobsTypeHeading": "Type",
+    "exportJobsFilterStatusLabel": "Status",
+    "exportJobsFilterTypeLabel": "Type",
+    "exportJobsFilterStatusAll": "All statuses",
+    "exportJobsFilterTypeAll": "All job types",
+    "exportJobsFilterNoResults": "No jobs match the selected filters.",
+    "exportJobsTypes": {
+      "export": "Export"
+    },
+    "exportJobsTypeFallback": "Job",
     "guideResources": {
       "heading": "Guides & updates",
       "description": "Explore quickstart guides to learn new workflows and settings.",
@@ -114,6 +131,73 @@
       "markUnviewed": "Restore “{{title}}”",
       "markUnviewedAria": "Restore guide {{title}}",
       "viewedBadge": "Viewed"
+    },
+    "encryption": {
+      "heading": "Passphrase & sync encryption",
+      "description": "Protect Dexie sync snapshots with an optional passphrase. The key never leaves this device.",
+      "stateUnknown": "Status unavailable",
+      "stateNotConfigured": "Not configured",
+      "stateNotConfiguredDescription": "No passphrase has been set. Dexie snapshots fall back to the local key.",
+      "stateLocked": "Configured · Locked",
+      "stateLockedDescription": "A passphrase is configured. Enter it below to unlock sync encryption.",
+      "stateUnlocked": "Configured · Unlocked",
+      "stateUnlockedDescription": "Dexie sync snapshots encrypt/decrypt automatically while unlocked.",
+      "stateLoading": "Checking status…",
+      "iterationsLabel": "PBKDF2 iterations: {{formatted}}",
+      "configureHeading": "Set a passphrase",
+      "configureHeadingUpdate": "Update passphrase",
+      "configureDescription": "Choose a strong passphrase. It will be required to restore synced data on other devices.",
+      "passphraseLabel": "Passphrase",
+      "passphrasePlaceholder": "Enter a new passphrase",
+      "confirmLabel": "Confirm passphrase",
+      "confirmPlaceholder": "Type the passphrase again",
+      "errorMissingPassphrase": "Enter a passphrase first.",
+      "errorTooShort": "Use at least 8 characters to harden the derived key.",
+      "errorMismatch": "Passphrases must match.",
+      "errorConfigureFailed": "Saving the passphrase failed. Retry and check the service worker logs.",
+      "noticeUpdated": "Passphrase updated. Snapshots will use the new key immediately.",
+      "noticeConfigured": "Encryption configured. Snapshots will now require this passphrase.",
+      "configureSaving": "Saving…",
+      "configureCta": "Save passphrase",
+      "updateCta": "Update passphrase",
+      "configureHint": "The passphrase is never synced. Store it in a secure manager.",
+      "unlockHeading": "Unlock existing passphrase",
+      "unlockDescription": "Unlock to decrypt snapshots and allow other devices to sync.",
+      "unlockLabel": "Passphrase",
+      "unlockPlaceholder": "Enter your passphrase",
+      "unlocking": "Unlocking…",
+      "unlockCta": "Unlock",
+      "noticeUnlocked": "Encryption unlocked. Sync snapshots can now decrypt data.",
+      "errorInvalidPassphrase": "The passphrase did not match. Retry with the correct value.",
+      "errorNotConfigured": "Encryption is not configured yet. Set a passphrase first.",
+      "errorUnlockFailed": "Unlock failed. Check the background console for details.",
+      "lockHeading": "Lock snapshots",
+      "lockDescription": "Lock to remove the key from memory. Encrypted data stays unreadable until you unlock again.",
+      "locking": "Locking…",
+      "lockCta": "Lock now",
+      "noticeLocked": "Encryption locked. Snapshots remain protected until you unlock again.",
+      "errorLockFailed": "Locking failed. Inspect the background console for more details.",
+      "footerNote": "The extension never transmits your passphrase. If you lose it, synced data cannot be recovered.",
+      "notifications": {
+        "configured": {
+          "title": "Encryption configured",
+          "description": "Sync snapshots now require the updated passphrase."
+        },
+        "unlocked": {
+          "title": "Encryption unlocked",
+          "description": "Encrypted snapshots can decrypt automatically until you lock again."
+        },
+        "locked": {
+          "title": "Encryption locked",
+          "description": "Snapshots will pause until you unlock the passphrase."
+        },
+        "cleared": {
+          "title": "Encryption cleared",
+          "description": "Snapshots fall back to the local key. Configure a passphrase to re-enable sync protection."
+        },
+        "timestamp": "Recorded at {{time}}",
+        "dismiss": "Dismiss"
+      }
     },
     "favoriteFolder": "Mark as favorite",
     "unfavoriteFolder": "Remove favorite",

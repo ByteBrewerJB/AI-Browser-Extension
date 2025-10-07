@@ -1,11 +1,77 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
-}
+@layer base {
+  :root {
+    color-scheme: light;
+    --color-background: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f1f5f9;
+    --color-border: #cbd5f5;
+    --color-border-strong: #94a3b8;
+    --color-text-primary: #0f172a;
+    --color-text-muted: #475569;
+    --color-text-inverse: #ffffff;
+    --color-accent: #2563eb;
+    --color-accent-contrast: #0b1f4b;
+    --color-focus-ring: #2563eb;
+    --shadow-elevation: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.1);
+  }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-background: #0f172a;
+    --color-surface: #111827;
+    --color-surface-subtle: #1e293b;
+    --color-border: #1f2937;
+    --color-border-strong: #334155;
+    --color-text-primary: #f8fafc;
+    --color-text-muted: #94a3b8;
+    --color-text-inverse: #0f172a;
+    --color-accent: #38bdf8;
+    --color-accent-contrast: #082f49;
+    --color-focus-ring: #38bdf8;
+    --shadow-elevation: 0 1px 2px rgba(8, 47, 73, 0.35), 0 1px 3px rgba(8, 47, 73, 0.5);
+  }
+
+  :root[data-theme='high-contrast'] {
+    color-scheme: light;
+    --color-background: #000000;
+    --color-surface: #000000;
+    --color-surface-subtle: #1a1a1a;
+    --color-border: #ffffff;
+    --color-border-strong: #ffd60a;
+    --color-text-primary: #ffffff;
+    --color-text-muted: #f5f5f5;
+    --color-text-inverse: #000000;
+    --color-accent: #ffd60a;
+    --color-accent-contrast: #000000;
+    --color-focus-ring: #00b4d8;
+    --shadow-elevation: 0 0 0 2px #ffffff, 0 0 0 4px #ffd60a;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-accent-contrast);
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+
+  a:hover {
+    color: var(--color-accent-contrast);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
 }

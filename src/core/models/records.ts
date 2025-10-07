@@ -10,6 +10,7 @@ export interface ConversationRecord {
   wordCount: number;
   charCount: number;
   archived?: boolean;
+  tags?: string[];
 }
 
 export interface MessageRecord {
@@ -62,6 +63,18 @@ export interface FolderRecord {
   updatedAt: string;
   kind: 'conversation' | 'prompt' | 'gpt';
   favorite?: boolean;
+}
+
+export type FolderItemType = 'conversation' | 'prompt' | 'gpt';
+
+export interface FolderItemRecord {
+  id: string;
+  folderId: string;
+  itemId: string;
+  itemType: FolderItemType;
+  sortIndex?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BookmarkRecord {

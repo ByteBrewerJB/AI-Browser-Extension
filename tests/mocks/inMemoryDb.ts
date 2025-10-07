@@ -1,6 +1,8 @@
 import type {
   BookmarkRecord,
   ConversationRecord,
+  FolderItemRecord,
+  FolderRecord,
   MessageRecord,
   PromptChainRecord
 } from '@/core/models';
@@ -32,6 +34,7 @@ type OrderQuery<T extends RecordWithId> = {
 };
 
 type MutableTable<T extends RecordWithId> = {
+  add(record: T): Promise<string>;
   put(record: T): Promise<string>;
   bulkPut(records: T[]): Promise<void>;
   get(id: string): Promise<T | undefined>;
@@ -76,9 +79,13 @@ function createWhereResult<T extends RecordWithId>(
 }
 
 class InMemoryTable<T extends RecordWithId> implements MutableTable<T> {
-  private store = new Map<string, T>();
+  protected store = new Map<string, T>();
 
   constructor(private readonly sortFallback: keyof T | null = null) {}
+
+  async add(record: T) {
+    return this.put(record);
+  }
 
   async put(record: T) {
     const existing = this.store.get(record.id);
@@ -217,9 +224,46 @@ class ConversationTable extends InMemoryTable<ConversationRecord> {
   }
 }
 
+class FolderTable extends InMemoryTable<FolderRecord> {
+  constructor() {
+    super('updatedAt');
+  }
+}
+
 class PromptChainTable extends InMemoryTable<PromptChainRecord> {
   constructor() {
     super('updatedAt');
+  }
+}
+
+class FolderItemsTable extends InMemoryTable<FolderItemRecord> {
+  constructor() {
+    super('updatedAt');
+  }
+
+  override where(field: keyof FolderItemRecord | '[itemType+itemId]'): WhereQuery<FolderItemRecord> {
+    if (field === '[itemType+itemId]') {
+      return {
+        equals: (value: unknown) => {
+          const [itemType, itemId] = Array.isArray(value) ? value : [];
+          const items = [...this.store.values()].filter(
+            (item) => item.itemType === itemType && item.itemId === itemId
+          );
+          return createWhereResult(this, items);
+        },
+        anyOf: (values: readonly unknown[]) => {
+          const normalized = values
+            .map((value) => (Array.isArray(value) ? value : []))
+            .filter((entry): entry is [FolderItemRecord['itemType'], string] => entry.length === 2);
+          const items = [...this.store.values()].filter((item) =>
+            normalized.some(([type, id]) => item.itemType === type && item.itemId === id)
+          );
+          return createWhereResult(this, items);
+        }
+      } satisfies WhereQuery<FolderItemRecord>;
+    }
+
+    return super.where(field as keyof FolderItemRecord);
   }
 }
 
@@ -241,6 +285,10 @@ class MetadataTable {
     this.store.set(record.key, clone(record));
   }
 
+  async delete(key: string) {
+    this.store.delete(key);
+  }
+
   async clear() {
     this.store.clear();
   }
@@ -250,6 +298,8 @@ const conversations = new ConversationTable();
 const messages = new MessageTable();
 const bookmarks = new BookmarkTable();
 const promptChains = new PromptChainTable();
+const folders = new FolderTable();
+const folderItems = new FolderItemsTable();
 const metadata = new MetadataTable();
 
 export const db = {
@@ -257,6 +307,8 @@ export const db = {
   messages,
   bookmarks,
   promptChains,
+  folders,
+  folderItems,
   metadata,
   async transaction(_mode: string, ...args: unknown[]) {
     const maybeCallback = args[args.length - 1];
@@ -267,7 +319,15 @@ export const db = {
 };
 
 export async function resetDatabase() {
-  await Promise.all([conversations.clear(), messages.clear(), bookmarks.clear(), promptChains.clear(), metadata.clear()]);
+  await Promise.all([
+    conversations.clear(),
+    messages.clear(),
+    bookmarks.clear(),
+    promptChains.clear(),
+    folders.clear(),
+    folderItems.clear(),
+    metadata.clear()
+  ]);
 }
 
 export const __stores = {
@@ -275,5 +335,7 @@ export const __stores = {
   messages,
   bookmarks,
   promptChains,
+  folders,
+  folderItems,
   metadata
 };

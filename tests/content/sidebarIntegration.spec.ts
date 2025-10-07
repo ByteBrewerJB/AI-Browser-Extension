@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { ensureHostPlacement, ensureShadowHost, resetSidebarPlacementForTests } from '@/content/sidebar-host';
+import { __resetSettingsStoreForTests } from '@/shared/state/settingsStore';
 
 import { setupDomEnvironment } from '../utils/domEnvironment';
 
@@ -37,6 +38,7 @@ function createSidebarEnvironment(language: string, ariaLabel = 'Chat history') 
   (globalThis as any).HTMLElement = (document.createElement('div') as any).constructor;
 
   resetSidebarPlacementForTests();
+  __resetSettingsStoreForTests();
 
   const wrapper = document.createElement('div');
   wrapper.setAttribute('data-testid', 'left-sidebar');

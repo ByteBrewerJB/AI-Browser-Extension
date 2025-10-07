@@ -1,16 +1,30 @@
 import { db, ENCRYPTION_DATA_VERSION, ENCRYPTION_METADATA_KEY, type CompanionDatabase, type EncryptionMetadataValue, type MetadataRecord } from './db';
+import { syncEncryptionBridge, SyncEncryptionBridgeLockedError, SyncEncryptionBridgeUnavailableError, type SyncEncryptionBridge } from './syncEncryptionBridge';
+import type { SyncEncryptionEnvelope, SyncEncryptionStatus } from '@/shared/types/syncEncryption';
 
 const DEFAULT_SYNC_QUOTA_BYTES = 100 * 1024; // 100KB, Chrome documented limit per item.
 const ENCRYPTION_KEY_STORAGE_KEY = 'ai-companion:encryption:key';
 const DEFAULT_ENCRYPTION_CONTEXT = 'ai-companion';
 
-export interface EncryptedEnvelope<TVersion extends number = number> {
+export interface LocalEncryptedEnvelope<TVersion extends number = number> {
   encryptionVersion: number;
   payloadVersion: TVersion;
   iv: string;
   salt: string;
   data: string;
+  mode?: 'local';
 }
+
+export interface DelegatedEncryptedEnvelope<TVersion extends number = number> {
+  encryptionVersion: number;
+  payloadVersion: TVersion;
+  mode: 'delegated';
+  envelope: SyncEncryptionEnvelope;
+}
+
+export type EncryptedEnvelope<TVersion extends number = number> =
+  | LocalEncryptedEnvelope<TVersion>
+  | DelegatedEncryptedEnvelope<TVersion>;
 
 export interface ReadEncryptedOptions<T> {
   fallback: T;
@@ -151,6 +165,8 @@ async function storageRemove(area: 'sync' | 'local', keys: string, fallbackStore
   });
 }
 
+type StorageEncryptionBridge = Pick<SyncEncryptionBridge, 'getStatus' | 'encrypt' | 'decrypt' | 'reset'>;
+
 export class StorageService {
   private encryptionKeyPromise: Promise<CryptoKey> | null = null;
 
@@ -158,15 +174,26 @@ export class StorageService {
 
   private readonly localFallback: Map<string, unknown>;
 
-  constructor(private readonly database: CompanionDatabase, options?: { syncFallback?: Map<string, unknown>; localFallback?: Map<string, unknown> }) {
+  private readonly encryptionBridge: StorageEncryptionBridge;
+
+  constructor(
+    private readonly database: CompanionDatabase,
+    options?: {
+      syncFallback?: Map<string, unknown>;
+      localFallback?: Map<string, unknown>;
+      encryptionBridge?: StorageEncryptionBridge;
+    }
+  ) {
     this.syncFallback = options?.syncFallback ?? new Map();
     this.localFallback = options?.localFallback ?? new Map();
+    this.encryptionBridge = options?.encryptionBridge ?? syncEncryptionBridge;
   }
 
   resetForTests() {
     this.encryptionKeyPromise = null;
     this.syncFallback.clear();
     this.localFallback.clear();
+    this.encryptionBridge.reset();
   }
 
   async readEncryptionMetadata(): Promise<EncryptionMetadataValue> {
@@ -213,7 +240,7 @@ export class StorageService {
       return options.fallback;
     }
 
-    const decrypted = await this.decryptEnvelope(envelope, `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`);
+    const decrypted = await this.decryptStoredEnvelope(envelope, `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`);
     if (envelope.payloadVersion === options.expectedVersion) {
       return decrypted as T;
     }
@@ -226,10 +253,16 @@ export class StorageService {
   }
 
   async writeEncrypted<T>(key: string, value: T, options: WriteEncryptedOptions): Promise<void> {
-    const envelope = await this.encryptPayload(value, {
+    const context = `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`;
+    const delegatedEnvelope = await this.tryEncryptWithSyncService(value, {
       payloadVersion: options.payloadVersion,
-      context: `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`
+      context
     });
+
+    const envelope = delegatedEnvelope ?? (await this.encryptWithLocalKey(value, {
+      payloadVersion: options.payloadVersion,
+      context
+    }));
 
     const serialized = JSON.stringify({ [key]: envelope });
     const quota = options.quotaBytes ?? DEFAULT_SYNC_QUOTA_BYTES;
@@ -250,7 +283,7 @@ export class StorageService {
       return options.fallback;
     }
 
-    const decrypted = await this.decryptEnvelope(envelope, `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`);
+    const decrypted = await this.decryptStoredEnvelope(envelope, `${DEFAULT_ENCRYPTION_CONTEXT}:${key}`);
     if (envelope.payloadVersion === options.expectedVersion) {
       return decrypted as T;
     }
@@ -299,7 +332,51 @@ export class StorageService {
     await storageSet('local', { [key]: value }, this.localFallback);
   }
 
-  private async encryptPayload(value: unknown, options: { context: string; payloadVersion: number }): Promise<EncryptedEnvelope> {
+  private async tryEncryptWithSyncService(
+    value: unknown,
+    options: { context: string; payloadVersion: number }
+  ): Promise<DelegatedEncryptedEnvelope | null> {
+    let status: SyncEncryptionStatus;
+    try {
+      status = await this.encryptionBridge.getStatus();
+    } catch (error) {
+      console.warn('[storageService] Failed to obtain sync encryption status; falling back to local key.', error);
+      return null;
+    }
+
+    if (!status.configured) {
+      return null;
+    }
+
+    if (!status.unlocked) {
+      throw new SyncEncryptionBridgeLockedError();
+    }
+
+    try {
+      const plaintext = JSON.stringify({ value, context: options.context });
+      const envelope = await this.encryptionBridge.encrypt(plaintext);
+      return {
+        encryptionVersion: ENCRYPTION_DATA_VERSION,
+        payloadVersion: options.payloadVersion,
+        mode: 'delegated',
+        envelope
+      };
+    } catch (error) {
+      if (error instanceof SyncEncryptionBridgeLockedError) {
+        throw error;
+      }
+      if (error instanceof SyncEncryptionBridgeUnavailableError) {
+        console.warn('[storageService] Sync encryption unavailable; falling back to local key.', error);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async encryptWithLocalKey(
+    value: unknown,
+    options: { context: string; payloadVersion: number }
+  ): Promise<LocalEncryptedEnvelope> {
     const crypto = getCrypto();
     const key = await this.getEncryptionKey();
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -313,11 +390,19 @@ export class StorageService {
       payloadVersion: options.payloadVersion,
       iv: arrayBufferToBase64(iv.buffer),
       salt: arrayBufferToBase64(salt.buffer),
-      data: arrayBufferToBase64(ciphertext)
+      data: arrayBufferToBase64(ciphertext),
+      mode: 'local'
     };
   }
 
-  private async decryptEnvelope(envelope: EncryptedEnvelope, context: string): Promise<unknown> {
+  private async decryptStoredEnvelope(envelope: EncryptedEnvelope, context: string): Promise<unknown> {
+    if (envelope.mode === 'delegated') {
+      return this.decryptDelegatedEnvelope(envelope, context);
+    }
+    return this.decryptLocalEnvelope(envelope, context);
+  }
+
+  private async decryptLocalEnvelope(envelope: LocalEncryptedEnvelope, context: string): Promise<unknown> {
     if (envelope.encryptionVersion !== ENCRYPTION_DATA_VERSION) {
       throw new Error(`Unsupported encryption version: ${envelope.encryptionVersion}`);
     }
@@ -334,6 +419,22 @@ export class StorageService {
     }
 
     return decoded.value;
+  }
+
+  private async decryptDelegatedEnvelope(envelope: DelegatedEncryptedEnvelope, context: string): Promise<unknown> {
+    try {
+      const plaintext = await this.encryptionBridge.decrypt(envelope.envelope);
+      const decoded = JSON.parse(plaintext) as { value: unknown; context: string };
+      if (!decoded || decoded.context !== context) {
+        throw new Error('Decryption context mismatch.');
+      }
+      return decoded.value;
+    } catch (error) {
+      if (error instanceof SyncEncryptionBridgeLockedError || error instanceof SyncEncryptionBridgeUnavailableError) {
+        throw error;
+      }
+      throw new Error('Failed to decrypt delegated sync envelope.');
+    }
   }
 
   private async importKey(raw: ArrayBuffer): Promise<CryptoKey> {

@@ -1,7 +1,7 @@
 import MiniSearch from 'minisearch';
 import type { MetadataRecord } from '@/core/storage/db';
 import { db } from '@/core/storage/db';
-import type { ConversationRecord, MessageRecord } from '@/core/models';
+import type { ConversationRecord, FolderItemRecord, FolderRecord, MessageRecord } from '@/core/models';
 import {
   type SearchDocument,
   type SearchWorkerRequest,
@@ -10,13 +10,13 @@ import {
 } from '@/core/workers/searchIndexWorker.types';
 
 const searchOptions = {
-  fields: ['title', 'text'],
+  fields: ['title', 'text', 'tags', 'folderPath'],
   storeFields: ['conversationId'],
   idField: 'id' as const,
 };
 
 const SEARCH_INDEX_METADATA_KEY = 'search:index';
-const SEARCH_INDEX_VERSION = 1;
+const SEARCH_INDEX_VERSION = 2;
 
 const supportsWorkerEnvironment =
   typeof window !== 'undefined' && typeof window.Worker !== 'undefined';
@@ -50,6 +50,200 @@ type ResponseForAction<TAction extends WorkerAction> = Extract<
   SearchWorkerSuccessResponse,
   { action: TAction }
 >;
+
+type ConversationFolderContext = {
+  folderById: Map<string, FolderRecord>;
+  membershipByConversationId: Map<string, Set<string>>;
+  pathCache: Map<string, string | undefined>;
+};
+
+type ConversationDocumentOptions = {
+  conversations: ConversationRecord[];
+  folders?: FolderRecord[];
+  folderItems?: FolderItemRecord[];
+};
+
+function formatTagsForIndex(tags?: string[]) {
+  if (!Array.isArray(tags)) {
+    return undefined;
+  }
+
+  const tokens = new Set<string>();
+
+  for (const tag of tags) {
+    if (typeof tag !== 'string') {
+      continue;
+    }
+    const trimmed = tag.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const lowered = trimmed.toLowerCase();
+    tokens.add(trimmed);
+    tokens.add(lowered);
+    tokens.add(`tag:${lowered}`);
+  }
+
+  if (tokens.size === 0) {
+    return undefined;
+  }
+
+  return Array.from(tokens).join(' ');
+}
+
+function buildConversationFolderContext(
+  folders: FolderRecord[],
+  folderItems: FolderItemRecord[]
+): ConversationFolderContext {
+  const folderById = new Map<string, FolderRecord>();
+  for (const folder of folders) {
+    if (folder.kind !== 'conversation') {
+      continue;
+    }
+    folderById.set(folder.id, folder);
+  }
+
+  const membershipByConversationId = new Map<string, Set<string>>();
+  for (const item of folderItems) {
+    if (item.itemType !== 'conversation') {
+      continue;
+    }
+    if (!folderById.has(item.folderId)) {
+      continue;
+    }
+
+    let set = membershipByConversationId.get(item.itemId);
+    if (!set) {
+      set = new Set<string>();
+      membershipByConversationId.set(item.itemId, set);
+    }
+    set.add(item.folderId);
+  }
+
+  return {
+    folderById,
+    membershipByConversationId,
+    pathCache: new Map<string, string | undefined>(),
+  } satisfies ConversationFolderContext;
+}
+
+function resolveFolderPath(folderId: string, context: ConversationFolderContext) {
+  if (context.pathCache.has(folderId)) {
+    return context.pathCache.get(folderId);
+  }
+
+  const folder = context.folderById.get(folderId);
+  if (!folder) {
+    context.pathCache.set(folderId, undefined);
+    return undefined;
+  }
+
+  const segments: string[] = [];
+  const visited = new Set<string>();
+  let current: FolderRecord | undefined = folder;
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    segments.unshift(current.name);
+    if (!current.parentId) {
+      break;
+    }
+    const parent = context.folderById.get(current.parentId);
+    if (!parent) {
+      break;
+    }
+    current = parent;
+  }
+
+  const path = segments.join(' / ');
+  const normalized = path.length > 0 ? path : undefined;
+  context.pathCache.set(folderId, normalized);
+  return normalized;
+}
+
+function collectFolderPaths(conversation: ConversationRecord, context: ConversationFolderContext) {
+  const folderIds = new Set<string>();
+  const direct = conversation.folderId?.trim();
+  if (direct && context.folderById.has(direct)) {
+    folderIds.add(direct);
+  }
+
+  const pivotMembership = context.membershipByConversationId.get(conversation.id);
+  if (pivotMembership) {
+    for (const folderId of pivotMembership) {
+      folderIds.add(folderId);
+    }
+  }
+
+  const paths = new Set<string>();
+  for (const folderId of folderIds) {
+    const path = resolveFolderPath(folderId, context);
+    if (path) {
+      paths.add(path);
+    }
+  }
+
+  return Array.from(paths);
+}
+
+function buildConversationDocument(
+  conversation: ConversationRecord,
+  context: ConversationFolderContext
+): SearchDocument {
+  const tags = formatTagsForIndex(conversation.tags);
+  const folderPaths = collectFolderPaths(conversation, context);
+  const folderPath = folderPaths.length > 0 ? folderPaths.join(' | ') : undefined;
+
+  const textParts = [conversation.title, tags, folderPath].filter(Boolean);
+
+  return {
+    id: `conv:${conversation.id}`,
+    text: textParts.join(' '),
+    title: conversation.title,
+    conversationId: conversation.id,
+    tags,
+    folderPath,
+  } satisfies SearchDocument;
+}
+
+async function createConversationDocuments({
+  conversations,
+  folders,
+  folderItems,
+}: ConversationDocumentOptions): Promise<SearchDocument[]> {
+  if (conversations.length === 0) {
+    return [];
+  }
+
+  const foldersPromise = folders
+    ? Promise.resolve(folders)
+    : db.folders.where('kind').equals('conversation').toArray();
+
+  const folderItemsPromise = folderItems
+    ? Promise.resolve(folderItems)
+    : conversations.length === 0
+    ? Promise.resolve([] as FolderItemRecord[])
+    : db.folderItems
+        .where('[itemType+itemId]')
+        .anyOf(conversations.map((conversation) => ['conversation', conversation.id] as const))
+        .toArray();
+
+  const [resolvedFolders, resolvedFolderItems] = await Promise.all([
+    foldersPromise,
+    folderItemsPromise,
+  ]);
+
+  const context = buildConversationFolderContext(resolvedFolders, resolvedFolderItems);
+  return conversations.map((conversation) => buildConversationDocument(conversation, context));
+}
+
+function createMessageDocument(message: MessageRecord): SearchDocument {
+  return {
+    id: `msg:${message.id}`,
+    text: message.content,
+    conversationId: message.conversationId,
+  } satisfies SearchDocument;
+}
 
 function createMiniSearch() {
   return new MiniSearch<SearchDocument>(searchOptions);
@@ -241,22 +435,23 @@ async function restorePersistedIndex(): Promise<boolean> {
 }
 
 async function loadDocumentsFromDatabase(): Promise<SearchDocument[]> {
-  const conversations = await db.conversations.toArray();
-  const messages = await db.messages.toArray();
+  const [conversations, messages, folders, folderItems] = await Promise.all([
+    db.conversations.toArray(),
+    db.messages.toArray(),
+    db.folders.where('kind').equals('conversation').toArray(),
+    db.folderItems.where('itemType').equals('conversation').toArray(),
+  ]);
 
-  return [
-    ...conversations.map<SearchDocument>(c => ({
-      id: `conv:${c.id}`,
-      text: c.title,
-      title: c.title,
-      conversationId: c.id,
-    })),
-    ...messages.map<SearchDocument>(m => ({
-      id: `msg:${m.id}`,
-      text: m.content,
-      conversationId: m.conversationId,
-    })),
-  ];
+  const [conversationDocuments, messageDocuments] = await Promise.all([
+    createConversationDocuments({
+      conversations,
+      folders,
+      folderItems,
+    }),
+    Promise.resolve(messages.map(createMessageDocument)),
+  ]);
+
+  return [...conversationDocuments, ...messageDocuments];
 }
 
 async function rebuildIndexFromDatabase() {
@@ -340,22 +535,31 @@ export async function upsertIntoIndex(items: Array<ConversationRecord | MessageR
 
   if (!indexReady) return;
 
-  const documents: SearchDocument[] = items.map(item => {
-    if ('title' in item) {
-      return {
-        id: `conv:${item.id}`,
-        text: item.title,
-        title: item.title,
-        conversationId: item.id,
-      } satisfies SearchDocument;
-    }
+  const conversationItems: ConversationRecord[] = [];
+  const messageItems: MessageRecord[] = [];
 
-    return {
-      id: `msg:${item.id}`,
-      text: item.content,
-      conversationId: item.conversationId,
-    } satisfies SearchDocument;
-  });
+  for (const item of items) {
+    if ('title' in item) {
+      conversationItems.push(item);
+    } else {
+      messageItems.push(item);
+    }
+  }
+
+  const documents: SearchDocument[] = [];
+
+  if (conversationItems.length > 0) {
+    const conversationDocs = await createConversationDocuments({ conversations: conversationItems });
+    documents.push(...conversationDocs);
+  }
+
+  if (messageItems.length > 0) {
+    documents.push(...messageItems.map(createMessageDocument));
+  }
+
+  if (documents.length === 0) {
+    return;
+  }
 
   if (isWorkerActive()) {
     try {
@@ -430,4 +634,33 @@ export async function removeFromIndex(ids: string[]) {
   }
 
   await persistIndex(JSON.stringify(fallbackMiniSearch));
+}
+
+export async function __resetSearchServiceForTests() {
+  if (worker) {
+    worker.terminate();
+    worker = null;
+  }
+
+  pendingWorkerRequests.clear();
+  requestId = 0;
+  workerAvailable = supportsWorkerEnvironment;
+  fallbackMiniSearch = workerAvailable ? null : createMiniSearch();
+  indexReady = false;
+  buildPromise = null;
+
+  try {
+    const metadataTable = db.metadata as unknown as {
+      delete?: (key: string) => Promise<unknown>;
+      clear?: () => Promise<unknown>;
+    };
+
+    if (typeof metadataTable.delete === 'function') {
+      await metadataTable.delete(SEARCH_INDEX_METADATA_KEY);
+    } else if (typeof metadataTable.clear === 'function') {
+      await metadataTable.clear();
+    }
+  } catch {
+    // Ignore metadata reset failures in tests.
+  }
 }

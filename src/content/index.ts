@@ -3,11 +3,28 @@ import type { MessageRecord } from '@/core/models';
 import type { RuntimeMessageMap } from '@/shared/messaging/contracts';
 import { createRuntimeMessageRouter, sendRuntimeMessage } from '@/shared/messaging/router';
 import { initializeSettingsStore } from '@/shared/state/settingsStore';
+import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
+import { bindLanguagePreferenceToI18n } from '@/shared/i18n/languageManager';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import { mountPromptLauncher } from './textareaPrompts';
 import { runPromptChainById } from './chainRunner';
 
-void initializeSettingsStore();
+const detachTheme = bindThemePreferenceToDocument();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', detachTheme, { once: true });
+}
+
+void initializeSettingsStore()
+  .then(() => {
+    const detachLanguage = bindLanguagePreferenceToI18n();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', detachLanguage, { once: true });
+    }
+  })
+  .catch((error) => {
+    console.error('[ai-companion] failed to initialise settings store', error);
+  });
 
 const processedMessageIds = new Set<string>();
 let scanTimeout: number | null = null;
@@ -129,8 +146,8 @@ function registerMessageHandlers() {
     return { status: 'pending' } as const;
   });
 
-  messageRouter.register('content/run-chain', async ({ chainId }) => {
-    return runPromptChainById(chainId);
+  messageRouter.register('content/run-chain', async ({ chainId, plan }) => {
+    return runPromptChainById(chainId, plan);
   });
 
   messageRouter.attach();

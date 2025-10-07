@@ -99,6 +99,23 @@
       "completed": "Voltooid",
       "failed": "Mislukt"
     },
+    "exportJobsStatusDetails": {
+      "pendingInitial": "Eerste run om {{time}}",
+      "pendingRetry": "Volgende retry {{attempt}}/{{max}} om {{time}}",
+      "running": "Poging {{attempt}}/{{max}} bezig",
+      "failed": "Mislukt na {{attempts}}/{{max}} pogingen",
+      "completed": "Voltooid na {{attempts}} pogingen"
+    },
+    "exportJobsTypeHeading": "Type",
+    "exportJobsFilterStatusLabel": "Status",
+    "exportJobsFilterTypeLabel": "Type",
+    "exportJobsFilterStatusAll": "Alle statussen",
+    "exportJobsFilterTypeAll": "Alle jobtypes",
+    "exportJobsFilterNoResults": "Geen jobs voldoen aan de gekozen filters.",
+    "exportJobsTypes": {
+      "export": "Export"
+    },
+    "exportJobsTypeFallback": "Job",
     "guideResources": {
       "heading": "Gidsen & updates",
       "description": "Ontdek snelstartgidsen om nieuwe workflows en instellingen te leren.",
@@ -114,6 +131,73 @@
       "markUnviewed": "Herstel “{{title}}”",
       "markUnviewedAria": "Herstel gids {{title}}",
       "viewedBadge": "Bekeken"
+    },
+    "encryption": {
+      "heading": "Wachtwoordzin & sync-encryptie",
+      "description": "Beveilig Dexie-syncsnapshots met een optionele wachtwoordzin. De sleutel verlaat dit apparaat nooit.",
+      "stateUnknown": "Status onbekend",
+      "stateNotConfigured": "Nog niet ingesteld",
+      "stateNotConfiguredDescription": "Er is geen wachtwoordzin ingesteld. Dexie-snapshots vallen terug op de lokale sleutel.",
+      "stateLocked": "Ingesteld · Vergrendeld",
+      "stateLockedDescription": "Er is een wachtwoordzin ingesteld. Vul hem hieronder in om sync-encryptie te ontgrendelen.",
+      "stateUnlocked": "Ingesteld · Ontgrendeld",
+      "stateUnlockedDescription": "Dexie-syncsnapshots versleutelen/ontsleutelen automatisch zolang ze ontgrendeld zijn.",
+      "stateLoading": "Status controleren…",
+      "iterationsLabel": "PBKDF2-iteraties: {{formatted}}",
+      "configureHeading": "Wachtwoordzin instellen",
+      "configureHeadingUpdate": "Wachtwoordzin bijwerken",
+      "configureDescription": "Kies een sterke wachtwoordzin. Je hebt deze nodig om gesynchroniseerde data op andere apparaten te herstellen.",
+      "passphraseLabel": "Wachtwoordzin",
+      "passphrasePlaceholder": "Voer een nieuwe wachtwoordzin in",
+      "confirmLabel": "Bevestig wachtwoordzin",
+      "confirmPlaceholder": "Voer de wachtwoordzin opnieuw in",
+      "errorMissingPassphrase": "Voer eerst een wachtwoordzin in.",
+      "errorTooShort": "Gebruik minstens 8 tekens om de afgeleide sleutel te versterken.",
+      "errorMismatch": "Wachtwoordzinnen moeten overeenkomen.",
+      "errorConfigureFailed": "Opslaan van de wachtwoordzin is mislukt. Probeer opnieuw en controleer de serviceworker-logs.",
+      "noticeUpdated": "Wachtwoordzin bijgewerkt. Snapshots gebruiken direct de nieuwe sleutel.",
+      "noticeConfigured": "Encryptie ingesteld. Snapshots vereisen voortaan deze wachtwoordzin.",
+      "configureSaving": "Opslaan…",
+      "configureCta": "Wachtwoordzin opslaan",
+      "updateCta": "Wachtwoordzin bijwerken",
+      "configureHint": "De wachtwoordzin wordt nooit gesynchroniseerd. Bewaar hem in een veilige manager.",
+      "unlockHeading": "Bestaande wachtwoordzin ontgrendelen",
+      "unlockDescription": "Ontgrendel om snapshots te ontsleutelen en andere apparaten te laten synchroniseren.",
+      "unlockLabel": "Wachtwoordzin",
+      "unlockPlaceholder": "Voer je wachtwoordzin in",
+      "unlocking": "Ontgrendelen…",
+      "unlockCta": "Ontgrendelen",
+      "noticeUnlocked": "Encryptie ontgrendeld. Sync-snapshots kunnen nu gegevens ontsleutelen.",
+      "errorInvalidPassphrase": "De wachtwoordzin klopt niet. Probeer opnieuw met de juiste waarde.",
+      "errorNotConfigured": "Encryptie is nog niet ingesteld. Stel eerst een wachtwoordzin in.",
+      "errorUnlockFailed": "Ontgrendelen mislukt. Controleer de achtergrondconsole voor details.",
+      "lockHeading": "Snapshots vergrendelen",
+      "lockDescription": "Vergrendel om de sleutel uit het geheugen te verwijderen. Gegevens blijven onleesbaar tot je opnieuw ontgrendelt.",
+      "locking": "Vergrendelen…",
+      "lockCta": "Nu vergrendelen",
+      "noticeLocked": "Encryptie vergrendeld. Snapshots blijven beschermd tot je opnieuw ontgrendelt.",
+      "errorLockFailed": "Vergrendelen mislukt. Raadpleeg de achtergrondconsole voor meer details.",
+      "footerNote": "De extensie verzendt je wachtwoordzin nooit. Als je hem verliest, kan gesynchroniseerde data niet worden hersteld.",
+      "notifications": {
+        "configured": {
+          "title": "Encryptie ingesteld",
+          "description": "Sync-snapshots vereisen nu de bijgewerkte wachtwoordzin."
+        },
+        "unlocked": {
+          "title": "Encryptie ontgrendeld",
+          "description": "Versleutelde snapshots ontsleutelen automatisch totdat je opnieuw vergrendelt."
+        },
+        "locked": {
+          "title": "Encryptie vergrendeld",
+          "description": "Snapshots pauzeren totdat je de wachtwoordzin ontgrendelt."
+        },
+        "cleared": {
+          "title": "Encryptie gewist",
+          "description": "Snapshots vallen terug op de lokale sleutel. Stel een wachtwoordzin in om sync-beveiliging opnieuw te activeren."
+        },
+        "timestamp": "Gelogd op {{time}}",
+        "dismiss": "Sluiten"
+      }
     },
     "favoriteFolder": "Markeren als favoriet",
     "unfavoriteFolder": "Favoriet verwijderen",

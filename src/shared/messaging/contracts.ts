@@ -1,4 +1,7 @@
 import type { JobSnapshot, JobStatus } from '@/core/models';
+import type { ChainRunPlan } from '@/shared/types/promptChains';
+import type { NetworkMonitorIncident } from '@/shared/types/monitoring';
+import type { SyncEncryptionEnvelope, SyncEncryptionStatus } from '@/shared/types/syncEncryption';
 
 export interface MessageSchema {
   request: unknown;
@@ -35,7 +38,7 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
     response: { status: 'pending' };
   };
   'content/run-chain': {
-    request: { chainId: string };
+    request: { chainId: string; plan?: ChainRunPlan };
     response:
       | { status: 'completed'; chainId: string; executedAt: string; steps: number }
       | { status: 'cancelled'; chainId: string; steps: number }
@@ -67,6 +70,41 @@ export interface RuntimeMessageMap extends MessageMapDefinition {
   'jobs/list': {
     request: { limit?: number; statuses?: JobStatus[] };
     response: { jobs: JobSnapshot[]; fetchedAt: string };
+  };
+  'sync/encryption-status': {
+    request: Record<string, never>;
+    response: SyncEncryptionStatus;
+  };
+  'sync/encryption-configure': {
+    request: { passphrase: string };
+    response: { status: 'configured' };
+  };
+  'sync/encryption-unlock': {
+    request: { passphrase: string };
+    response: { status: 'unlocked' } | { status: 'invalid' } | { status: 'not_configured' };
+  };
+  'sync/encryption-lock': {
+    request: Record<string, never>;
+    response: { status: 'locked' };
+  };
+  'sync/encryption-encrypt': {
+    request: { plaintext: string };
+    response:
+      | { status: 'ok'; envelope: SyncEncryptionEnvelope }
+      | { status: 'locked' }
+      | { status: 'not_configured' };
+  };
+  'sync/encryption-decrypt': {
+    request: { envelope: SyncEncryptionEnvelope };
+    response:
+      | { status: 'ok'; plaintext: string }
+      | { status: 'locked' }
+      | { status: 'invalid' }
+      | { status: 'not_configured' };
+  };
+  'monitoring/network-incidents': {
+    request: Record<string, never>;
+    response: { incidents: NetworkMonitorIncident[]; fetchedAt: string };
   };
 }
 

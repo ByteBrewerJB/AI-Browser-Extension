@@ -1,9 +1,10 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
 import { GuideResourcesCard } from './features/infoAndUpdates/GuideResourcesCard';
+import { EncryptionSection } from './features/privacy/EncryptionSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import { useHistoryStore } from './features/history/historyStore';
 import type { JobSnapshot } from '@/core/models';
@@ -21,6 +22,8 @@ const STATUS_BADGE_CLASSES: Record<JobSnapshot['status'], string> = {
   failed: 'border-rose-400/40 bg-rose-400/10 text-rose-200'
 };
 
+type StatusFilterValue = JobSnapshot['status'] | 'all';
+
 const featureColumns = [
   {
     title: 'Conversations',
@@ -32,7 +35,7 @@ const featureColumns = [
   },
   {
     title: 'Audio & Sync',
-    items: ['Audio download', 'Advanced voice mode', 'Voice options', 'Cross-device sync']
+    items: ['Audio download', 'Advanced voice mode', 'Voice options', 'Cross-device sync', 'Passphrase lock']
   }
 ];
 
@@ -48,6 +51,8 @@ export function Options() {
   const [jobsFetchedAt, setJobsFetchedAt] = useState<string | null>(null);
   const [isFetchingJobs, setIsFetchingJobs] = useState(false);
   const [jobLoadError, setJobLoadError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     document.documentElement.dir = direction;
@@ -107,11 +112,59 @@ export function Options() {
     [exportJobs]
   );
 
+  const jobTypeOptions = useMemo(() => {
+    const uniqueTypes = Array.from(new Set(jobs.map((job) => job.type)));
+    uniqueTypes.sort();
+    return uniqueTypes;
+  }, [jobs]);
+
+  useEffect(() => {
+    if (typeFilter !== 'all' && !jobTypeOptions.includes(typeFilter)) {
+      setTypeFilter('all');
+    }
+  }, [jobTypeOptions, typeFilter]);
+
   useEffect(() => {
     if (pendingExportJob) {
       setOptimisticExportAt(null);
     }
   }, [pendingExportJob]);
+
+  const formatJobType = useCallback(
+    (type: JobSnapshot['type']) => {
+      const translationKey = `options.exportJobsTypes.${type}`;
+      const translated = t(translationKey, { defaultValue: '' });
+      if (translated && translated !== translationKey) {
+        return translated;
+      }
+      if (!type) {
+        return t('options.exportJobsTypeFallback', { defaultValue: 'Job' });
+      }
+      return type.charAt(0).toUpperCase() + type.slice(1);
+    },
+    [t]
+  );
+
+  const typeFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: t('options.exportJobsFilterTypeAll', { defaultValue: 'All job types' }) },
+      ...jobTypeOptions.map((type) => ({
+        value: type,
+        label: formatJobType(type)
+      }))
+    ],
+    [formatJobType, jobTypeOptions, t]
+  );
+
+  const filteredJobs = useMemo(
+    () =>
+      jobs.filter(
+        (job) =>
+          (statusFilter === 'all' || job.status === statusFilter) &&
+          (typeFilter === 'all' || job.type === typeFilter)
+      ),
+    [jobs, statusFilter, typeFilter]
+  );
 
   const formatDateTime = useCallback(
     (value: string | null | undefined) => {
@@ -131,6 +184,70 @@ export function Options() {
       failed: t('options.exportJobsStatus.failed', { defaultValue: 'Failed' })
     }),
     [t]
+  );
+
+  const statusFilterOptions = useMemo(
+    () =>
+      (['all', 'pending', 'running', 'completed', 'failed'] as StatusFilterValue[]).map((value) => ({
+        value,
+        label:
+          value === 'all'
+            ? t('options.exportJobsFilterStatusAll', { defaultValue: 'All statuses' })
+            : statusLabels[value]
+      })),
+    [statusLabels, t]
+  );
+
+  const getStatusBadgeDetails = useCallback(
+    (job: JobSnapshot) => {
+      if (job.status === 'pending') {
+        if (job.attempts > 0) {
+          const nextAttempt = Math.min(job.attempts + 1, job.maxAttempts);
+          return (
+            t('options.exportJobsStatusDetails.pendingRetry', {
+              defaultValue: 'Retry {{attempt}}/{{max}} at {{time}}',
+              attempt: nextAttempt,
+              max: job.maxAttempts,
+              time: formatDateTime(job.runAt)
+            }) ?? undefined
+          );
+        }
+        return (
+          t('options.exportJobsStatusDetails.pendingInitial', {
+            defaultValue: 'First run at {{time}}',
+            time: formatDateTime(job.runAt)
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'running') {
+        return (
+          t('options.exportJobsStatusDetails.running', {
+            defaultValue: 'Attempt {{attempt}}/{{max}} in progress',
+            attempt: job.attempts,
+            max: job.maxAttempts
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'failed') {
+        return (
+          t('options.exportJobsStatusDetails.failed', {
+            defaultValue: 'Failed after {{attempts}}/{{max}} attempts',
+            attempts: job.attempts,
+            max: job.maxAttempts
+          }) ?? undefined
+        );
+      }
+      if (job.status === 'completed' && job.attempts > 1) {
+        return (
+          t('options.exportJobsStatusDetails.completed', {
+            defaultValue: 'Completed after {{attempts}} attempts',
+            attempts: job.attempts
+          }) ?? undefined
+        );
+      }
+      return undefined;
+    },
+    [formatDateTime, t]
   );
 
   const exportStatusMessage = useMemo(() => {
@@ -261,9 +378,45 @@ export function Options() {
               </div>
             </div>
             {jobLoadError ? <p className="mb-3 text-[11px] text-rose-400">{jobLoadError}</p> : null}
-            {exportJobs.length === 0 ? (
+            {jobs.length > 0 ? (
+              <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <label className="flex flex-col gap-1 text-[11px] font-medium text-slate-400">
+                  <span>{t('options.exportJobsFilterStatusLabel') ?? 'Status'}</span>
+                  <select
+                    className="rounded-md border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[11px] text-slate-100 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as StatusFilterValue)}
+                  >
+                    {statusFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-medium text-slate-400">
+                  <span>{t('options.exportJobsFilterTypeLabel') ?? 'Type'}</span>
+                  <select
+                    className="rounded-md border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-[11px] text-slate-100 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                    value={typeFilter}
+                    onChange={(event) => setTypeFilter(event.target.value)}
+                  >
+                    {typeFilterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
+            {jobs.length === 0 ? (
               <p className="text-xs text-slate-400">
                 {t('options.exportJobsEmpty') ?? 'No export jobs scheduled yet.'}
+              </p>
+            ) : filteredJobs.length === 0 ? (
+              <p className="text-xs text-slate-400">
+                {t('options.exportJobsFilterNoResults') ?? 'No jobs match the selected filters.'}
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -272,6 +425,9 @@ export function Options() {
                     <tr>
                       <th className="px-3 text-left font-medium">
                         {t('options.exportJobsStatusHeading') ?? 'Status'}
+                      </th>
+                      <th className="px-3 text-left font-medium">
+                        {t('options.exportJobsTypeHeading') ?? 'Type'}
                       </th>
                       <th className="px-3 text-left font-medium">
                         {t('options.exportJobsAttempts') ?? 'Attempts'}
@@ -288,21 +444,29 @@ export function Options() {
                     </tr>
                   </thead>
                   <tbody className="text-slate-200">
-                    {exportJobs.map((job) => (
-                      <tr key={job.id} className="rounded-md bg-slate-900/80">
-                        <td className="rounded-l-md px-3 py-2 align-top">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              STATUS_BADGE_CLASSES[job.status]
-                            }`}
-                          >
-                            {statusLabels[job.status]}
-                          </span>
-                          <div className="mt-1 text-[11px] text-slate-500">#{job.id.slice(0, 8)}</div>
-                        </td>
-                        <td className="px-3 py-2 align-top text-[11px] text-slate-300">
-                          {job.attempts}/{job.maxAttempts}
-                        </td>
+                    {filteredJobs.map((job) => {
+                      const badgeDetails = getStatusBadgeDetails(job);
+                      return (
+                        <tr key={job.id} className="rounded-md bg-slate-900/80">
+                          <td className="rounded-l-md px-3 py-2 align-top">
+                            <span
+                              className={`inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                STATUS_BADGE_CLASSES[job.status]
+                              }`}
+                            >
+                              <span>{statusLabels[job.status]}</span>
+                              {badgeDetails ? (
+                                <span className="text-[10px] font-normal opacity-80">{badgeDetails}</span>
+                              ) : null}
+                            </span>
+                            <div className="mt-1 text-[11px] text-slate-500">#{job.id.slice(0, 8)}</div>
+                          </td>
+                          <td className="px-3 py-2 align-top text-[11px] text-slate-300">
+                            {formatJobType(job.type)}
+                          </td>
+                          <td className="px-3 py-2 align-top text-[11px] text-slate-300">
+                            {job.attempts}/{job.maxAttempts}
+                          </td>
                         <td className="px-3 py-2 align-top text-[11px] text-slate-300">
                           {job.status === 'pending'
                             ? formatDateTime(job.runAt)
@@ -324,7 +488,8 @@ export function Options() {
                               : 'â€”'}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -333,6 +498,7 @@ export function Options() {
         </section>
 
         <GuideResourcesCard />
+        <EncryptionSection />
         <HistorySection />
         <PromptsSection />
         <MediaSection />
