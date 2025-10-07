@@ -73,6 +73,12 @@ export class SyncEncryptionBridge {
     return this.statusPromise;
   }
 
+  async refreshStatus(): Promise<SyncEncryptionStatus> {
+    const status = await this.fetchStatus();
+    this.setStatus(status);
+    return status;
+  }
+
   async encrypt(plaintext: string): Promise<SyncEncryptionEnvelope> {
     const status = await this.getStatus();
     if (!status.configured) {

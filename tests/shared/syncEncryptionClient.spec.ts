@@ -6,6 +6,7 @@ import {
   lockSyncEncryption,
   unlockSyncEncryption
 } from '../../src/shared/messaging/syncEncryptionClient';
+import { syncEncryptionBridge } from '../../src/core/storage/syncEncryptionBridge';
 
 const previousChrome = (globalThis as any).chrome;
 
@@ -41,30 +42,41 @@ async function run() {
     assert.deepEqual(sentMessages[0], { type: 'sync/encryption-status', payload: {} });
 
     queueResponse({ status: 'configured' });
+    queueResponse({ configured: true, unlocked: true, iterations: 300000 });
     const configureResult = await configureSyncEncryption('top secret');
     assert.equal(configureResult, 'configured');
     assert.deepEqual(sentMessages[1], {
       type: 'sync/encryption-configure',
       payload: { passphrase: 'top secret' }
     });
+    assert.deepEqual(sentMessages[2], { type: 'sync/encryption-status', payload: {} });
 
     queueResponse({ status: 'invalid' });
     const invalidUnlock = await unlockSyncEncryption('wrong');
     assert.equal(invalidUnlock, 'invalid');
-    assert.deepEqual(sentMessages[2], {
+    assert.deepEqual(sentMessages[3], {
       type: 'sync/encryption-unlock',
       payload: { passphrase: 'wrong' }
     });
 
     queueResponse({ status: 'unlocked' });
+    queueResponse({ configured: true, unlocked: true, iterations: 300000 });
     const unlockResult = await unlockSyncEncryption('top secret');
     assert.equal(unlockResult, 'unlocked');
+    assert.deepEqual(sentMessages[4], {
+      type: 'sync/encryption-unlock',
+      payload: { passphrase: 'top secret' }
+    });
+    assert.deepEqual(sentMessages[5], { type: 'sync/encryption-status', payload: {} });
 
     queueResponse({ status: 'locked' });
+    queueResponse({ configured: true, unlocked: false, iterations: 300000 });
     const lockResult = await lockSyncEncryption();
     assert.equal(lockResult, 'locked');
-    assert.deepEqual(sentMessages[4], { type: 'sync/encryption-lock', payload: {} });
+    assert.deepEqual(sentMessages[6], { type: 'sync/encryption-lock', payload: {} });
+    assert.deepEqual(sentMessages[7], { type: 'sync/encryption-status', payload: {} });
   } finally {
+    syncEncryptionBridge.reset();
     (globalThis as any).chrome = previousChrome;
   }
 }
