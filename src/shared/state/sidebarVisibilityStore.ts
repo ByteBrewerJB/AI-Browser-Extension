@@ -23,6 +23,7 @@ interface SidebarVisibilityState extends SidebarVisibilitySnapshot {
   setSectionHidden: (sectionId: SidebarSectionId, hidden: boolean) => void;
   setSectionCollapsed: (sectionId: SidebarSectionId, collapsed: boolean) => void;
   toggleSectionCollapsed: (sectionId: SidebarSectionId) => void;
+  resetSections: () => void;
   applyBulkUpdate: (
     changes: SidebarVisibilityChange[],
     metadata: SidebarVisibilityActionMetadata
@@ -40,7 +41,7 @@ type SidebarVisibilityChange = {
   collapsed?: boolean;
 };
 
-export type SidebarVisibilityActionKind = 'pin' | 'unpin' | 'hide' | 'show';
+export type SidebarVisibilityActionKind = 'pin' | 'unpin' | 'hide' | 'show' | 'reset';
 
 interface SidebarVisibilityActionMetadata {
   kind: SidebarVisibilityActionKind;
@@ -352,6 +353,19 @@ export const useSidebarVisibilityStore = create<SidebarVisibilityState>((set, ge
   toggleSectionCollapsed: (sectionId) => {
     const collapsed = get().collapsedSections.includes(sectionId);
     get().setSectionCollapsed(sectionId, !collapsed);
+  },
+  resetSections: () => {
+    const sections = SIDEBAR_SECTIONS.map((section) => section.id);
+    const changes: SidebarVisibilityChange[] = sections.map((sectionId) => ({
+      sectionId,
+      pinned: false,
+      hidden: false,
+      collapsed: false
+    }));
+    get().applyBulkUpdate(changes, {
+      kind: 'reset',
+      sections
+    });
   },
   applyBulkUpdate: (changes, metadata) => {
     set((state) => {

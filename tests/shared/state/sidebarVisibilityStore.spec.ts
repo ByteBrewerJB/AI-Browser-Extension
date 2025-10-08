@@ -73,6 +73,22 @@ async function run() {
   assert.ok(store.getState().hiddenSections.includes('history.recent'));
   assert.ok(store.getState().collapsedSections.includes('history.recent'));
   assert.ok(store.getState().collapsedSections.includes('history.bookmarks'));
+
+  store.getState().resetSections();
+  assert.deepEqual(store.getState().pinnedSections, []);
+  assert.deepEqual(store.getState().hiddenSections, []);
+  assert.deepEqual(store.getState().collapsedSections, []);
+  assert.equal(store.getState().announcement?.entry.metadata.kind, 'reset');
+
+  store.getState().undo();
+  assert.ok(store.getState().hiddenSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.bookmarks'));
+
+  store.getState().redo();
+  assert.deepEqual(store.getState().pinnedSections, []);
+  assert.deepEqual(store.getState().hiddenSections, []);
+  assert.deepEqual(store.getState().collapsedSections, []);
 }
 
 await run();
