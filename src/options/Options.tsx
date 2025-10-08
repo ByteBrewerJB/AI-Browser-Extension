@@ -7,6 +7,7 @@ import { GuideResourcesCard } from './features/infoAndUpdates/GuideResourcesCard
 import { EncryptionSection } from './features/privacy/EncryptionSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import { useHistoryStore } from './features/history/historyStore';
+import { SidebarPreferences } from './features/sidebar/SidebarPreferences';
 import type { JobSnapshot } from '@/core/models';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
@@ -497,6 +498,7 @@ export function Options() {
           </div>
         </section>
 
+        <SidebarPreferences />
         <GuideResourcesCard />
         <EncryptionSection />
         <HistorySection />

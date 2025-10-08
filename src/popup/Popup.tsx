@@ -11,6 +11,7 @@ import { useRecentConversations } from '@/shared/hooks/useRecentConversations';
 import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 import { openGuideResource, useGuideResources } from '@/shared/hooks/useGuideResources';
+import { SidebarSection as SidebarPreferencesSection } from './features/sidebar/SidebarSection';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -402,6 +403,8 @@ export function Popup() {
           </button>
         </div>
       </section>
+
+      <SidebarPreferencesSection />
 
       <section className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
         <header className="flex items-center justify-between">

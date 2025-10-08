@@ -1,6 +1,6 @@
 # AI Browser Extension — Architecture & Delivery Roadmap
 
-_Last updated: 2025-10-16_
+_Last updated: 2025-10-17_
 
 This living document combines the architectural snapshot, delivery status, and premium launch planning for the AI Browser Extension. Update it whenever shipped functionality or priorities change so contributors have a single source of truth.
 
@@ -43,7 +43,7 @@ This living document combines the architectural snapshot, delivery status, and p
 
 ### Near-term backlog (Phase 3 focus)
 _De onderstaande punten staan ook in het retrofitlog; markeer in beide bestanden wanneer scopes verschuiven._
-- **Search & sidebar** – _Status: in uitvoering._ Dexie-schema uitgebreid met `folder_items` pivot en Minisearch verrijkt met tags/mappaden (10k benchmark gereed); zijbalk-wireframes en promptlauncher UX-spec zijn afgerond. Inline `//`/`..` triggers ruimen nu composerinput op, vullen promptfilters en openen het juiste panel. De chain-confirmatiemodal consumeert de DSL-parser en levert een `ChainRunPlan` aan de content-runner; volgende focus: gedeelde Zustand-store `sidebarVisibilityStore` bouwen voor pin/hide/collapse voorkeuren, surfaces (content/popup/options) eraan koppelen en daarna accessibility review + async step-runner (cancel/resume, step-output streaming) oppakken.
+- **Search & sidebar** – _Status: in uitvoering._ Dexie-schema uitgebreid met `folder_items` pivot en Minisearch verrijkt met tags/mappaden (10k benchmark gereed); zijbalk-wireframes, promptlauncher UX-spec én gedeelde Zustand-store (`sidebarVisibilityStore`) zijn afgerond. Content, popup en dashboard delen nu pin/hide/collapse-voorkeuren en het shadow-host exposeert tellingen via data-attributen. Accessibility-review (aria-labels, region semantics, locale check) is afgerond; volgende focus: undo/redo-flows voor bulk pin/hide-acties, automatische herstelopties voor verborgen secties en async step-runner (cancel/resume, step-output streaming).
 - Automatische jobs dashboard vervolledigen: retry hand-offs zichtbaar maken in de UI (filterpaneel live per 2025-10-05).
 - MiniSearch-indexering naar een dedicated worker verplaatsen zodat grote datasets de content thread niet blokkeren.
 - Promptketen-runner voorzien van progress feedback en annuleringsevents naar de popup.

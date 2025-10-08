@@ -137,6 +137,16 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
    - Escape closes the menu and subsequent right-click uses the native browser menu once the sidebar is hidden.
 6. Locale persistence:
    - Na het wisselen van taal in de popup, open het dashboard en de sidebar opnieuw (Chrome/Edge op beide domeinen) om te bevestigen dat alle labels/knoppen direct dezelfde taal tonen zonder herinitialisatieglitches.
+7. Popup-voorkeuren:
+   - Open de kaart **Sidebar layout**, zet `Pinned conversations` vast en verberg `Recent conversations`. Controleer dat de content-zijbalk direct de badges `data-ai-companion-pinned-count="1"` en `data-ai-companion-hidden-count="1"` op het shadow-host element toont en dat de secties in/uit beeld schuiven zonder herload.
+   - Hef de verborgen status op en bevestig dat de telling terugvalt. Herlaad de ChatGPT-pagina en controleer dat voorkeuren behouden blijven.
+8. Dashboard-voorkeuren:
+   - Ga naar **Zijbalkindeling** in het dashboard, vink `Prompt templates` uit en `Voice & sync` aan voor inklappen. Bevestig in de content-zijbalk dat `Prompt templates` verdwijnt, `Voice & sync` ingeklapt rendert en de instellingen ook in de popup zichtbaar zijn.
+   - Herhaal in Firefox of Edge (indien beschikbaar) om browserspecifieke persistence te controleren.
+9. Toegankelijkheid van zijbalkknoppen:
+   - Focus met `Tab` de collapse-knop van elke sectie in de content-zijbalk en controleer in Chrome DevTools → Accessibility pane dat de naam "Collapse/Expand {section}" toont en `aria-expanded` wisselt na `Space` of `Enter`.
+   - Open de popup → **Sidebar layout** en navigeer met het toetsenbord door de pin/collapse/hide-knoppen. Verwacht dat elke knop de sectienaam in de aangekondigde labeltekst bevat en dat `aria-pressed` wisselt.
+   - Herhaal de stap hierboven na het schakelen naar Nederlands om vertaalde aria-labels te verifiëren.
 
 ## 5. Composer counters & prompt launcher
 1. Start drafting a message. Word/character counters update live and reset after sending.

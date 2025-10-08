@@ -1,6 +1,6 @@
 # Zijbalk pin/hide/collapse wireframes
 
-_Laatste update: 2025-02-17_
+_Laatste update: 2025-10-17_
 
 Deze notitie beschrijft de wireframes voor de professionele zijbalk met pin-, hide- en collapse-flows. Ze fungeert als referentie voor componentbouwers en QA totdat definitieve visual assets zijn uitgewerkt.
 
@@ -50,9 +50,23 @@ Deze notitie beschrijft de wireframes voor de professionele zijbalk met pin-, hi
 - Controleer dat Zustand-state synchroon blijft na reload (`sidebarPrefs`).
 - UI-tests schrijven om toast + undo te verifiëren (`@testing-library/react`).
 - Handmatige check: pin → reload → gepinde sectie blijft bovenaan; collapse status blijft behouden.
-- Accessibility: toetsnav flows (`Tab`, `Shift+P`, `[`/`]`, `Enter`) documenteren en testen.
+- Accessibility: toetsnav flows (`Tab`, `Shift+P`, `[`/`]`, `Enter`) documenteren en testen; verifieer dat collapse-knoppen "Collapse/Expand {section}" aankondigen en popup-toggles per sectie een unieke screenreadernaam hebben in EN/NL.
+- Popup- en dashboardvoorkeuren (SidebarPreferences) moeten pin/hide/collapse direct weerspiegelen in de content-zijbalk; verifieer dat `data-ai-companion-pinned-count`/`hidden-count` attributen wisselen op het shadow-host element.
+
+## Toegankelijkheidsaanpassingen (2025-10-17)
+- Content-secties zijn als `role="region"` gemarkeerd en gekoppeld aan hun kop via `aria-labelledby`, zodat screenreaders context zien bij het navigeren tussen clusters.
+- Collapse-knoppen gebruiken dynamische aria-labels (`Collapse/Expand {{section}}`) en houden `aria-expanded` synchroon met de zichtbaarheid van de lijst.
+- Popupkaart **Sidebar layout** groepeert pin/hide/collapse-knoppen per sectie (`role="group"` + beschrijving) en voorziet elke knop van een unieke aria-label die de sectietitel bevat.
+- Engels en Nederlands kregen gelijke vertalingen voor de nieuwe aria-labels zodat locale-switches dezelfde toegankelijkheidsdekking behouden.
+
+## Zustand-voorkeuren (update 2025-10-16)
+- `sidebarVisibilityStore` hydrateert popup, opties en content tegelijk; pin/hide/collapse worden via `chrome.storage.local` gedeeld.
+- Popupkaart **Sidebar layout** geeft snelle toggles met knoppen voor vastzetten, inklappen en verbergen.
+- Dashboardkaart **Zijbalkindeling** biedt een tabel met checkboxen voor dezelfde voorkeuren plus contextcopy per sectie.
+- Het shadow-host markeert het aantal vastgezette/verborgen secties via data-attributen zodat thema’s en QA-scripts de status kunnen lezen.
 
 ## Volgende stappen
 - Visuele assets (Figma) genereren en koppelen zodra ontwerpteam levert.
-- Beslissen of hidden GPT's na 30 dagen automatisch worden ontpind.
-- Uitwerken hoe pinned cluster samenwerkt met mapweergave voor chats.
+- Beslissen of verborgen secties na 30 dagen automatisch worden hersteld.
+- Toetsen hoe het vastgezette cluster samenwerkt met mapweergave en bulkacties voor chats.
+- Undo/redo-flows en toastfocus documenteren zodat bulkacties voor toetsenbordgebruikers herstelopties tonen.

@@ -1,5 +1,10 @@
 import { initI18n } from '@/shared/i18n';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
+import {
+  initializeSidebarVisibilityStore,
+  useSidebarVisibilityStore
+} from '@/shared/state/sidebarVisibilityStore';
+import { SIDEBAR_SECTIONS } from '@/shared/types/sidebar';
 
 const HOST_ID = 'ai-companion-shadow-host';
 
@@ -48,6 +53,62 @@ let observedSidebar: HTMLElement | null = null;
 let activeHost: HTMLElement | null = null;
 let locationWatcher: number | null = null;
 let lastKnownHref = typeof window !== 'undefined' ? window.location.href : '';
+let sidebarVisibilityUnsubscribe: (() => void) | null = null;
+
+function applySidebarVisibilityAttributes(host: HTMLElement) {
+  const state = useSidebarVisibilityStore.getState();
+  if (!state.hydrated) {
+    return;
+  }
+
+  const pinnedCount = state.pinnedSections.length;
+  const hiddenCount = state.hiddenSections.length;
+
+  if (pinnedCount > 0) {
+    host.setAttribute('data-ai-companion-pinned-count', String(pinnedCount));
+  } else {
+    host.removeAttribute('data-ai-companion-pinned-count');
+  }
+
+  if (hiddenCount > 0) {
+    host.setAttribute('data-ai-companion-hidden-count', String(hiddenCount));
+  } else {
+    host.removeAttribute('data-ai-companion-hidden-count');
+  }
+
+  if (hiddenCount >= SIDEBAR_SECTIONS.length) {
+    host.setAttribute('data-ai-companion-sidebar-empty', 'true');
+  } else {
+    host.removeAttribute('data-ai-companion-sidebar-empty');
+  }
+}
+
+function attachSidebarVisibilityWatcher(host: HTMLElement) {
+  applySidebarVisibilityAttributes(host);
+
+  if (sidebarVisibilityUnsubscribe) {
+    sidebarVisibilityUnsubscribe();
+    sidebarVisibilityUnsubscribe = null;
+  }
+
+  sidebarVisibilityUnsubscribe = useSidebarVisibilityStore.subscribe((state, previous) => {
+    if (!state.hydrated) {
+      return;
+    }
+
+    const previousPinned = previous?.pinnedSections.length ?? -1;
+    const previousHidden = previous?.hiddenSections.length ?? -1;
+
+    if (
+      previousPinned === state.pinnedSections.length &&
+      previousHidden === state.hiddenSections.length
+    ) {
+      return;
+    }
+
+    applySidebarVisibilityAttributes(host);
+  });
+}
 
 function findListWithin(root: HTMLElement): HTMLElement | null {
   return (
@@ -195,6 +256,7 @@ export function ensureHostPlacement(): void {
 
 function initializeSidebarWatchers(host: HTMLElement) {
   activeHost = host;
+  attachSidebarVisibilityWatcher(host);
   ensureHostPlacement();
 
   if (!sidebarMutationObserver) {
@@ -222,7 +284,7 @@ function initializeSidebarWatchers(host: HTMLElement) {
 }
 
 export async function ensureShadowHost(): Promise<HTMLElement> {
-  await initializeSettingsStore();
+  await Promise.all([initializeSettingsStore(), initializeSidebarVisibilityStore()]);
   const language = useSettingsStore.getState().language;
   const i18nInstance = await initI18n(language);
   const existing = document.getElementById(HOST_ID);
@@ -266,5 +328,9 @@ export function resetSidebarPlacementForTests() {
   observedSidebar = null;
   activeHost = null;
   lastKnownHref = typeof window !== 'undefined' ? window.location.href : '';
+  if (sidebarVisibilityUnsubscribe) {
+    sidebarVisibilityUnsubscribe();
+    sidebarVisibilityUnsubscribe = null;
+  }
 }
 

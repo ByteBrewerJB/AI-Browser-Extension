@@ -7,9 +7,10 @@ import { initI18n } from '@/shared/i18n';
 import { bindLanguagePreferenceToI18n } from '@/shared/i18n/languageManager';
 import { bindThemePreferenceToDocument } from '@/shared/theme/themeManager';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
+import { initializeSidebarVisibilityStore } from '@/shared/state/sidebarVisibilityStore';
 
 async function bootstrap() {
-  await initializeSettingsStore();
+  await Promise.all([initializeSettingsStore(), initializeSidebarVisibilityStore()]);
 
   const detachTheme = bindThemePreferenceToDocument();
   const initialLanguage = useSettingsStore.getState().language;

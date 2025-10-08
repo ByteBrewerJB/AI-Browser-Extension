@@ -34,6 +34,11 @@ import {
 import type { Bubble } from '@/shared/state/bubbleLauncherStore';
 import globalStylesUrl from '@/styles/global.css?url';
 import { initializeSettingsStore, useSettingsStore } from '@/shared/state/settingsStore';
+import {
+  initializeSidebarVisibilityStore,
+  useSidebarVisibilityStore
+} from '@/shared/state/sidebarVisibilityStore';
+import type { SidebarSectionId } from '@/shared/types/sidebar';
 import { GuideResourcesCard } from '@/options/features/infoAndUpdates/GuideResourcesCard';
 
 function ensureShadowRoot(host: HTMLElement): ShadowRoot {
@@ -1183,24 +1188,93 @@ function openDashboard(options?: OpenDashboardOptions) {
 }
 
 interface SidebarSectionProps {
+  sectionId: SidebarSectionId;
   title: string;
   action?: ReactNode;
   children: ReactNode;
 }
 
-function SidebarSection({ title, action, children }: SidebarSectionProps): ReactElement {
+function SidebarSection({ sectionId, title, action, children }: SidebarSectionProps): ReactElement | null {
+  const { t } = useTranslation();
+  const hydrated = useSidebarVisibilityStore((state) => state.hydrated);
+  const hidden = useSidebarVisibilityStore((state) => state.hiddenSections.includes(sectionId));
+  const collapsed = useSidebarVisibilityStore((state) => state.collapsedSections.includes(sectionId));
+  const pinned = useSidebarVisibilityStore((state) => state.pinnedSections.includes(sectionId));
+  const toggleSectionCollapsed = useSidebarVisibilityStore((state) => state.toggleSectionCollapsed);
+  const reactId = useId();
+  const sanitizedId = sectionId.replace(/[^a-z0-9-]/gi, '-');
+  const contentId = `ai-companion-section-${sanitizedId}-${reactId}`;
+  const headingId = `ai-companion-section-heading-${sanitizedId}-${reactId}`;
+
+  const handleToggle = useCallback(() => {
+    toggleSectionCollapsed(sectionId);
+  }, [sectionId, toggleSectionCollapsed]);
+
+  if (hydrated && hidden) {
+    return null;
+  }
+
+  const collapseLabel = collapsed
+    ? t('content.sidebar.sections.expandWithTitle', {
+        defaultValue: 'Expand {{section}}',
+        section: title
+      })
+    : t('content.sidebar.sections.collapseWithTitle', {
+        defaultValue: 'Collapse {{section}}',
+        section: title
+      });
+  const pinnedBadgeLabel = t('content.sidebar.sections.pinned', { defaultValue: 'Pinned' });
+
   return (
-    <section className="space-y-2">
+    <section
+      className="space-y-2"
+      data-ai-companion-section-id={sectionId}
+      data-ai-companion-section-pinned={pinned ? 'true' : undefined}
+      aria-labelledby={headingId}
+      role="region"
+    >
       <header className="flex items-center justify-between gap-3">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{title}</h3>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/10 bg-white/5 text-xs text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:opacity-60"
+            aria-expanded={!collapsed}
+            aria-controls={contentId}
+            aria-label={collapseLabel}
+            onClick={handleToggle}
+            disabled={!hydrated}
+          >
+            <span
+              aria-hidden="true"
+              className={`transition-transform ${collapsed ? '-rotate-90' : 'rotate-0'}`}
+            >
+              ▾
+            </span>
+            <span className="sr-only">{collapseLabel}</span>
+          </button>
+          <h3
+            className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+            id={headingId}
+          >
+            {title}
+          </h3>
+          {pinned ? (
+            <span className="rounded-full border border-emerald-400/50 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+              {pinnedBadgeLabel}
+            </span>
+          ) : null}
+        </div>
         {action}
       </header>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-3" id={contentId} hidden={collapsed} aria-hidden={collapsed}>
+        {children}
+      </div>
     </section>
   );
 }
 
 interface ConversationListProps {
+  sectionId: SidebarSectionId;
   title: string;
   conversations: ConversationOverview[];
   emptyTitle: string;
@@ -1210,9 +1284,10 @@ interface ConversationListProps {
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function ConversationList({ title, conversations, emptyTitle, emptyDescription, onTogglePin, onMove, t }: ConversationListProps) {
+function ConversationList({ sectionId, title, conversations, emptyTitle, emptyDescription, onTogglePin, onMove, t }: ConversationListProps) {
   return (
     <SidebarSection
+      sectionId={sectionId}
       action={
         conversations.length > 0 ? (
           <button
@@ -1292,14 +1367,16 @@ function ConversationList({ title, conversations, emptyTitle, emptyDescription, 
 }
 
 interface BookmarkListProps {
+  sectionId: SidebarSectionId;
   bookmarks: BookmarkSummary[];
   onAddBookmark: (target?: BookmarkTarget) => void;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function BookmarkList({ bookmarks, onAddBookmark, t }: BookmarkListProps) {
+function BookmarkList({ sectionId, bookmarks, onAddBookmark, t }: BookmarkListProps) {
   return (
     <SidebarSection
+      sectionId={sectionId}
       action={
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1375,16 +1452,18 @@ function BookmarkList({ bookmarks, onAddBookmark, t }: BookmarkListProps) {
 }
 
 interface PromptListProps {
+  sectionId: SidebarSectionId;
   prompts: PromptRecord[];
   folderNames: Map<string, string>;
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function PromptList({ prompts, folderNames, t }: PromptListProps) {
+function PromptList({ sectionId, prompts, folderNames, t }: PromptListProps) {
   const limited = useMemo(() => prompts.slice(0, 6), [prompts]);
 
   return (
     <SidebarSection
+      sectionId={sectionId}
       action={
         prompts.length > 0 ? (
           <button
@@ -1596,6 +1675,7 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
   return (
     <div className="space-y-4">
       <SidebarSection
+        sectionId="history.pinned"
         action={
           pinnedConversations.length > 0 || folderOptions.length > 0
             ? (
@@ -1762,6 +1842,7 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
       </SidebarSection>
 
       <ConversationList
+        sectionId="history.recent"
         conversations={recentConversations}
         emptyDescription={t('content.sidebar.history.emptyRecent', {
           defaultValue: 'Start chatting to populate your history.'
@@ -1773,7 +1854,12 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
         title={t('content.sidebar.history.recentHeading', { defaultValue: 'Recent updates' })}
       />
 
-      <BookmarkList bookmarks={bookmarks} onAddBookmark={onAddBookmark} t={t} />
+      <BookmarkList
+        sectionId="history.bookmarks"
+        bookmarks={bookmarks}
+        onAddBookmark={onAddBookmark}
+        t={t}
+      />
       <MoveDialog
         open={Boolean(moveTarget)}
         title={moveDialogTitle}
@@ -1804,7 +1890,7 @@ function PromptsTab(): ReactElement {
     return map;
   }, [folders]);
 
-  return <PromptList folderNames={folderNames} prompts={prompts} t={t} />;
+  return <PromptList sectionId="prompts.library" folderNames={folderNames} prompts={prompts} t={t} />;
 }
 
 function MediaTab(): ReactElement {
@@ -1812,6 +1898,7 @@ function MediaTab(): ReactElement {
 
   return (
     <SidebarSection
+      sectionId="media.overview"
       action={
         <button
           className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
@@ -2518,7 +2605,11 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
 }
 
 async function init() {
-  await Promise.all([initializeSettingsStore(), initializeBubbleLauncherStore()]);
+  await Promise.all([
+    initializeSettingsStore(),
+    initializeBubbleLauncherStore(),
+    initializeSidebarVisibilityStore()
+  ]);
   const host = await ensureShadowHost();
   const container = mountReact(host);
   const root = createRoot(container);
