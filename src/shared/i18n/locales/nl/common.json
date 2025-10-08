@@ -66,6 +66,46 @@
       "markViewedAria": "Markeer gids {{title}} als bekeken",
       "markUnviewed": "Herstel “{{title}}”",
       "markUnviewedAria": "Herstel gids {{title}}"
+    },
+    "sidebarPreferences": {
+      "heading": "Zijbalkindeling",
+      "description": "Kies welke secties zichtbaar of vastgezet blijven in de ChatGPT-zijbalk.",
+      "loading": "Voorkeuren laden…",
+      "pin": "Vastzetten",
+      "unpin": "Losmaken",
+      "collapse": "Inklappen",
+      "expand": "Uitklappen",
+      "hide": "Verbergen",
+      "show": "Tonen",
+      "sectionControlsLabel": "{{section}}-bediening",
+      "pinSection": "Sectie {{section}} vastzetten",
+      "unpinSection": "Sectie {{section}} losmaken",
+      "collapseSection": "Sectie {{section}} inklappen",
+      "expandSection": "Sectie {{section}} uitklappen",
+      "hideSection": "Sectie {{section}} verbergen",
+      "showSection": "Sectie {{section}} tonen",
+      "sections": {
+        "historyPinned": {
+          "title": "Vastgezette gesprekken",
+          "description": "Toont vastgezette chats en map-snelkoppelingen bovenaan de geschiedenis-bubbel."
+        },
+        "historyRecent": {
+          "title": "Recente gesprekken",
+          "description": "Laat de nieuwste gesprekken zien met snelle acties voor vastzetten en archiveren."
+        },
+        "historyBookmarks": {
+          "title": "Laatste bladwijzers",
+          "description": "Houdt recent opgeslagen bladwijzers zichtbaar voor snel invoegen of herbekijken."
+        },
+        "promptsLibrary": {
+          "title": "Promptsjablonen",
+          "description": "Toont je meest recente sjablonen met knoppen om direct in te voegen."
+        },
+        "mediaOverview": {
+          "title": "Overzicht spraak & sync",
+          "description": "Biedt snelkoppelingen naar audiobestanden, spraakbediening en synchronisatie-instellingen."
+        }
+      }
     }
   },
   "options": {
@@ -362,6 +402,37 @@
     "sidebarToggleHelp": "Schakel de zwevende zijbalk in de ChatGPT-interface in of uit.",
     "sidebarToggleOn": "Ingeschakeld",
     "sidebarToggleOff": "Uitgeschakeld",
+    "sidebarPreferences": {
+      "heading": "Zijbalkindeling",
+      "description": "Stel in welke secties zichtbaar blijven in de ChatGPT-zijbalk en hoe ze zich gedragen.",
+      "loading": "Voorkeuren laden…",
+      "pin": "Vastgezet",
+      "collapsed": "Ingeklapt",
+      "hidden": "Verborgen",
+      "sectionColumn": "Sectie",
+      "sections": {
+        "historyPinned": {
+          "title": "Vastgezette gesprekken",
+          "description": "Houdt belangrijke chats en map-snelkoppelingen bovenaan de geschiedenis-bubbel."
+        },
+        "historyRecent": {
+          "title": "Recente gesprekken",
+          "description": "Toont de meest recente gesprekken met snelle opties voor vastzetten, verplaatsen en archiveren."
+        },
+        "historyBookmarks": {
+          "title": "Laatste bladwijzers",
+          "description": "Laat recent opgeslagen bladwijzers direct zichtbaar voor hergebruik."
+        },
+        "promptsLibrary": {
+          "title": "Promptsjablonen",
+          "description": "Toont je nieuwste sjablonen met knoppen om ze direct in te voegen."
+        },
+        "mediaOverview": {
+          "title": "Overzicht spraak & sync",
+          "description": "Biedt snelkoppelingen naar audiobestanden, spraakbediening en synchronisatie-instellingen."
+        }
+      }
+    },
     "gptFolderActiveLabel": "Actieve map: {{name}}",
     "promptFolderActiveLabel": "Actieve map: {{name}}",
     "promptGptActiveLabel": "Gekoppelde GPT: {{name}}",
@@ -519,10 +590,17 @@
         "contextMenuCopied": "Bericht gekopieerd naar het klembord.",
         "contextMenuPinSuccess": "Gesprek vastgezet.",
         "contextMenuUnpinSuccess": "Pin verwijderd.",
-        "contextMenuError": "Actie kon niet worden voltooid. Probeer het opnieuw."
+      "contextMenuError": "Actie kon niet worden voltooid. Probeer het opnieuw."
+    },
+      "sections": {
+        "collapse": "Sectie inklappen",
+        "expand": "Sectie uitklappen",
+        "collapseWithTitle": "{{section}} inklappen",
+        "expandWithTitle": "{{section}} uitklappen",
+        "pinned": "Vastgezet"
       },
-      "prompts": {
-        "heading": "Promptsjablonen",
+    "prompts": {
+      "heading": "Promptsjablonen",
         "empty": "Bewaar prompts via het dashboard of de pop-up om ze hier te gebruiken.",
         "emptyTitle": "Nog geen prompts.",
         "openLibrary": "Promptbibliotheek openen"

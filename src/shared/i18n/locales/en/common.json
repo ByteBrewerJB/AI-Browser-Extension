@@ -66,6 +66,46 @@
       "markViewedAria": "Mark guide {{title}} as viewed",
       "markUnviewed": "Restore “{{title}}”",
       "markUnviewedAria": "Restore guide {{title}}"
+    },
+    "sidebarPreferences": {
+      "heading": "Sidebar layout",
+      "description": "Choose which sections stay visible or pinned in the ChatGPT sidebar.",
+      "loading": "Loading preferences…",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "hide": "Hide",
+      "show": "Show",
+      "sectionControlsLabel": "{{section}} controls",
+      "pinSection": "Pin {{section}} section",
+      "unpinSection": "Unpin {{section}} section",
+      "collapseSection": "Collapse {{section}} section",
+      "expandSection": "Expand {{section}} section",
+      "hideSection": "Hide {{section}} section",
+      "showSection": "Show {{section}} section",
+      "sections": {
+        "historyPinned": {
+          "title": "Pinned conversations",
+          "description": "Highlights pinned chats and folder shortcuts at the top of the history bubble."
+        },
+        "historyRecent": {
+          "title": "Recent conversations",
+          "description": "Shows the latest conversations with quick access to pin and archive actions."
+        },
+        "historyBookmarks": {
+          "title": "Latest bookmarks",
+          "description": "Keeps recently saved bookmarks visible for quick insertion or review."
+        },
+        "promptsLibrary": {
+          "title": "Prompt templates",
+          "description": "Surface the most recent prompt templates with inline insert buttons."
+        },
+        "mediaOverview": {
+          "title": "Voice & sync overview",
+          "description": "Provides shortcuts to audio downloads, voice playback, and sync preferences."
+        }
+      }
     }
   },
   "options": {
@@ -362,6 +402,37 @@
     "sidebarToggleHelp": "Toggle the floating sidebar in the ChatGPT interface.",
     "sidebarToggleOn": "Enabled",
     "sidebarToggleOff": "Disabled",
+    "sidebarPreferences": {
+      "heading": "Sidebar layout",
+      "description": "Configure which sections remain visible in the ChatGPT sidebar and how they behave.",
+      "loading": "Loading preferences…",
+      "pin": "Pinned",
+      "collapsed": "Collapsed",
+      "hidden": "Hidden",
+      "sectionColumn": "Section",
+      "sections": {
+        "historyPinned": {
+          "title": "Pinned conversations",
+          "description": "Keeps critical chats and folder shortcuts anchored at the top of the history bubble."
+        },
+        "historyRecent": {
+          "title": "Recent conversations",
+          "description": "Shows the latest conversations with quick pin, archive, and move controls."
+        },
+        "historyBookmarks": {
+          "title": "Latest bookmarks",
+          "description": "Lists recently saved bookmarks so you can reopen or insert them without leaving ChatGPT."
+        },
+        "promptsLibrary": {
+          "title": "Prompt templates",
+          "description": "Surface the most recent prompt templates with inline insert buttons."
+        },
+        "mediaOverview": {
+          "title": "Voice & sync overview",
+          "description": "Provides shortcuts to audio downloads, voice playback, and sync preferences."
+        }
+      }
+    },
     "gptFolderActiveLabel": "Active folder: {{name}}",
     "promptFolderActiveLabel": "Active folder: {{name}}",
     "promptGptActiveLabel": "Linked GPT: {{name}}",
@@ -519,10 +590,17 @@
         "contextMenuCopied": "Message copied to clipboard.",
         "contextMenuPinSuccess": "Conversation pinned.",
         "contextMenuUnpinSuccess": "Conversation unpinned.",
-        "contextMenuError": "We could not complete that action. Try again."
+      "contextMenuError": "We could not complete that action. Try again."
+    },
+      "sections": {
+        "collapse": "Collapse section",
+        "expand": "Expand section",
+        "collapseWithTitle": "Collapse {{section}}",
+        "expandWithTitle": "Expand {{section}}",
+        "pinned": "Pinned"
       },
-      "prompts": {
-        "heading": "Prompt templates",
+    "prompts": {
+      "heading": "Prompt templates",
         "empty": "Save prompts in the dashboard or popup to reuse them here.",
         "emptyTitle": "No prompts yet.",
         "openLibrary": "Open prompt library"
