@@ -267,6 +267,44 @@ function updateSectionList(
   return normalizeSections(set);
 }
 
+function applySnapshotForSections(
+  current: SidebarVisibilitySnapshot,
+  patch: SidebarVisibilitySnapshot,
+  sections: SidebarSectionId[]
+): SidebarVisibilitySnapshot {
+  const relevantSections = normalizeSections(sections);
+  if (relevantSections.length === 0) {
+    return { ...current };
+  }
+
+  const sectionSet = new Set(relevantSections);
+  const patchPinned = new Set(patch.pinnedSections);
+  const patchHidden = new Set(patch.hiddenSections);
+  const patchCollapsed = new Set(patch.collapsedSections);
+
+  const mergeList = (
+    currentList: SidebarSectionId[],
+    patchSet: Set<SidebarSectionId>
+  ): SidebarSectionId[] => {
+    const result = new Set(currentList);
+    for (const sectionId of sectionSet) {
+      result.delete(sectionId);
+    }
+    for (const sectionId of sectionSet) {
+      if (patchSet.has(sectionId)) {
+        result.add(sectionId);
+      }
+    }
+    return normalizeSections(result);
+  };
+
+  return {
+    pinnedSections: mergeList(current.pinnedSections, patchPinned),
+    hiddenSections: mergeList(current.hiddenSections, patchHidden),
+    collapsedSections: mergeList(current.collapsedSections, patchCollapsed)
+  };
+}
+
 let initializationPromise: Promise<void> | null = null;
 let storageListenerRegistered = false;
 
@@ -410,7 +448,12 @@ export const useSidebarVisibilityStore = create<SidebarVisibilityState>((set, ge
 
       const history = [...state.history];
       const entry = history.pop() as SidebarVisibilityHistoryEntry;
-      const previousSnapshot = entry.before;
+      const currentSnapshot = toSnapshot(state);
+      const previousSnapshot = applySnapshotForSections(
+        currentSnapshot,
+        entry.before,
+        entry.metadata.sections
+      );
       const future = [...state.future, entry];
 
       const nextState = {
@@ -444,7 +487,12 @@ export const useSidebarVisibilityStore = create<SidebarVisibilityState>((set, ge
 
       const future = [...state.future];
       const entry = future.pop() as SidebarVisibilityHistoryEntry;
-      const nextSnapshot = entry.after;
+      const currentSnapshot = toSnapshot(state);
+      const nextSnapshot = applySnapshotForSections(
+        currentSnapshot,
+        entry.after,
+        entry.metadata.sections
+      );
       const history = [...state.history, entry];
 
       const nextState = {

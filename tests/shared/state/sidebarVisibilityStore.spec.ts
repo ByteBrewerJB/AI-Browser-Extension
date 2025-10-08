@@ -55,6 +55,24 @@ async function run() {
   store.getState().redo();
   assert.ok(store.getState().pinnedSections.includes('history.recent'));
   assert.equal(store.getState().announcement?.direction, 'redo');
+
+  store.getState().setSectionHidden('history.recent', true);
+  assert.ok(store.getState().hiddenSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.recent'));
+
+  store.getState().setSectionCollapsed('history.bookmarks', true);
+  assert.ok(store.getState().collapsedSections.includes('history.bookmarks'));
+
+  store.getState().undo();
+  assert.ok(store.getState().pinnedSections.includes('history.recent'));
+  assert.ok(!store.getState().hiddenSections.includes('history.recent'));
+  assert.ok(!store.getState().collapsedSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.bookmarks'));
+
+  store.getState().redo();
+  assert.ok(store.getState().hiddenSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.recent'));
+  assert.ok(store.getState().collapsedSections.includes('history.bookmarks'));
 }
 
 await run();
