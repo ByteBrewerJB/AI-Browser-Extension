@@ -76,6 +76,20 @@ function toSnapshot(state: SidebarVisibilityState): SidebarVisibilitySnapshot {
   };
 }
 
+function areSnapshotsEqual(
+  a: SidebarVisibilitySnapshot,
+  b: SidebarVisibilitySnapshot
+): boolean {
+  return (
+    a.pinnedSections.length === b.pinnedSections.length &&
+    a.hiddenSections.length === b.hiddenSections.length &&
+    a.collapsedSections.length === b.collapsedSections.length &&
+    a.pinnedSections.every((sectionId, index) => sectionId === b.pinnedSections[index]) &&
+    a.hiddenSections.every((sectionId, index) => sectionId === b.hiddenSections[index]) &&
+    a.collapsedSections.every((sectionId, index) => sectionId === b.collapsedSections[index])
+  );
+}
+
 function getLocalStorageArea(): chrome.storage.StorageArea | undefined {
   if (typeof chrome === 'undefined' || !chrome.storage?.local) {
     return undefined;
@@ -211,6 +225,7 @@ function updateSectionList(
 }
 
 let initializationPromise: Promise<void> | null = null;
+let storageListenerRegistered = false;
 
 export const useSidebarVisibilityStore = create<SidebarVisibilityState>((set, get) => ({
   ...DEFAULT_SNAPSHOT,
@@ -254,12 +269,45 @@ export const useSidebarVisibilityStore = create<SidebarVisibilityState>((set, ge
   }
 }));
 
+function registerStorageListener() {
+  if (storageListenerRegistered) {
+    return;
+  }
+
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
+    return;
+  }
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') {
+      return;
+    }
+
+    const change = changes[STORAGE_KEY];
+    if (!change) {
+      return;
+    }
+
+    const nextSnapshot = normalizeSnapshot(change.newValue);
+    const currentSnapshot = toSnapshot(useSidebarVisibilityStore.getState());
+    if (areSnapshotsEqual(nextSnapshot, currentSnapshot)) {
+      return;
+    }
+
+    fallbackStore.set(STORAGE_KEY, nextSnapshot);
+    useSidebarVisibilityStore.setState({ ...nextSnapshot, hydrated: true });
+  });
+
+  storageListenerRegistered = true;
+}
+
 export async function initializeSidebarVisibilityStore(): Promise<void> {
   if (!initializationPromise) {
     initializationPromise = (async () => {
       const snapshot = await readStoredSnapshot();
       fallbackStore.set(STORAGE_KEY, snapshot);
       useSidebarVisibilityStore.setState({ ...snapshot, hydrated: true });
+      registerStorageListener();
     })();
   }
 
@@ -269,5 +317,6 @@ export async function initializeSidebarVisibilityStore(): Promise<void> {
 export function __resetSidebarVisibilityStoreForTests() {
   fallbackStore.clear();
   initializationPromise = null;
+  storageListenerRegistered = false;
   useSidebarVisibilityStore.setState({ ...DEFAULT_SNAPSHOT, hydrated: false });
 }
