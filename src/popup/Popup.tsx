@@ -12,6 +12,7 @@ import { sendRuntimeMessage } from '@/shared/messaging/router';
 import { useSettingsStore } from '@/shared/state/settingsStore';
 import { openGuideResource, useGuideResources } from '@/shared/hooks/useGuideResources';
 import { SidebarSection as SidebarPreferencesSection } from './features/sidebar/SidebarSection';
+import { SidebarVisibilityToast } from '@/shared/components';
 
 const languageOptions = [
   { code: 'en', label: 'English' },
@@ -734,6 +735,7 @@ export function Popup() {
           </ul>
         )}
       </section>
+      <SidebarVisibilityToast className="fixed bottom-4 right-4 z-50" />
     </div>
   );
 }

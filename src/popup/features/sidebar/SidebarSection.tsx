@@ -93,12 +93,8 @@ export function SidebarSection() {
   const handleTogglePinned = useCallback(
     (sectionId: SidebarSectionId, nextPinned: boolean) => {
       setSectionPinned(sectionId, nextPinned);
-      if (!nextPinned) {
-        return;
-      }
-      setSectionHidden(sectionId, false);
     },
-    [setSectionHidden, setSectionPinned]
+    [setSectionPinned]
   );
 
   const handleToggleCollapsed = useCallback(
@@ -114,12 +110,8 @@ export function SidebarSection() {
   const handleToggleHidden = useCallback(
     (sectionId: SidebarSectionId, nextHidden: boolean) => {
       setSectionHidden(sectionId, nextHidden);
-      if (nextHidden) {
-        setSectionPinned(sectionId, false);
-        setSectionCollapsed(sectionId, true);
-      }
     },
-    [setSectionCollapsed, setSectionHidden, setSectionPinned]
+    [setSectionHidden]
   );
 
   const heading = t('popup.sidebarPreferences.heading', { defaultValue: 'Sidebar layout' });

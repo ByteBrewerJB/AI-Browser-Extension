@@ -69,4 +69,4 @@ Deze notitie beschrijft de wireframes voor de professionele zijbalk met pin-, hi
 - Visuele assets (Figma) genereren en koppelen zodra ontwerpteam levert.
 - Beslissen of verborgen secties na 30 dagen automatisch worden hersteld.
 - Toetsen hoe het vastgezette cluster samenwerkt met mapweergave en bulkacties voor chats.
-- Undo/redo-flows en toastfocus documenteren zodat bulkacties voor toetsenbordgebruikers herstelopties tonen.
+- Evalueren of undo/redo-toasts een wachtrij nodig hebben bij snelle acties en of automatische herstelmeldingen nuttig zijn voor langdurig verborgen secties.
