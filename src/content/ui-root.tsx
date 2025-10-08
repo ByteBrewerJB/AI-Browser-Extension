@@ -19,7 +19,7 @@ import type { BookmarkSummary, ConversationOverview, FolderTreeNode } from '@/co
 import type { BookmarkRecord, PromptRecord } from '@/core/models';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 import { MoveDialog, type MoveDialogOption } from '@/ui/components/MoveDialog';
-import { EmptyState } from '@/shared/components';
+import { EmptyState, SidebarVisibilityToast } from '@/shared/components';
 import { useFolders } from '@/shared/hooks/useFolders';
 import { useFolderTree } from '@/shared/hooks/useFolderTree';
 import { usePinnedConversations } from '@/shared/hooks/usePinnedConversations';
@@ -2541,6 +2541,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
         t={t}
       />
       <ActionToastView toast={toast} />
+      <SidebarVisibilityToast className="fixed bottom-24 right-6 z-[2147483646]" />
       <Modal
         labelledBy={modalHeadingId}
         onClose={() => setPatternModalOpen(false)}

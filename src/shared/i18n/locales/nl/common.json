@@ -644,5 +644,59 @@
       "dashboard": "Dashboard",
       "dashboardAria": "Dashboard openen"
     }
+  },
+  "sidebarVisibility": {
+    "sections": {
+      "history": {
+        "pinned": "Vastgezette gesprekken",
+        "recent": "Recente gesprekken",
+        "bookmarks": "Laatste bladwijzers"
+      },
+      "prompts": {
+        "library": "Promptsjablonen"
+      },
+      "media": {
+        "overview": "Voice- en syncoverzicht"
+      }
+    },
+    "buttons": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw",
+      "dismiss": "Sluiten"
+    },
+    "toast": {
+      "pin": {
+        "apply": "{{section}} vastgezet",
+        "apply_plural": "{{count}} secties vastgezet",
+        "undo": "{{section}} ontvastgezet",
+        "undo_plural": "{{count}} secties ontvastgezet",
+        "redo": "{{section}} opnieuw vastgezet",
+        "redo_plural": "{{count}} secties opnieuw vastgezet"
+      },
+      "unpin": {
+        "apply": "{{section}} ontvastgezet",
+        "apply_plural": "{{count}} secties ontvastgezet",
+        "undo": "{{section}} weer vastgezet",
+        "undo_plural": "{{count}} secties weer vastgezet",
+        "redo": "{{section}} opnieuw ontvastgezet",
+        "redo_plural": "{{count}} secties opnieuw ontvastgezet"
+      },
+      "hide": {
+        "apply": "{{section}} verborgen",
+        "apply_plural": "{{count}} secties verborgen",
+        "undo": "{{section}} hersteld",
+        "undo_plural": "{{count}} secties hersteld",
+        "redo": "{{section}} opnieuw verborgen",
+        "redo_plural": "{{count}} secties opnieuw verborgen"
+      },
+      "show": {
+        "apply": "{{section}} hersteld",
+        "apply_plural": "{{count}} secties hersteld",
+        "undo": "{{section}} verborgen",
+        "undo_plural": "{{count}} secties verborgen",
+        "redo": "{{section}} opnieuw hersteld",
+        "redo_plural": "{{count}} secties opnieuw hersteld"
+      }
+    }
   }
 }

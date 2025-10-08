@@ -644,5 +644,59 @@
       "dashboard": "Dashboard",
       "dashboardAria": "Open dashboard"
     }
+  },
+  "sidebarVisibility": {
+    "sections": {
+      "history": {
+        "pinned": "Pinned conversations",
+        "recent": "Recent conversations",
+        "bookmarks": "Latest bookmarks"
+      },
+      "prompts": {
+        "library": "Prompt templates"
+      },
+      "media": {
+        "overview": "Voice & sync overview"
+      }
+    },
+    "buttons": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "dismiss": "Dismiss"
+    },
+    "toast": {
+      "pin": {
+        "apply": "Pinned {{section}}",
+        "apply_plural": "Pinned {{count}} sections",
+        "undo": "Unpinned {{section}}",
+        "undo_plural": "Unpinned {{count}} sections",
+        "redo": "Pinned {{section}} again",
+        "redo_plural": "Pinned {{count}} sections again"
+      },
+      "unpin": {
+        "apply": "Unpinned {{section}}",
+        "apply_plural": "Unpinned {{count}} sections",
+        "undo": "Re-pinned {{section}}",
+        "undo_plural": "Re-pinned {{count}} sections",
+        "redo": "Unpinned {{section}} again",
+        "redo_plural": "Unpinned {{count}} sections again"
+      },
+      "hide": {
+        "apply": "Hidden {{section}}",
+        "apply_plural": "Hidden {{count}} sections",
+        "undo": "Restored {{section}}",
+        "undo_plural": "Restored {{count}} sections",
+        "redo": "Hidden {{section}} again",
+        "redo_plural": "Hidden {{count}} sections again"
+      },
+      "show": {
+        "apply": "Restored {{section}}",
+        "apply_plural": "Restored {{count}} sections",
+        "undo": "Hidden {{section}}",
+        "undo_plural": "Hidden {{count}} sections",
+        "redo": "Restored {{section}} again",
+        "redo_plural": "Restored {{count}} sections again"
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { HistorySection } from './features/history/HistorySection';
 import { MediaSection } from './features/media/MediaSection';
 import { GuideResourcesCard } from './features/infoAndUpdates/GuideResourcesCard';
+import { SidebarVisibilityToast } from '@/shared/components';
 import { EncryptionSection } from './features/privacy/EncryptionSection';
 import { PromptsSection } from './features/prompts/PromptsSection';
 import { useHistoryStore } from './features/history/historyStore';
@@ -505,6 +506,7 @@ export function Options() {
         <PromptsSection />
         <MediaSection />
       </main>
+      <SidebarVisibilityToast className="fixed bottom-6 right-6 z-50" />
     </div>
   );
 }

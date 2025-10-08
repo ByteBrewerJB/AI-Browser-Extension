@@ -67,6 +67,10 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
    - Contains conversation, bookmark, and job events sorted by timestamp.
    - Failed jobs show error text; completed jobs surface completion timestamps.
    - “Open dashboard” navigates to options.html when clicked.
+9. **Sidebar layout toasts**:
+   - Open **Sidebar layout**, pin een sectie en bevestig dat er een toast verschijnt met een **Undo**-knop.
+   - Activeer **Undo** en controleer dat de sectie direct terugkeert naar de vorige toestand.
+   - Verberg dezelfde sectie, volg de toast en gebruik **Redo** om de wijziging opnieuw toe te passen.
 
 ## 3. Dashboard/options regression
 Perform on `chrome-extension://<id>/options.html` with the direction toggle in both LTR and RTL at least once.
@@ -140,8 +144,10 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 7. Popup-voorkeuren:
    - Open de kaart **Sidebar layout**, zet `Pinned conversations` vast en verberg `Recent conversations`. Controleer dat de content-zijbalk direct de badges `data-ai-companion-pinned-count="1"` en `data-ai-companion-hidden-count="1"` op het shadow-host element toont en dat de secties in/uit beeld schuiven zonder herload.
    - Hef de verborgen status op en bevestig dat de telling terugvalt. Herlaad de ChatGPT-pagina en controleer dat voorkeuren behouden blijven.
+   - Gebruik de toast om **Undo**/**Redo** uit te voeren en verifieer dat zowel de popup als de content-zijbalk de herstelactie meteen reflecteren.
 8. Dashboard-voorkeuren:
    - Ga naar **Zijbalkindeling** in het dashboard, vink `Prompt templates` uit en `Voice & sync` aan voor inklappen. Bevestig in de content-zijbalk dat `Prompt templates` verdwijnt, `Voice & sync` ingeklapt rendert en de instellingen ook in de popup zichtbaar zijn.
+   - Gebruik de toast op het dashboard om Undo/Redo te testen en controleer dat popup en content dezelfde statuswijzigingen tonen.
    - Herhaal in Firefox of Edge (indien beschikbaar) om browserspecifieke persistence te controleren.
 9. Toegankelijkheid van zijbalkknoppen:
    - Focus met `Tab` de collapse-knop van elke sectie in de content-zijbalk en controleer in Chrome DevTools → Accessibility pane dat de naam "Collapse/Expand {section}" toont en `aria-expanded` wisselt na `Space` of `Enter`.

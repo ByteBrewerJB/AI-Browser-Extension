@@ -87,11 +87,8 @@ export function SidebarPreferences() {
   const handlePinnedChange = useCallback(
     (sectionId: SidebarSectionId, nextPinned: boolean) => {
       setSectionPinned(sectionId, nextPinned);
-      if (nextPinned) {
-        setSectionHidden(sectionId, false);
-      }
     },
-    [setSectionHidden, setSectionPinned]
+    [setSectionPinned]
   );
 
   const handleCollapsedChange = useCallback(
@@ -107,12 +104,8 @@ export function SidebarPreferences() {
   const handleHiddenChange = useCallback(
     (sectionId: SidebarSectionId, nextHidden: boolean) => {
       setSectionHidden(sectionId, nextHidden);
-      if (nextHidden) {
-        setSectionPinned(sectionId, false);
-        setSectionCollapsed(sectionId, true);
-      }
     },
-    [setSectionCollapsed, setSectionHidden, setSectionPinned]
+    [setSectionHidden]
   );
 
   const heading = t('options.sidebarPreferences.heading', { defaultValue: 'Sidebar layout' });
