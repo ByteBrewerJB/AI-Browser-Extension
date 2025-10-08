@@ -75,9 +75,12 @@
       "unpin": "Unpin",
       "collapse": "Collapse",
       "expand": "Expand",
-      "hide": "Hide",
-      "show": "Show",
-      "sectionControlsLabel": "{{section}} controls",
+    "hide": "Hide",
+    "show": "Show",
+    "reset": "Reset layout",
+    "resetDescription": "Restore the default set of sidebar sections and clear pins, hides, and collapses.",
+    "resetAriaLabel": "Reset sidebar layout preferences to defaults",
+    "sectionControlsLabel": "{{section}} controls",
       "pinSection": "Pin {{section}} section",
       "unpinSection": "Unpin {{section}} section",
       "collapseSection": "Collapse {{section}} section",
@@ -407,10 +410,13 @@
       "description": "Configure which sections remain visible in the ChatGPT sidebar and how they behave.",
       "loading": "Loading preferences…",
       "pin": "Pinned",
-      "collapsed": "Collapsed",
-      "hidden": "Hidden",
-      "sectionColumn": "Section",
-      "sections": {
+    "collapsed": "Collapsed",
+    "hidden": "Hidden",
+    "sectionColumn": "Section",
+    "reset": "Reset layout",
+    "resetHelper": "Restore the default section order and clear all pin, collapse, and hide choices.",
+    "resetAriaLabel": "Reset sidebar layout preferences to defaults",
+    "sections": {
         "historyPinned": {
           "title": "Pinned conversations",
           "description": "Keeps critical chats and folder shortcuts anchored at the top of the history bubble."
@@ -689,14 +695,19 @@
         "redo": "Hidden {{section}} again",
         "redo_plural": "Hidden {{count}} sections again"
       },
-      "show": {
-        "apply": "Restored {{section}}",
-        "apply_plural": "Restored {{count}} sections",
-        "undo": "Hidden {{section}}",
-        "undo_plural": "Hidden {{count}} sections",
-        "redo": "Restored {{section}} again",
-        "redo_plural": "Restored {{count}} sections again"
-      }
+    "show": {
+      "apply": "Restored {{section}}",
+      "apply_plural": "Restored {{count}} sections",
+      "undo": "Hidden {{section}}",
+      "undo_plural": "Hidden {{count}} sections",
+      "redo": "Restored {{section}} again",
+      "redo_plural": "Restored {{count}} sections again"
+    },
+    "reset": {
+      "apply": "Sidebar layout reset",
+      "undo": "Restored previous sidebar layout",
+      "redo": "Sidebar layout reset again"
     }
   }
+}
 }

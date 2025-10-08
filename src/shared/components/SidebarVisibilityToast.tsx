@@ -21,7 +21,7 @@ const SECTION_FALLBACK_TITLES: Record<SidebarSectionId, string> = {
 };
 
 const MESSAGE_FALLBACKS: Record<
-  SidebarVisibilityActionKind,
+  Exclude<SidebarVisibilityActionKind, 'reset'>,
   Record<
     SidebarVisibilityAnnouncementDirection,
     { singular: string; plural: string }
@@ -85,6 +85,15 @@ const MESSAGE_FALLBACKS: Record<
   }
 };
 
+const RESET_FALLBACKS: Record<
+  SidebarVisibilityAnnouncementDirection,
+  string
+> = {
+  apply: 'Sidebar layout reset',
+  undo: 'Restored previous sidebar layout',
+  redo: 'Sidebar layout reset again'
+};
+
 function getSectionTitle(
   t: ReturnType<typeof useTranslation>['t'],
   sectionId: SidebarSectionId
@@ -100,6 +109,14 @@ function getMessage(
   direction: SidebarVisibilityAnnouncementDirection,
   sections: SidebarSectionId[]
 ) {
+  if (kind === 'reset') {
+    const key = `sidebarVisibility.toast.reset.${direction}`;
+    return t(key, {
+      count: sections.length,
+      defaultValue: RESET_FALLBACKS[direction]
+    });
+  }
+
   const count = sections.length;
   const keyBase = `sidebarVisibility.toast.${kind}.${direction}`;
   const fallback = MESSAGE_FALLBACKS[kind][direction];

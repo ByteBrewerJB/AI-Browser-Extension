@@ -73,6 +73,7 @@ export function SidebarSection() {
   const setSectionPinned = useSidebarVisibilityStore((state) => state.setSectionPinned);
   const setSectionHidden = useSidebarVisibilityStore((state) => state.setSectionHidden);
   const setSectionCollapsed = useSidebarVisibilityStore((state) => state.setSectionCollapsed);
+  const resetSections = useSidebarVisibilityStore((state) => state.resetSections);
 
   const sectionStates = useMemo(
     () =>
@@ -87,6 +88,12 @@ export function SidebarSection() {
           collapsed
         };
       }),
+    [collapsedSections, hiddenSections, pinnedSections]
+  );
+
+  const hasCustomizations = useMemo(
+    () =>
+      pinnedSections.length > 0 || hiddenSections.length > 0 || collapsedSections.length > 0,
     [collapsedSections, hiddenSections, pinnedSections]
   );
 
@@ -125,12 +132,35 @@ export function SidebarSection() {
   const expandLabel = t('popup.sidebarPreferences.expand', { defaultValue: 'Expand' });
   const hideLabel = t('popup.sidebarPreferences.hide', { defaultValue: 'Hide' });
   const showLabel = t('popup.sidebarPreferences.show', { defaultValue: 'Show' });
+  const resetLabel = t('popup.sidebarPreferences.reset', { defaultValue: 'Reset layout' });
+  const resetDescription = t('popup.sidebarPreferences.resetDescription', {
+    defaultValue: 'Restore the default set of sidebar sections and clear pins, hides, and collapses.'
+  });
+  const resetAriaLabel = t('popup.sidebarPreferences.resetAriaLabel', {
+    defaultValue: 'Reset sidebar layout preferences to defaults'
+  });
+
+  const handleReset = useCallback(() => {
+    resetSections();
+  }, [resetSections]);
 
   return (
     <section className="space-y-3 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-      <header className="space-y-1">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{heading}</h2>
-        <p className="text-xs text-slate-400">{description}</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{heading}</h2>
+          <p className="text-xs text-slate-400">{description}</p>
+          <p className="text-[11px] text-slate-500">{resetDescription}</p>
+        </div>
+        <button
+          type="button"
+          className="rounded-md border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-600"
+          onClick={handleReset}
+          disabled={!hydrated || !hasCustomizations}
+          aria-label={resetAriaLabel}
+        >
+          {resetLabel}
+        </button>
       </header>
 
       {!hydrated ? (

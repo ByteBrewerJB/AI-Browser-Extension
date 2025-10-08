@@ -76,8 +76,11 @@
       "collapse": "Inklappen",
       "expand": "Uitklappen",
       "hide": "Verbergen",
-      "show": "Tonen",
-      "sectionControlsLabel": "{{section}}-bediening",
+  "show": "Tonen",
+  "reset": "Lay-out resetten",
+  "resetDescription": "Zet de standaardzijbalk terug en wis alle vastgepinde, verborgen en ingeklapte secties.",
+  "resetAriaLabel": "Zijbalkindeling resetten naar standaardinstellingen",
+  "sectionControlsLabel": "{{section}}-bediening",
       "pinSection": "Sectie {{section}} vastzetten",
       "unpinSection": "Sectie {{section}} losmaken",
       "collapseSection": "Sectie {{section}} inklappen",
@@ -408,9 +411,12 @@
       "loading": "Voorkeuren laden…",
       "pin": "Vastgezet",
       "collapsed": "Ingeklapt",
-      "hidden": "Verborgen",
-      "sectionColumn": "Sectie",
-      "sections": {
+  "hidden": "Verborgen",
+  "sectionColumn": "Sectie",
+  "reset": "Lay-out resetten",
+  "resetHelper": "Zet de standaardvolgorde terug en wis alle keuzes voor vastzetten, inklappen en verbergen.",
+  "resetAriaLabel": "Zijbalkindeling resetten naar standaardinstellingen",
+  "sections": {
         "historyPinned": {
           "title": "Vastgezette gesprekken",
           "description": "Houdt belangrijke chats en map-snelkoppelingen bovenaan de geschiedenis-bubbel."
@@ -689,14 +695,19 @@
         "redo": "{{section}} opnieuw verborgen",
         "redo_plural": "{{count}} secties opnieuw verborgen"
       },
-      "show": {
-        "apply": "{{section}} hersteld",
-        "apply_plural": "{{count}} secties hersteld",
-        "undo": "{{section}} verborgen",
-        "undo_plural": "{{count}} secties verborgen",
-        "redo": "{{section}} opnieuw hersteld",
-        "redo_plural": "{{count}} secties opnieuw hersteld"
-      }
-    }
+  "show": {
+    "apply": "{{section}} hersteld",
+    "apply_plural": "{{count}} secties hersteld",
+    "undo": "{{section}} verborgen",
+    "undo_plural": "{{count}} secties verborgen",
+    "redo": "{{section}} opnieuw hersteld",
+    "redo_plural": "{{count}} secties opnieuw hersteld"
+  },
+  "reset": {
+    "apply": "Zijbalkindeling hersteld",
+    "undo": "Vorige indeling teruggezet",
+    "redo": "Zijbalkindeling opnieuw hersteld"
+  }
+}
   }
 }

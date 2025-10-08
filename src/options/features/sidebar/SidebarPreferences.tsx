@@ -72,6 +72,7 @@ export function SidebarPreferences() {
   const setSectionPinned = useSidebarVisibilityStore((state) => state.setSectionPinned);
   const setSectionCollapsed = useSidebarVisibilityStore((state) => state.setSectionCollapsed);
   const setSectionHidden = useSidebarVisibilityStore((state) => state.setSectionHidden);
+  const resetSections = useSidebarVisibilityStore((state) => state.resetSections);
 
   const rows = useMemo(
     () =>
@@ -81,6 +82,12 @@ export function SidebarPreferences() {
         collapsed: collapsedSections.includes(definition.id),
         hidden: hiddenSections.includes(definition.id)
       })),
+    [collapsedSections, hiddenSections, pinnedSections]
+  );
+
+  const hasCustomizations = useMemo(
+    () =>
+      pinnedSections.length > 0 || hiddenSections.length > 0 || collapsedSections.length > 0,
     [collapsedSections, hiddenSections, pinnedSections]
   );
 
@@ -116,12 +123,35 @@ export function SidebarPreferences() {
   const pinLabel = t('options.sidebarPreferences.pin', { defaultValue: 'Pinned' });
   const collapsedLabel = t('options.sidebarPreferences.collapsed', { defaultValue: 'Collapsed' });
   const hiddenLabel = t('options.sidebarPreferences.hidden', { defaultValue: 'Hidden' });
+  const resetLabel = t('options.sidebarPreferences.reset', { defaultValue: 'Reset layout' });
+  const resetHelper = t('options.sidebarPreferences.resetHelper', {
+    defaultValue: 'Restore the default section order and clear all pin, collapse, and hide choices.'
+  });
+  const resetAriaLabel = t('options.sidebarPreferences.resetAriaLabel', {
+    defaultValue: 'Reset sidebar layout preferences to defaults'
+  });
+
+  const handleReset = useCallback(() => {
+    resetSections();
+  }, [resetSections]);
 
   return (
     <section className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 shadow-lg">
-      <header className="space-y-2">
-        <h2 className="text-lg font-semibold text-slate-100">{heading}</h2>
-        <p className="text-sm text-slate-300">{description}</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-slate-100">{heading}</h2>
+          <p className="text-sm text-slate-300">{description}</p>
+          <p className="text-xs text-slate-500">{resetHelper}</p>
+        </div>
+        <button
+          type="button"
+          className="rounded-md border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-600"
+          onClick={handleReset}
+          disabled={!hydrated || !hasCustomizations}
+          aria-label={resetAriaLabel}
+        >
+          {resetLabel}
+        </button>
       </header>
 
       {!hydrated ? (

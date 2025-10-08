@@ -71,6 +71,10 @@ Use this guide for every release candidate that touches the popup, dashboard/opt
    - Open **Sidebar layout**, pin een sectie en bevestig dat er een toast verschijnt met een **Undo**-knop.
    - Activeer **Undo** en controleer dat de sectie direct terugkeert naar de vorige toestand.
    - Verberg dezelfde sectie, volg de toast en gebruik **Redo** om de wijziging opnieuw toe te passen.
+10. **Lay-out resetten**:
+   - Klik in **Sidebar layout** op **Lay-out resetten** en bevestig dat alle toggles terugvallen naar de standaardstatus (geen secties vastgezet, verborgen of ingeklapt).
+   - Controleer dat zowel de popup als de content-zijbalk dezelfde reset tonen en dat er een toast verschijnt met de melding dat de lay-out is hersteld.
+   - Gebruik **Undo** vanuit de toast om de vorige toestand terug te halen en **Redo** om de reset opnieuw toe te passen.
 
 ## 3. Dashboard/options regression
 Perform on `chrome-extension://<id>/options.html` with the direction toggle in both LTR and RTL at least once.
@@ -149,6 +153,7 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
    - Ga naar **Zijbalkindeling** in het dashboard, vink `Prompt templates` uit en `Voice & sync` aan voor inklappen. Bevestig in de content-zijbalk dat `Prompt templates` verdwijnt, `Voice & sync` ingeklapt rendert en de instellingen ook in de popup zichtbaar zijn.
    - Gebruik de toast op het dashboard om Undo/Redo te testen en controleer dat popup en content dezelfde statuswijzigingen tonen.
    - Herhaal in Firefox of Edge (indien beschikbaar) om browserspecifieke persistence te controleren.
+   - Klik op **Lay-out resetten**, bevestig dat alle secties terug naar de standaardinstelling gaan in dashboard, popup en content, en gebruik Undo/Redo voor de reset-flow.
 9. Toegankelijkheid van zijbalkknoppen:
    - Focus met `Tab` de collapse-knop van elke sectie in de content-zijbalk en controleer in Chrome DevTools → Accessibility pane dat de naam "Collapse/Expand {section}" toont en `aria-expanded` wisselt na `Space` of `Enter`.
    - Open de popup → **Sidebar layout** en navigeer met het toetsenbord door de pin/collapse/hide-knoppen. Verwacht dat elke knop de sectienaam in de aangekondigde labeltekst bevat en dat `aria-pressed` wisselt.
