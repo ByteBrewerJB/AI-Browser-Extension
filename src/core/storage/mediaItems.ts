@@ -1,3 +1,5 @@
+import Dexie from 'dexie';
+
 import type { MediaItemFilter, MediaItemRecord, MediaItemType } from '@/core/models';
 
 import { db } from './db';
@@ -31,12 +33,10 @@ const TYPE_METADATA: Record<MediaItemType, { dominant: string; accent: string; c
 
 export async function countMediaItems(type: MediaItemFilter = 'all') {
   if (type === 'all') {
-    const items = await db.mediaItems.toArray();
-    return items.length;
+    return db.mediaItems.where('sortKey').between(Dexie.minKey, Dexie.maxKey).count();
   }
 
-  const items = await db.mediaItems.where('type').equals(type).toArray();
-  return items.length;
+  return db.mediaItems.where('type').equals(type).count();
 }
 
 export async function seedMediaItems(target = DEFAULT_SEED_COUNT) {
@@ -99,14 +99,25 @@ export async function listMediaItems(options: ListMediaItemsOptions = {}): Promi
   const cursor = options.cursor ?? null;
   const type = options.type ?? 'all';
 
-  const [orderedItems, total] = await Promise.all([
-    db.mediaItems.orderBy('sortKey').reverse().toArray(),
+  const collection = type === 'all'
+    ? cursor === null
+      ? db.mediaItems.orderBy('sortKey').reverse()
+      : db.mediaItems.where('sortKey').below(cursor).reverse()
+    : cursor === null
+      ? db.mediaItems
+          .where('[type+sortKey]')
+          .between([type, Dexie.minKey], [type, Dexie.maxKey])
+          .reverse()
+      : db.mediaItems
+          .where('[type+sortKey]')
+          .between([type, Dexie.minKey], [type, cursor], true, false)
+          .reverse();
+
+  const [items, total] = await Promise.all([
+    collection.limit(limit).toArray(),
     countMediaItems(type)
   ]);
 
-  const filtered = orderedItems.filter((item) => (type === 'all' ? true : item.type === type));
-  const sliced = cursor !== null ? filtered.filter((item) => item.sortKey < cursor) : filtered;
-  const items = sliced.slice(0, limit);
   const nextCursor = items.length === limit ? items[items.length - 1].sortKey : null;
 
   return {
