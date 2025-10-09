@@ -3,6 +3,7 @@ import type {
   ConversationRecord,
   FolderItemRecord,
   FolderRecord,
+  MediaItemRecord,
   MessageRecord,
   PromptChainRecord
 } from '@/core/models';
@@ -218,6 +219,12 @@ class MessageTable extends InMemoryTable<MessageRecord> {
   }
 }
 
+class MediaItemsTable extends InMemoryTable<MediaItemRecord> {
+  constructor() {
+    super('sortKey');
+  }
+}
+
 class ConversationTable extends InMemoryTable<ConversationRecord> {
   constructor() {
     super('updatedAt');
@@ -301,6 +308,7 @@ const promptChains = new PromptChainTable();
 const folders = new FolderTable();
 const folderItems = new FolderItemsTable();
 const metadata = new MetadataTable();
+const mediaItems = new MediaItemsTable();
 
 export const db = {
   conversations,
@@ -310,6 +318,7 @@ export const db = {
   folders,
   folderItems,
   metadata,
+  mediaItems,
   async transaction(_mode: string, ...args: unknown[]) {
     const maybeCallback = args[args.length - 1];
     if (typeof maybeCallback === 'function') {
@@ -326,7 +335,8 @@ export async function resetDatabase() {
     promptChains.clear(),
     folders.clear(),
     folderItems.clear(),
-    metadata.clear()
+    metadata.clear(),
+    mediaItems.clear()
   ]);
 }
 
@@ -337,5 +347,6 @@ export const __stores = {
   promptChains,
   folders,
   folderItems,
-  metadata
+  metadata,
+  mediaItems
 };

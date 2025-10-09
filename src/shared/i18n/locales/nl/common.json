@@ -175,6 +175,27 @@
       "markUnviewedAria": "Herstel gids {{title}}",
       "viewedBadge": "Bekeken"
     },
+    "mediaHeading": "Audio- & syncwerkruimte",
+    "mediaDescription": "Configureer voice-weergave en standaardinstellingen voor cross-device captures.",
+    "mediaVoiceHeading": "Voice-bediening",
+    "mediaVoiceDescription": "Kies een standaardstem en stel geavanceerde capture-gedragingen in.",
+    "mediaVoiceAutoDownload": "Audio automatisch downloaden zodra het beschikbaar is",
+    "mediaVoiceAdvanced": "Geavanceerde voicemodus met gelaagde prompts inschakelen",
+    "mediaVoiceSync": "Voice-presets synchroniseren tussen ingelogde browsers",
+    "mediaVoiceSelect": "Standaardstem",
+    "mediaGalleryHeading": "Mediagalerij",
+    "mediaGalleryDescription": "Blader door recente voice-captures en uploads met een virtueel raster.",
+    "mediaGalleryFilterLabel": "Filter",
+    "mediaGalleryFilter": {
+      "all": "Alle media",
+      "audio": "Audio",
+      "video": "Video",
+      "image": "Afbeeldingen"
+    },
+    "mediaGalleryCount": "{{visible}} van {{total}} media-items zichtbaar",
+    "mediaGalleryLoadingMore": "Meer media laden…",
+    "mediaGalleryEmpty": "Nog geen media-items. Maak een capture of upload audio om ze hier te tonen.",
+    "mediaGallerySeedError": "Voorbeeldmedia konden niet worden voorbereid. Herlaad het dashboard om het opnieuw te proberen.",
     "encryption": {
       "heading": "Wachtwoordzin & sync-encryptie",
       "description": "Beveilig Dexie-syncsnapshots met een optionele wachtwoordzin. De sleutel verlaat dit apparaat nooit.",

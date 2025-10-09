@@ -13,6 +13,7 @@ async function runSequentially() {
   await import('./shared/bubbleLauncherStore.spec');
   await import('./shared/syncEncryptionClient.spec');
   await import('./shared/theme/themePreference.spec');
+  await import('./options/mediaGallery.spec');
 }
 
 runSequentially()
