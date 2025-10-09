@@ -564,6 +564,8 @@
         "openDashboard": "Open dashboard",
         "folderShortcuts": "Folder shortcuts",
         "folderShortcutsEmpty": "Create folders in the dashboard to access them quickly here.",
+        "newFolder": "New",
+        "newFolderPrompt": "Enter a name for the new folder:",
         "archive": "Archive",
         "restore": "Restore",
         "moveAction": "Move",

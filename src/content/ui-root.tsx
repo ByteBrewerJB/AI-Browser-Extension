@@ -7,6 +7,7 @@ import { insertTextIntoComposer } from './textareaPrompts';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import {
   archiveConversations,
+  createFolder,
   createPrompt,
   getBookmarks,
   getConversationOverviewById,
@@ -1549,6 +1550,23 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
     (state) => state.setConversationFolderShortcuts
   );
 
+  const handleCreateFolder = useCallback(async () => {
+    const promptMessage =
+      t('content.sidebar.history.newFolderPrompt', {
+        defaultValue: 'Enter a name for the new folder:'
+      }) ?? 'Enter a name for the new folder:';
+    const name = window.prompt(promptMessage);
+    if (!name || name.trim().length === 0) {
+      return;
+    }
+    try {
+      await createFolder({ name, kind: 'conversation' });
+    } catch (error) {
+      console.error('[ai-companion] failed to create folder', error);
+      // TODO: show toast
+    }
+  }, [t]);
+
   const handleTogglePin = useCallback((conversationId: string) => {
     void togglePinned(conversationId);
   }, []);
@@ -1770,9 +1788,20 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
             )}
           </div>
           <div className="rounded-md border border-white/10 bg-slate-900/60 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
-              {t('content.sidebar.history.folderShortcuts', { defaultValue: 'Folder shortcuts' })}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+                {t('content.sidebar.history.folderShortcuts', { defaultValue: 'Folder shortcuts' })}
+              </p>
+              <button
+                className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+                onClick={() => {
+                  void handleCreateFolder();
+                }}
+                type="button"
+              >
+                {t('content.sidebar.history.newFolder', { defaultValue: 'New' })}
+              </button>
+            </div>
             {folderOptions.length === 0 ? (
               <p className="mt-2 text-xs text-slate-400">
                 {t('content.sidebar.history.folderShortcutsEmpty', {
