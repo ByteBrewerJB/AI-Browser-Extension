@@ -564,6 +564,8 @@
         "openDashboard": "Dashboard openen",
         "folderShortcuts": "Map-snelkoppelingen",
         "folderShortcutsEmpty": "Maak mappen in het dashboard om ze hier snel terug te vinden.",
+        "newFolder": "Nieuw",
+        "newFolderPrompt": "Voer een naam in voor de nieuwe map:",
         "archive": "Archiveren",
         "restore": "Herstellen",
         "moveAction": "Verplaatsen",
