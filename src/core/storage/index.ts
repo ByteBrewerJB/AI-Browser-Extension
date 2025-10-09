@@ -9,3 +9,4 @@ export * from './settings';
 export * from './syncBridge';
 export * from './service';
 export * from './insights';
+export * from './mediaItems';

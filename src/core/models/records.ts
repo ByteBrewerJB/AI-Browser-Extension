@@ -86,6 +86,26 @@ export interface BookmarkRecord {
   messagePreview?: string;
 }
 
+export type MediaItemType = 'audio' | 'video' | 'image';
+
+export type MediaItemFilter = MediaItemType | 'all';
+
+export interface MediaItemRecord {
+  id: string;
+  type: MediaItemType;
+  title: string;
+  description?: string;
+  createdAt: string;
+  sortKey: number;
+  durationSeconds: number;
+  sizeKb: number;
+  dominantColor: string;
+  accentColor: string;
+  thumbnailLabel: string;
+  collection: string;
+  tags?: string[];
+}
+
 export type ConversationPinnedFilter = 'all' | 'pinned' | 'unpinned';
 
 export type ConversationArchivedFilter = 'all' | 'archived' | 'active';

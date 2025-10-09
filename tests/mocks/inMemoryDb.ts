@@ -3,6 +3,7 @@ import type {
   ConversationRecord,
   FolderItemRecord,
   FolderRecord,
+  MediaItemRecord,
   MessageRecord,
   PromptChainRecord
 } from '@/core/models';
@@ -12,17 +13,35 @@ export const ENCRYPTION_METADATA_KEY = 'encryption';
 
 type RecordWithId = { id: string };
 
+type LimitedResult<T extends RecordWithId> = {
+  toArray(): Promise<T[]>;
+};
+
+type DirectionalResult<T extends RecordWithId> = {
+  limit(limit: number): LimitedResult<T>;
+  toArray(): Promise<T[]>;
+};
+
 type WhereResult<T extends RecordWithId> = {
   count(): Promise<number>;
   toArray(): Promise<T[]>;
   delete(): Promise<void>;
   and(predicate: (item: T) => boolean): WhereResult<T>;
   first(): Promise<T | undefined>;
+  reverse(): DirectionalResult<T>;
+  limit(limit: number): LimitedResult<T>;
 };
 
 type WhereQuery<T extends RecordWithId> = {
   equals(value: unknown): WhereResult<T>;
   anyOf(values: readonly unknown[]): WhereResult<T>;
+  below(value: unknown): WhereResult<T>;
+  between(
+    lower: unknown,
+    upper: unknown,
+    includeLower?: boolean,
+    includeUpper?: boolean
+  ): WhereResult<T>;
 };
 
 type OrderQuery<T extends RecordWithId> = {
@@ -45,6 +64,7 @@ type MutableTable<T extends RecordWithId> = {
   clear(): Promise<void>;
   where<K extends keyof T>(field: K): WhereQuery<T>;
   orderBy<K extends keyof T>(field: K): OrderQuery<T>;
+  count(): Promise<number>;
 };
 
 function clone<T>(value: T): T {
@@ -53,14 +73,18 @@ function clone<T>(value: T): T {
 
 function createWhereResult<T extends RecordWithId>(
   table: InMemoryTable<T>,
-  items: T[]
+  items: T[],
+  sortField?: keyof T
 ): WhereResult<T> {
+  const sortAscending = () => table.sortItems(items, sortField, false);
+  const sortDescending = () => table.sortItems(items, sortField, true);
+
   return {
     async count() {
       return items.length;
     },
     async toArray() {
-      return items.map((item) => clone(item));
+      return sortAscending();
     },
     async delete() {
       for (const item of items) {
@@ -69,11 +93,32 @@ function createWhereResult<T extends RecordWithId>(
     },
     and(predicate: (item: T) => boolean) {
       const filtered = items.filter((item) => predicate(item));
-      return createWhereResult(table, filtered);
+      return createWhereResult(table, filtered, sortField);
     },
     async first() {
-      const [first] = items;
-      return first ? clone(first) : undefined;
+      const [first] = sortAscending();
+      return first ?? undefined;
+    },
+    reverse() {
+      return {
+        limit(limit: number) {
+          return {
+            async toArray() {
+              return sortDescending().slice(0, limit);
+            }
+          } satisfies LimitedResult<T>;
+        },
+        async toArray() {
+          return sortDescending();
+        }
+      } satisfies DirectionalResult<T>;
+    },
+    limit(limit: number) {
+      return {
+        async toArray() {
+          return sortAscending().slice(0, limit);
+        }
+      } satisfies LimitedResult<T>;
     }
   };
 }
@@ -82,6 +127,48 @@ class InMemoryTable<T extends RecordWithId> implements MutableTable<T> {
   protected store = new Map<string, T>();
 
   constructor(private readonly sortFallback: keyof T | null = null) {}
+
+  private resolveSortValue(item: T, field?: keyof T) {
+    if (field) {
+      const value = (item as Record<string, unknown>)[field as string];
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    if (this.sortFallback) {
+      return (item as Record<string, unknown>)[this.sortFallback as string];
+    }
+
+    return field ? (item as Record<string, unknown>)[field as string] : undefined;
+  }
+
+  sortItems(items: T[], sortField?: keyof T, descending = false) {
+    const sorted = [...items].sort((a, b) => {
+      const aValue = this.resolveSortValue(a, sortField);
+      const bValue = this.resolveSortValue(b, sortField);
+
+      if (aValue === bValue) {
+        return 0;
+      }
+
+      if (aValue == null) {
+        return 1;
+      }
+
+      if (bValue == null) {
+        return -1;
+      }
+
+      return aValue > bValue ? 1 : -1;
+    });
+
+    if (descending) {
+      sorted.reverse();
+    }
+
+    return sorted.map((item) => clone(item));
+  }
 
   async add(record: T) {
     return this.put(record);
@@ -153,50 +240,72 @@ class InMemoryTable<T extends RecordWithId> implements MutableTable<T> {
     this.store.clear();
   }
 
+  async count() {
+    return this.store.size;
+  }
+
   where<K extends keyof T>(field: K): WhereQuery<T> {
+    const values = () => [...this.store.values()];
+    const toNumber = (value: unknown, fallback: number) =>
+      typeof value === 'number' ? value : fallback;
+
     return {
       equals: (value: unknown) => {
-        const items = [...this.store.values()].filter((item) => (item as any)[field] === value);
-        return createWhereResult(this, items);
+        const items = values().filter((item) => (item as any)[field] === value);
+        return createWhereResult(this, items, field);
       },
-      anyOf: (values: readonly unknown[]) => {
-        const set = new Set(values);
-        const items = [...this.store.values()].filter((item) => set.has((item as any)[field]));
-        return createWhereResult(this, items);
+      anyOf: (incoming: readonly unknown[]) => {
+        const set = new Set(incoming);
+        const items = values().filter((item) => set.has((item as any)[field]));
+        return createWhereResult(this, items, field);
+      },
+      below: (value: unknown) => {
+        const upper = toNumber(value, Number.POSITIVE_INFINITY);
+        const items = values().filter((item) => {
+          const current = (item as any)[field];
+          return typeof current === 'number' && current < upper;
+        });
+        return createWhereResult(this, items, field);
+      },
+      between: (
+        lower: unknown,
+        upper: unknown,
+        includeLower = true,
+        includeUpper = true
+      ) => {
+        const lowerBound = toNumber(lower, Number.NEGATIVE_INFINITY);
+        const upperBound = toNumber(upper, Number.POSITIVE_INFINITY);
+        const items = values().filter((item) => {
+          const current = (item as any)[field];
+          if (typeof current !== 'number') {
+            return false;
+          }
+          const lowerPass = includeLower ? current >= lowerBound : current > lowerBound;
+          const upperPass = includeUpper ? current <= upperBound : current < upperBound;
+          return lowerPass && upperPass;
+        });
+        return createWhereResult(this, items, field);
       }
-    };
+    } satisfies WhereQuery<T>;
   }
 
   orderBy<K extends keyof T>(field: K): OrderQuery<T> {
     const sortField = field;
-    const fallback = this.sortFallback;
-
-    const sortValues = () =>
-      [...this.store.values()].sort((a, b) => {
-        const aValue = (a as any)[sortField] ?? (fallback ? (a as any)[fallback] : undefined);
-        const bValue = (b as any)[sortField] ?? (fallback ? (b as any)[fallback] : undefined);
-        if (aValue === bValue) return 0;
-        return aValue > bValue ? 1 : -1;
-      });
+    const values = () => [...this.store.values()];
 
     return {
       reverse: () => ({
         limit: (limit: number) => ({
           toArray: async () => {
-            return sortValues()
-              .reverse()
-              .slice(0, limit)
-              .map((item) => clone(item));
+            return this.sortItems(values(), sortField, true).slice(0, limit);
           }
         }),
         toArray: async () => {
-          return sortValues()
-            .reverse()
-            .map((item) => clone(item));
+          return this.sortItems(values(), sortField, true);
         }
       }),
       toArray: async () => {
-        return sortValues().map((item) => clone(item));
+        return this.sortItems(values(), sortField, false);
       }
     };
   }
@@ -215,6 +324,80 @@ class BookmarkTable extends InMemoryTable<BookmarkRecord> {
 class MessageTable extends InMemoryTable<MessageRecord> {
   constructor() {
     super('createdAt');
+  }
+}
+
+class MediaItemsTable extends InMemoryTable<MediaItemRecord> {
+  constructor() {
+    super('sortKey');
+  }
+
+  override where(field: keyof MediaItemRecord | '[type+sortKey]'): WhereQuery<MediaItemRecord> {
+    if (field === '[type+sortKey]') {
+      const values = () => [...this.store.values()];
+
+      return {
+        equals: (value: unknown) => {
+          const [type, sortKey] = Array.isArray(value) ? value : [];
+          const items = values().filter(
+            (item) => item.type === type && item.sortKey === sortKey
+          );
+          return createWhereResult(this, items, 'sortKey');
+        },
+        anyOf: (incoming: readonly unknown[]) => {
+          const normalized = incoming
+            .map((value) => (Array.isArray(value) ? value : []))
+            .filter((entry): entry is [MediaItemRecord['type'], number] => entry.length === 2);
+          const items = values().filter((item) =>
+            normalized.some(([type, sortKey]) => item.type === type && item.sortKey === sortKey)
+          );
+          return createWhereResult(this, items, 'sortKey');
+        },
+        below: (value: unknown) => {
+          if (!Array.isArray(value) || value.length < 2) {
+            return createWhereResult(this, [], 'sortKey');
+          }
+          const [type, sortKey] = value as [MediaItemRecord['type'], number];
+          const items = values().filter(
+            (item) => item.type === type && item.sortKey < sortKey
+          );
+          return createWhereResult(this, items, 'sortKey');
+        },
+        between: (
+          lower: unknown,
+          upper: unknown,
+          includeLower = true,
+          includeUpper = true
+        ) => {
+          const lowerTuple = Array.isArray(lower) ? lower : [];
+          const upperTuple = Array.isArray(upper) ? upper : [];
+          const type = (lowerTuple[0] ?? upperTuple[0]) as MediaItemRecord['type'] | undefined;
+          if (!type) {
+            return createWhereResult(this, [], 'sortKey');
+          }
+
+          const lowerValue =
+            typeof lowerTuple[1] === 'number' ? lowerTuple[1] : Number.NEGATIVE_INFINITY;
+          const upperValue =
+            typeof upperTuple[1] === 'number' ? upperTuple[1] : Number.POSITIVE_INFINITY;
+
+          const items = values().filter((item) => {
+            if (item.type !== type) {
+              return false;
+            }
+
+            const current = item.sortKey;
+            const lowerPass = includeLower ? current >= lowerValue : current > lowerValue;
+            const upperPass = includeUpper ? current <= upperValue : current < upperValue;
+            return lowerPass && upperPass;
+          });
+
+          return createWhereResult(this, items, 'sortKey');
+        }
+      } satisfies WhereQuery<MediaItemRecord>;
+    }
+
+    return super.where(field as keyof MediaItemRecord);
   }
 }
 
@@ -249,7 +432,7 @@ class FolderItemsTable extends InMemoryTable<FolderItemRecord> {
           const items = [...this.store.values()].filter(
             (item) => item.itemType === itemType && item.itemId === itemId
           );
-          return createWhereResult(this, items);
+          return createWhereResult(this, items, 'updatedAt');
         },
         anyOf: (values: readonly unknown[]) => {
           const normalized = values
@@ -258,8 +441,10 @@ class FolderItemsTable extends InMemoryTable<FolderItemRecord> {
           const items = [...this.store.values()].filter((item) =>
             normalized.some(([type, id]) => item.itemType === type && item.itemId === id)
           );
-          return createWhereResult(this, items);
-        }
+          return createWhereResult(this, items, 'updatedAt');
+        },
+        below: () => createWhereResult(this, [], 'updatedAt'),
+        between: () => createWhereResult(this, [], 'updatedAt')
       } satisfies WhereQuery<FolderItemRecord>;
     }
 
@@ -301,6 +486,7 @@ const promptChains = new PromptChainTable();
 const folders = new FolderTable();
 const folderItems = new FolderItemsTable();
 const metadata = new MetadataTable();
+const mediaItems = new MediaItemsTable();
 
 export const db = {
   conversations,
@@ -310,6 +496,7 @@ export const db = {
   folders,
   folderItems,
   metadata,
+  mediaItems,
   async transaction(_mode: string, ...args: unknown[]) {
     const maybeCallback = args[args.length - 1];
     if (typeof maybeCallback === 'function') {
@@ -326,7 +513,8 @@ export async function resetDatabase() {
     promptChains.clear(),
     folders.clear(),
     folderItems.clear(),
-    metadata.clear()
+    metadata.clear(),
+    mediaItems.clear()
   ]);
 }
 
@@ -337,5 +525,6 @@ export const __stores = {
   promptChains,
   folders,
   folderItems,
-  metadata
+  metadata,
+  mediaItems
 };

@@ -7,6 +7,7 @@ import type {
   GPTRecord,
   JobRecord,
   MessageRecord,
+  MediaItemRecord,
   PromptChainRecord,
   PromptRecord,
   SettingsRecord
@@ -55,6 +56,7 @@ export class CompanionDatabase extends Dexie {
   settings!: Table<SettingsRecord, string>;
   jobs!: Table<JobRecord, string>;
   metadata!: Table<MetadataRecord, string>;
+  mediaItems!: Table<MediaItemRecord, string>;
 
   constructor() {
     super('AICompanionDB');
@@ -264,6 +266,21 @@ export class CompanionDatabase extends Dexie {
           await folderItemsTable.bulkAdd(records);
         }
       });
+
+    this.version(9).stores({
+      conversations: 'id, updatedAt, folderId, pinned, archived',
+      messages: 'id, [conversationId+createdAt], conversationId, createdAt',
+      gpts: 'id, folderId, updatedAt',
+      prompts: 'id, folderId, gptId, updatedAt',
+      promptChains: 'id, updatedAt',
+      folders: 'id, parentId, kind, favorite',
+      folderItems: 'id, folderId, itemType, itemId, &[itemType+itemId], [folderId+itemType], sortIndex',
+      bookmarks: 'id, [conversationId+messageId], conversationId, createdAt',
+      settings: 'id',
+      jobs: 'id, status, runAt, updatedAt',
+      metadata: 'key',
+      mediaItems: 'id, sortKey, type, [type+sortKey]'
+    });
   }
 }
 

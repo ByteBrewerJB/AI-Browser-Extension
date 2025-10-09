@@ -3,6 +3,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { MediaOverlay } from '@/ui/components/MediaOverlay';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@/ui/components/Modal';
 
+import { MediaGallery } from './MediaGallery';
 import { useMediaStore } from './mediaStore';
 
 export function MediaSection() {
@@ -49,7 +50,7 @@ export function MediaSection() {
                 type="checkbox"
               />
               <span className="text-sm text-slate-200">
-                {t('options.mediaAutoDownloadLabel') ?? 'Automatically download response audio when available'}
+                {t('options.mediaVoiceAutoDownload') ?? 'Automatically download response audio when available'}
               </span>
             </label>
             <label className="flex items-start gap-3">
@@ -60,7 +61,7 @@ export function MediaSection() {
                 type="checkbox"
               />
               <span className="text-sm text-slate-200">
-                {t('options.mediaAdvancedVoiceLabel') ?? 'Enable advanced voice mode with layered prompts'}
+                {t('options.mediaVoiceAdvanced') ?? 'Enable advanced voice mode with layered prompts'}
               </span>
             </label>
             <label className="flex items-start gap-3">
@@ -71,12 +72,12 @@ export function MediaSection() {
                 type="checkbox"
               />
               <span className="text-sm text-slate-200">
-                {t('options.mediaSyncLabel') ?? 'Synchronize voice presets across signed-in browsers'}
+                {t('options.mediaVoiceSync') ?? 'Synchronize voice presets across signed-in browsers'}
               </span>
             </label>
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-slate-400" htmlFor="voice-select">
-                {t('options.mediaVoiceSelectLabel') ?? 'Default voice'}
+                {t('options.mediaVoiceSelect') ?? 'Default voice'}
               </label>
               <select
                 className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-emerald-400 focus:outline-none"
@@ -106,15 +107,7 @@ export function MediaSection() {
             </button>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-          <h3 className="text-base font-semibold text-emerald-200">{t('options.mediaGuidanceHeading') ?? 'Accessibility & sync'}</h3>
-          <ul className="mt-4 space-y-3 text-sm text-slate-200">
-            <li>{t('options.mediaGuidanceKeyboard') ?? 'All controls remain keyboard accessible with focus outlines.'}</li>
-            <li>{t('options.mediaGuidanceScreenReader') ?? 'Announcements mirror playback state for screen-readers.'}</li>
-            <li>{t('options.mediaGuidanceRtl') ?? 'RTL layouts flip toolbar affordances automatically.'}</li>
-            <li>{t('options.mediaGuidanceSync') ?? 'Voice preferences sync when signed into Chrome with storage permissions.'}</li>
-          </ul>
-        </div>
+        <MediaGallery />
       </div>
 
       <MediaOverlay labelledBy="media-preview-heading" onClose={() => setPreviewOpen(false)} open={previewOpen}>

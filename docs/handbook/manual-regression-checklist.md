@@ -121,6 +121,15 @@ Perform on `chrome-extension://<id>/options.html` with the direction toggle in b
 2. Change the default voice from the dropdown and verify the preview overlay reflects the selection.
 3. Open the **Preview voice overlay**, check that focus stays trapped inside, and close it with both the confirm button and `Escape`.
 4. Launch the **Learn about modals** dialog and confirm focus returns to the trigger after closing.
+5. Scroll through the **Media gallery** card:
+   - Use the mouse wheel to move from top to bottom; new thumbnails should stream in batches of ~60 with a skeleton shimmer while loading.
+   - Flick to the end of the list and confirm the “Loading more…” banner appears briefly without layout jumps or duplicate rows.
+6. Apply each gallery filter (All media / Audio / Video / Images):
+   - Switching filters should reset the scroll position to the top and immediately swap the tile set.
+   - Change the filter while scrolled halfway and verify the grid re-renders without blank gaps or repeated items.
+7. Virtual scroll stress test:
+   - Resize the window below 900 px wide and scroll rapidly; performance should stay smooth (<300 ms render spikes) and the counter (e.g. “240 of 1000 media items”) updates as pages stream in.
+   - Reload the options page; skeleton tiles should appear for <1 s before demo media repopulates.
 
 ### 3.6 Passphrase & sync encryptie
 1. Open de sectie **Wachtwoordzin & sync-encryptie** in het dashboard. Controleer dat de statusbadge “Nog niet ingesteld” toont bij een schone installatie en dat PBKDF2-iteraties zichtbaar worden zodra een passphrase is opgeslagen.

@@ -175,6 +175,27 @@
       "markUnviewedAria": "Restore guide {{title}}",
       "viewedBadge": "Viewed"
     },
+    "mediaHeading": "Audio & sync workspace",
+    "mediaDescription": "Configure voice playback and cross-device capture defaults.",
+    "mediaVoiceHeading": "Voice controls",
+    "mediaVoiceDescription": "Select a default narration voice and configure advanced capture behaviours.",
+    "mediaVoiceAutoDownload": "Automatically download response audio when available",
+    "mediaVoiceAdvanced": "Enable advanced voice mode with layered prompts",
+    "mediaVoiceSync": "Synchronise voice presets across signed-in browsers",
+    "mediaVoiceSelect": "Default voice",
+    "mediaGalleryHeading": "Media gallery",
+    "mediaGalleryDescription": "Browse recent voice captures and uploads with virtualised thumbnails.",
+    "mediaGalleryFilterLabel": "Filter",
+    "mediaGalleryFilter": {
+      "all": "All media",
+      "audio": "Audio",
+      "video": "Video",
+      "image": "Images"
+    },
+    "mediaGalleryCount": "Showing {{visible}} of {{total}} media items",
+    "mediaGalleryLoadingMore": "Loading more media…",
+    "mediaGalleryEmpty": "No media items yet. Capture or upload audio to see it here.",
+    "mediaGallerySeedError": "Demo media items could not be prepared. Reload the dashboard to retry.",
     "encryption": {
       "heading": "Passphrase & sync encryption",
       "description": "Protect Dexie sync snapshots with an optional passphrase. The key never leaves this device.",
