@@ -6,11 +6,25 @@ import { ensureShadowHost } from './sidebar-host';
 import { insertTextIntoComposer } from './textareaPrompts';
 import { collectMessageElements, getConversationId, getConversationTitle } from './chatDom';
 import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
   archiveConversations,
   createFolder,
   createPrompt,
+  deleteFolder,
   getBookmarks,
   getConversationOverviewById,
+  renameFolder,
   toggleBookmark,
   toggleFavoriteFolder,
   togglePinned,
@@ -206,6 +220,11 @@ interface ContextMenuState {
   messageText: string;
   pinned: boolean;
   hasText: boolean;
+}
+
+interface FolderContextMenuState {
+  position: { x: number; y: number };
+  folder: FolderShortcut;
 }
 
 interface BookmarkDialogProps {
@@ -1285,7 +1304,48 @@ interface ConversationListProps {
   t: ReturnType<typeof useTranslation>['t'];
 }
 
-function ConversationList({ sectionId, title, conversations, emptyTitle, emptyDescription, onTogglePin, onMove, t }: ConversationListProps) {
+function DraggableListItem({
+  id,
+  data,
+  children,
+  ...props
+}: {
+  id: string;
+  data: Record<string, unknown>;
+  children: React.ReactNode;
+  [key: string]: unknown;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    data
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 10
+      }
+    : undefined;
+
+  return (
+    <li ref={setNodeRef} style={style} {...props}>
+      <div className={isDragging ? 'opacity-50' : ''} {...listeners} {...attributes}>
+        {children}
+      </div>
+    </li>
+  );
+}
+
+function ConversationList({
+  sectionId,
+  title,
+  conversations,
+  emptyTitle,
+  emptyDescription,
+  onTogglePin,
+  onMove,
+  t
+}: ConversationListProps) {
   return (
     <SidebarSection
       sectionId={sectionId}
@@ -1323,8 +1383,10 @@ function ConversationList({ sectionId, title, conversations, emptyTitle, emptyDe
             const pinLabel = conversation.pinned ? t('popup.unpin') : t('popup.pin');
 
             return (
-              <li
+              <DraggableListItem
                 key={conversation.id}
+                id={conversation.id}
+                data={{ type: 'conversation', conversation }}
                 className="rounded-md border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-100 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -1332,7 +1394,9 @@ function ConversationList({ sectionId, title, conversations, emptyTitle, emptyDe
                     <p className="text-sm font-semibold text-slate-100">{titleLabel}</p>
                     <p className="text-[11px] text-slate-400">{metrics}</p>
                     <p className="text-[11px] text-slate-500">{characterLabel}</p>
-                    <p className="text-[11px] text-slate-500">{t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}</p>
+                    <p className="text-[11px] text-slate-500">
+                      {t('content.promptLauncher.updatedAt', { time: updatedAtLabel })}
+                    </p>
                   </div>
                   <div className="flex flex-col items-end gap-2 text-right">
                     <button
@@ -1358,7 +1422,7 @@ function ConversationList({ sectionId, title, conversations, emptyTitle, emptyDe
                     </button>
                   </div>
                 </div>
-              </li>
+              </DraggableListItem>
             );
           })}
         </ul>
@@ -1535,11 +1599,129 @@ function PromptList({ sectionId, prompts, folderNames, t }: PromptListProps) {
   );
 }
 
-interface HistoryTabProps {
-  onAddBookmark: (target?: BookmarkTarget) => void;
+interface FolderTreeItemProps {
+  folder: FolderShortcut;
+  onNavigate: (folderId: string) => void;
+  onContextMenu: (event: React.MouseEvent, folder: FolderShortcut) => void;
+  onToggleFavorite: (folderId: string, next: boolean) => void;
+  isFavoritePending: boolean;
+  t: ReturnType<typeof useTranslation>['t'];
 }
 
-function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
+function FolderTreeItem({
+  folder,
+  onNavigate,
+  onContextMenu,
+  onToggleFavorite,
+  isFavoritePending,
+  t
+}: FolderTreeItemProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: folder.id,
+    data: {
+      type: 'folder'
+    }
+  });
+
+  const favoriteToggleLabel = folder.favorite
+    ? t('content.sidebar.history.unfavoriteFolder', {
+        defaultValue: 'Remove favorite'
+      })
+    : t('content.sidebar.history.favoriteFolder', {
+        defaultValue: 'Mark as favorite'
+      });
+
+  const containerClassName = `flex items-center gap-2 rounded-md transition ${
+    isOver ? 'bg-emerald-500/20' : ''
+  }`;
+
+  return (
+    <div ref={setNodeRef} className={containerClassName}>
+      <button
+        className="flex-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+        onClick={() => onNavigate(folder.id)}
+        onContextMenu={(event) => onContextMenu(event, folder)}
+        type="button"
+      >
+        <span className="flex items-center gap-2" style={{ paddingLeft: `${folder.depth * 12}px` }}>
+          <span className="truncate">{folder.name}</span>
+          {folder.favorite ? (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+              {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
+            </span>
+          ) : null}
+        </span>
+      </button>
+      <button
+        className="rounded-md border border-amber-400/70 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={() => onToggleFavorite(folder.id, !folder.favorite)}
+        type="button"
+        aria-label={favoriteToggleLabel}
+        aria-pressed={folder.favorite}
+        disabled={isFavoritePending}
+        title={favoriteToggleLabel ?? undefined}
+      >
+        {folder.favorite ? '★' : '☆'}
+      </button>
+    </div>
+  );
+}
+
+interface FolderTreeViewProps {
+  folders: FolderShortcut[];
+  favoritePendingIds: Set<string>;
+  onNavigate: (folderId: string | undefined) => void;
+  onContextMenu: (event: React.MouseEvent, folder: FolderShortcut) => void;
+  onToggleFavorite: (folderId: string, next: boolean) => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}
+
+function FolderTreeView({
+  folders,
+  favoritePendingIds,
+  onNavigate,
+  onContextMenu,
+  onToggleFavorite,
+  t
+}: FolderTreeViewProps) {
+  return (
+    <ul className="space-y-2">
+      <li>
+        <button
+          className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+          onClick={() => onNavigate(undefined)}
+          type="button"
+        >
+          {t('options.filterFolderAll', { defaultValue: 'All folders' })}
+        </button>
+      </li>
+      {folders.map((folder) => (
+        <li key={folder.id}>
+          <FolderTreeItem
+            folder={folder}
+            onNavigate={() => onNavigate(folder.id)}
+            onContextMenu={onContextMenu}
+            onToggleFavorite={onToggleFavorite}
+            isFavoritePending={favoritePendingIds.has(folder.id)}
+            t={t}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface HistoryTabProps {
+  onAddBookmark: (target?: BookmarkTarget) => void;
+  onCreateFolder: (parentId?: string) => void;
+  onFolderContextMenu: (event: React.MouseEvent, folder: FolderShortcut) => void;
+}
+
+function HistoryTab({
+  onAddBookmark,
+  onCreateFolder,
+  onFolderContextMenu
+}: HistoryTabProps): ReactElement {
   const { t } = useTranslation();
   const pinnedConversations = usePinnedConversations(6);
   const conversationFolders = useFolderTree('conversation');
@@ -1549,23 +1731,6 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
   const setConversationFolderShortcuts = useBubbleLauncherStore(
     (state) => state.setConversationFolderShortcuts
   );
-
-  const handleCreateFolder = useCallback(async () => {
-    const promptMessage =
-      t('content.sidebar.history.newFolderPrompt', {
-        defaultValue: 'Enter a name for the new folder:'
-      }) ?? 'Enter a name for the new folder:';
-    const name = window.prompt(promptMessage);
-    if (!name || name.trim().length === 0) {
-      return;
-    }
-    try {
-      await createFolder({ name, kind: 'conversation' });
-    } catch (error) {
-      console.error('[ai-companion] failed to create folder', error);
-      // TODO: show toast
-    }
-  }, [t]);
 
   const handleTogglePin = useCallback((conversationId: string) => {
     void togglePinned(conversationId);
@@ -1794,9 +1959,7 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
               </p>
               <button
                 className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                onClick={() => {
-                  void handleCreateFolder();
-                }}
+                onClick={() => onCreateFolder()}
                 type="button"
               >
                 {t('content.sidebar.history.newFolder', { defaultValue: 'New' })}
@@ -1809,62 +1972,16 @@ function HistoryTab({ onAddBookmark }: HistoryTabProps): ReactElement {
                 })}
               </p>
             ) : (
-              <ul className="mt-3 space-y-2">
-                <li>
-                  <button
-                    className="w-full rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                    onClick={() => handleNavigateToFolder(undefined)}
-                    type="button"
-                  >
-                    {t('options.filterFolderAll', { defaultValue: 'All folders' })}
-                  </button>
-                </li>
-                {folderOptions.map((folder) => {
-                  const favoriteToggleLabel = folder.favorite
-                    ? t('content.sidebar.history.unfavoriteFolder', {
-                        defaultValue: 'Remove favorite'
-                      })
-                    : t('content.sidebar.history.favoriteFolder', {
-                        defaultValue: 'Mark as favorite'
-                      });
-                  const pendingFavorite = favoritePendingIds.has(folder.id);
-
-                  return (
-                    <li key={folder.id}>
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="flex-1 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
-                          onClick={() => handleNavigateToFolder(folder.id)}
-                          type="button"
-                        >
-                          <span
-                            className="flex items-center gap-2"
-                            style={{ paddingLeft: `${folder.depth * 12}px` }}
-                          >
-                            <span className="truncate">{folder.name}</span>
-                            {folder.favorite ? (
-                              <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-300">
-                                {t('content.sidebar.history.favoriteBadge', { defaultValue: 'Fav' })}
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
-                        <button
-                          className="rounded-md border border-amber-400/70 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
-                          onClick={() => void handleToggleFavorite(folder.id, !folder.favorite)}
-                          type="button"
-                          aria-label={favoriteToggleLabel}
-                          aria-pressed={folder.favorite}
-                          disabled={pendingFavorite}
-                          title={favoriteToggleLabel ?? undefined}
-                        >
-                          {folder.favorite ? '★' : '☆'}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="mt-3">
+                <FolderTreeView
+                  folders={folderOptions}
+                  favoritePendingIds={favoritePendingIds}
+                  onNavigate={handleNavigateToFolder}
+                  onContextMenu={onFolderContextMenu}
+                  onToggleFavorite={handleToggleFavorite}
+                  t={t}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -1958,6 +2075,94 @@ interface ContextMenuOverlayProps {
   onTogglePin: () => void;
   onOpenDashboard: () => void;
   t: ReturnType<typeof useTranslation>['t'];
+}
+
+function FolderContextMenu({
+  state,
+  onClose,
+  onCreateSubfolder,
+  onRename,
+  onDelete,
+  onToggleFavorite,
+  t
+}: {
+  state: FolderContextMenuState | null;
+  onClose: () => void;
+  onCreateSubfolder: (folderId: string) => void;
+  onRename: (folderId: string, currentName: string) => void;
+  onDelete: (folderId: string, folderName: string) => void;
+  onToggleFavorite: (folderId: string, next: boolean) => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}): ReactElement | null {
+  if (!state) {
+    return null;
+  }
+
+  const handleAction = (callback: () => void) => {
+    callback();
+    onClose();
+  };
+
+  const favoriteLabel = state.folder.favorite
+    ? t('content.sidebar.folders.contextMenuUnfavorite', { defaultValue: 'Unmark as favorite' })
+    : t('content.sidebar.folders.contextMenuFavorite', { defaultValue: 'Mark as favorite' });
+
+  return (
+    <div
+      className="fixed inset-0 z-[2147483646]"
+      onClick={onClose}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <div
+        className="absolute w-64 rounded-lg border border-white/10 bg-slate-950/90 px-1 py-1 text-sm text-slate-100 shadow-2xl backdrop-blur"
+        style={{ left: `${state.position.x}px`, top: `${state.position.y}px` }}
+        onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => event.preventDefault()}
+      >
+        <div className="border-b border-white/10 px-3 py-2 text-xs text-slate-300">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            {t('content.sidebar.folders.contextMenuTitle', { defaultValue: 'Folder actions' })}
+          </p>
+          <p className="mt-1 truncate text-xs font-medium text-slate-200">{state.folder.name}</p>
+        </div>
+        <div className="space-y-1 px-1 py-1">
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => handleAction(() => onCreateSubfolder(state.folder.id))}
+            type="button"
+          >
+            <span>
+              {t('content.sidebar.folders.contextMenuNewSubfolder', { defaultValue: 'New subfolder' })}
+            </span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => handleAction(() => onToggleFavorite(state.folder.id, !state.folder.favorite))}
+            type="button"
+          >
+            <span>{favoriteLabel}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => handleAction(() => onRename(state.folder.id, state.folder.name))}
+            type="button"
+          >
+            <span>{t('content.sidebar.folders.contextMenuRename', { defaultValue: 'Rename' })}</span>
+          </button>
+          <button
+            className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-rose-300 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            onClick={() => handleAction(() => onDelete(state.folder.id, state.folder.name))}
+            type="button"
+          >
+            <span>{t('content.sidebar.folders.contextMenuDelete', { defaultValue: 'Delete' })}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ContextMenuOverlay({
@@ -2188,6 +2393,7 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = useState(false);
   const [bookmarkDialogTarget, setBookmarkDialogTarget] = useState<BookmarkTarget | null>(null);
   const [contextMenuState, setContextMenuState] = useState<ContextMenuState | null>(null);
+  const [folderContextMenuState, setFolderContextMenuState] = useState<FolderContextMenuState | null>(null);
   const [contextMenuPending, setContextMenuPending] = useState<ContextMenuAction | null>(null);
   const [toast, setToast] = useState<ActionToast | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
@@ -2195,6 +2401,10 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
   const modalHeadingId = useId();
   const guidesModalHeadingId = useId();
   const modalContainerRef = useRef<Element | null>(null);
+
+  const closeFolderContextMenu = useCallback(() => {
+    setFolderContextMenuState(null);
+  }, []);
 
   useEffect(() => {
     const shadow = host.shadowRoot;
@@ -2269,6 +2479,49 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     },
     [closeContextMenu]
   );
+
+  const handleRenameFolder = useCallback(
+    (folderId: string, currentName: string) => {
+      const newName = window.prompt(
+        t('content.sidebar.folders.renamePrompt', { defaultValue: 'Enter new name:' }),
+        currentName
+      );
+      if (!newName || newName.trim().length === 0) {
+        return;
+      }
+      renameFolder(folderId, newName).catch((error) => {
+        console.error('[ai-companion] failed to rename folder', error);
+        // TODO: show toast
+      });
+    },
+    [t]
+  );
+
+  const handleDeleteFolder = useCallback(
+    (folderId: string, folderName: string) => {
+      const confirmation = window.confirm(
+        t('content.sidebar.folders.deleteConfirm', {
+          name: folderName,
+          defaultValue: 'Are you sure you want to delete the folder "{{name}}" and all its contents?'
+        })
+      );
+      if (!confirmation) {
+        return;
+      }
+      deleteFolder(folderId).catch((error) => {
+        console.error('[ai-companion] failed to delete folder', error);
+        // TODO: show toast
+      });
+    },
+    [t]
+  );
+
+  const handleToggleFavoriteFolder = useCallback((folderId: string, next: boolean) => {
+    toggleFavoriteFolder(folderId, next).catch((error) => {
+      console.error('[ai-companion] failed to toggle favorite folder', error);
+      // TODO: show toast
+    });
+  }, []);
 
   const handleCloseBookmarkDialog = useCallback(() => {
     setBookmarkDialogOpen(false);
@@ -2504,6 +2757,22 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     closeContextMenu();
   }, [closeContextMenu]);
 
+  const handleFolderContextMenu = useCallback(
+    (event: React.MouseEvent, folder: FolderShortcut) => {
+      event.preventDefault();
+      closeContextMenu();
+
+      const adjustedX = Math.min(event.clientX, window.innerWidth - 272);
+      const adjustedY = Math.min(event.clientY, window.innerHeight - 128);
+
+      setFolderContextMenuState({
+        position: { x: adjustedX, y: adjustedY },
+        folder
+      });
+    },
+    [closeContextMenu]
+  );
+
   const modalPoints = useMemo(() => {
     const points = t('content.sidebar.modal.points', { returnObjects: true });
     return Array.isArray(points) ? (points as string[]) : [];
@@ -2524,10 +2793,55 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
     <ActionsPanel onOpenBookmarkDialog={handleOpenBookmarkDialog} showToast={showToast} t={t} />
   );
 
+  const handleCreateFolder = useCallback(
+    async (parentId?: string) => {
+      const promptMessage =
+        t('content.sidebar.history.newFolderPrompt', {
+          defaultValue: 'Enter a name for the new folder:'
+        }) ?? 'Enter a name for the new folder:';
+      const name = window.prompt(promptMessage);
+      if (!name || name.trim().length === 0) {
+        return;
+      }
+      try {
+        await createFolder({ name, kind: 'conversation', parentId });
+      } catch (error) {
+        console.error('[ai-companion] failed to create folder', error);
+        // TODO: show toast
+      }
+    },
+    [t]
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { over, active } = event;
+
+    const isFolderDrop = over?.data.current?.type === 'folder';
+    const isConversationDrag = active.data.current?.type === 'conversation';
+
+    if (over && isFolderDrop && isConversationDrag) {
+      const folderId = over.id.toString();
+      const conversation = active.data.current?.conversation as ConversationOverview;
+
+      if (conversation && conversation.folderId !== folderId) {
+        upsertConversation({ ...conversation, folderId }).catch((error) => {
+          console.error('[ai-companion] Failed to move conversation on drop', error);
+          // TODO: show toast
+        });
+      }
+    }
+  }, []);
+
   const HistoryPanel = () => (
-    <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
-      <HistoryTab onAddBookmark={handleOpenBookmarkDialog} />
-    </div>
+    <DndContext onDragEnd={handleDragEnd}>
+      <div className="w-full max-w-md rounded-lg border border-white/10 bg-slate-900/70 p-3 text-sm text-slate-200 shadow-sm">
+        <HistoryTab
+          onAddBookmark={handleOpenBookmarkDialog}
+          onCreateFolder={handleCreateFolder}
+          onFolderContextMenu={handleFolderContextMenu}
+        />
+      </div>
+    </DndContext>
   );
 
   const PromptsPanel = () => (
@@ -2557,6 +2871,15 @@ function CompanionSidebarRoot({ host }: CompanionSidebarRootProps): ReactElement
         initialTarget={bookmarkDialogTarget ?? undefined}
         t={t}
         modalContainer={modalContainerRef.current}
+      />
+      <FolderContextMenu
+        state={folderContextMenuState}
+        onClose={closeFolderContextMenu}
+        onCreateSubfolder={handleCreateFolder}
+        onRename={handleRenameFolder}
+        onDelete={handleDeleteFolder}
+        onToggleFavorite={handleToggleFavoriteFolder}
+        t={t}
       />
       <ContextMenuOverlay
         state={contextMenuState}

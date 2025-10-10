@@ -10,7 +10,7 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
 ## Overzicht pariteit → plus
 | Featuregroep | Kernscope | Status | Laatste update |
 | --- | --- | --- | --- |
-| Gespreksbeheer & mappen | Onbeperkte mappen/submappen, GPT-koppeling, drag & drop, pinned folders, bulk verplaatsing | 🟥 Gap – ontwerp | 2025-02-14 – roadmap geaccepteerd |
+| Gespreksbeheer & mappen | Onbeperkte mappen/submappen, GPT-koppeling, drag & drop, pinned folders, bulk verplaatsing | 🟨 Iteratie | 2025-10-22 – UI voor mappen, submappen en drag & drop geïmplementeerd |
 | Professionele zijbalk | History search (<150 ms), pin/hide, bulkacties, collapse GPTs, undo flows | 🟧 Gap – analyse | 2025-02-16 – MiniSearch tags/mappen, 10k build 1.5 s / query 3 ms |
 | Chat pinning & bulkacties | Pin/unpin met shortcut, bulkselectie 500+, exact filters, persistente state | 🟧 Gap – analyse | 2025-02-14 – Dexie schema review |
 | Promptbibliotheek | CRUD, tagging, versies, favorieten, `//` launcher ≤50 ms | 🟥 Gap – ontwerp | 2025-02-14 – trigger specs klaar |
@@ -219,5 +219,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-19 | _pending_ | UX | Resetknop voor zijbalkindeling live in popup/options/content (`sidebarVisibilityStore.resetSections`, UI-knoppen, i18n/toastupdates); regressiegids + roadmap aangevuld en lint/test/build uitgevoerd. |
 | 2025-10-20 | _pending_ | Content & Core | Basis-UI voor mapcreatie toegevoegd aan zijbalk (`src/content/ui-root.tsx`) met i18n-updates. Nieuwe testsuite (`tests/core/folders.spec.ts`) valideert map-CRUD; `npm run test` succesvol. |
 | 2025-10-21 | _pending_ | Core & Test | Functionaliteit voor het verplaatsen van gesprekken gevalideerd en gedocumenteerd. Nieuwe testsuite `tests/core/conversations.spec.ts` toegevoegd en alle tests succesvol uitgevoerd (`npm run test`). |
+| 2025-10-22 | _pending_ | Content & UX | UI voor mapbeheer geïmplementeerd: geneste weergave, contextmenu's (submap aanmaken, hernoemen, verwijderen, favoriet maken) en drag-and-drop voor gesprekken. Tests (`npm run test`) succesvol; frontend-verificatie geblokkeerd door dev-server probleem. |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
