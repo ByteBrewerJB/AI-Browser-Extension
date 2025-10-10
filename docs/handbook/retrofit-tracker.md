@@ -143,6 +143,10 @@ De extensie evolueert naar een **volledige productiviteitssuite** bovenop ChatGP
     - **Prioritering** – Legt de basis voor mapbeheer door gebruikers in staat te stellen nieuwe mappen aan te maken vanuit de content-UI. Dit deblokkeert vervolgstappen zoals het verplaatsen van gesprekken en het organiseren van de bibliotheek.
     - **Documentatie** – UI-update in `src/content/ui-root.tsx`, vertalingen in `src/shared/i18n/locales/{en,nl}/common.json`. Nieuwe testsuite `tests/core/folders.spec.ts` dekt alle CRUD-operaties op mapniveau.
     - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). De nieuwe testsuite `folders.spec.ts` is succesvol. Handmatig: 'Nieuw'-knop in de zijbalk onder 'Map-snelkoppelingen' opent een prompt, en een geldige naam voegt een nieuwe map toe aan de lijst.
+21. [x] Gesprekken naar mappen verplaatsen via UI en storage-laag. _(afgerond 2025-10-21)_
+    - **Prioritering** – Maakt de mapbeheer-cyclus compleet: gebruikers kunnen nu gesprekken organiseren in de mappen die ze aanmaken. Dit deblokkeert de volgende stappen in de 'Gespreksbeheer & mappen' featuregroep, zoals drag & drop en bulkacties.
+    - **Documentatie** – Bestaande UI-component (`MoveDialog`) en storage-functie (`upsertConversation`) zijn gevalideerd. Nieuwe testsuite `tests/core/conversations.spec.ts` toegevoegd om de correcte werking van het verplaatsen te garanderen, inclusief de koppeling met de `folderItems`-tabel. Dit retrofitlog en de roadmap zijn bijgewerkt.
+    - **QA-notes** – Geautomatiseerd: `npm run lint`, `npm run test`, `npm run build` (Node 20.19.0). De nieuwe testsuite `conversations.spec.ts` is succesvol. Handmatig: via de 'Verplaats'-knop in de zijbalk een gesprek naar een nieuwe map verplaatsen, en controleren dat het gesprek uit de oude lijst verdwijnt en in de nieuwe map verschijnt na een refresh. Resultaat vastleggen in regressiegids.
 
 ## Definition of done per groep
 ### Gespreksbeheer & mappen
@@ -214,5 +218,6 @@ Gebruik onderstaande scenario's als regressie-anker zodra features landen.
 | 2025-10-18 | _pending_ | Search | Undo/redo-historie + toasts voor sidebar-voorkeuren toegevoegd (`sidebarVisibilityStore`, `SidebarVisibilityToast`), vertalingen bijgewerkt en gedeelde QA-notes vastgelegd; `npm run lint`, `npm run test`, `npm run build` gepland en handmatige Undo/Redo-checks beschreven. |
 | 2025-10-19 | _pending_ | UX | Resetknop voor zijbalkindeling live in popup/options/content (`sidebarVisibilityStore.resetSections`, UI-knoppen, i18n/toastupdates); regressiegids + roadmap aangevuld en lint/test/build uitgevoerd. |
 | 2025-10-20 | _pending_ | Content & Core | Basis-UI voor mapcreatie toegevoegd aan zijbalk (`src/content/ui-root.tsx`) met i18n-updates. Nieuwe testsuite (`tests/core/folders.spec.ts`) valideert map-CRUD; `npm run test` succesvol. |
+| 2025-10-21 | _pending_ | Core & Test | Functionaliteit voor het verplaatsen van gesprekken gevalideerd en gedocumenteerd. Nieuwe testsuite `tests/core/conversations.spec.ts` toegevoegd en alle tests succesvol uitgevoerd (`npm run test`). |
 
 Voeg nieuwe regels toe met `YYYY-MM-DD | commit | scope | details` en noteer welke QA (lint/test/build/manual) is uitgevoerd.
